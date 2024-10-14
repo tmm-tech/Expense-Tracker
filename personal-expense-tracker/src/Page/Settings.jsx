@@ -1,17 +1,15 @@
-"use client"
-
-import { useState } from "react"
-import { Bell, ChevronRight, CreditCard, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react"
-import { Button } from "../Component/button"
-import { Input } from "../Component/input"
-import { Label } from "../Component/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select"
-import { Switch } from "../Component/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../Component/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card"
-import { Avatar, AvatarFallback, AvatarImage } from ../Component/avatar"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog"
-import { Alert, AlertDescription, AlertTitle } from "../Component/alert"
+import { useState } from "react";
+import { Bell, ChevronRight, CreditCard, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react";
+import { Button } from "../Component/button";
+import { Input } from "../Component/input";
+import { Label } from "../Component/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select";
+import { Switch } from "../Component/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../Component/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
+import { Avatar, AvatarFallback, AvatarImage } from ../Component/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
+import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
 
 export default function Settings() {
