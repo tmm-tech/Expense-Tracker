@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
 
-export default function Settings() {
+export default function Setting() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
   const [currency, setCurrency] = useState("USD")
   const [language, setLanguage] = useState("en")
