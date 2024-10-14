@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; // Use Link from react-router-dom for navigation
-
+import { Target, Home, BarChart2, FileText, Settings} from "lucide-react";
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
