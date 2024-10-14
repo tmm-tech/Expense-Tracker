@@ -1,15 +1,16 @@
-import { useState } from "react"
-import { AlertCircle, ChevronDown, DollarSign, Edit, PlusCircle, Trash2 } from "lucide-react"
-import { Button } from "../Component/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card"
-import { Input } from "../Component/input"
-import { Label } from "../Component/label"
-import { Progress } from "../Component/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog"
-import { Alert, AlertDescription, AlertTitle } from "../Component/alert"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart"
-import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
+import { useState } from "react";
+import { AlertCircle, ChevronDown, DollarSign, Edit, PlusCircle, Trash2 } from "lucide-react";
+import { Button } from "../Component/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
+import { Input } from "../Component/input";
+import { Label } from "../Component/label";
+import { Progress } from "../Component/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
+import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart";
+import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import Sidebar from '../Component/Sidebar';
 // Mock data for budgets
 const initialBudgets = [
