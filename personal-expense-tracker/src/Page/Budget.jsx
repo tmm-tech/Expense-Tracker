@@ -26,7 +26,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 export default function Budget() {
   const [budgets, setBudgets] = useState(initialBudgets)
   const [isAddingBudget, setIsAddingBudget] = useState(false)
-  const [editingBudget, setEditingBudget] = useState<any>(null)
+  const [editingBudget, setEditingBudget] = useState("")
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const totalBudgeted = budgets.reduce((sum, budget) => sum + budget.budgeted, 0)
   const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
