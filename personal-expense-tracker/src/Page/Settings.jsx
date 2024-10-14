@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from ../Component/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
-
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 export default function Settings() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
   const [currency, setCurrency] = useState("USD")
