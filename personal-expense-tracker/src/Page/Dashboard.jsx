@@ -5,7 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import { Button } from "../Component/button";
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
-
+import Sidebar from '../Component/Sidebar';
 // Mock data for demonstration
 const accountData = [
   { name: "Checking", balance: 2500, icon: Wallet, type: "asset" },
@@ -25,14 +25,6 @@ const budgetData = [
 const goalData = [
   { name: "Vacation", current: 2000, target: 5000 },
   { name: "New Laptop", current: 800, target: 1500 },
-]
-
-const navItems = [
-  { name: "Dashboard", icon: Home },
-  { name: "Transactions", icon: FileText },
-  { name: "Budget", icon: BarChart2 },
-  { name: "Goals", icon: Target },
-  { name: "Settings", icon: Settings },
 ]
 
 const expenseDistribution = [
@@ -56,32 +48,13 @@ const incomeTrend = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d']
 
 export default function Dashboard() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const totalAssets = accountData.filter(account => account.type === "asset").reduce((sum, account) => sum + account.balance, 0)
   const totalLiabilities = accountData.filter(account => account.type === "liability").reduce((sum, account) => sum + Math.abs(account.balance), 0)
   const netWorth = totalAssets - totalLiabilities
 
   return (
     <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
-      {/* Sidebar */}
-      <aside className={`bg-white bg-opacity-90 w-64 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed lg:relative lg:translate-x-0 z-10`}>
-        <div className="p-4 border-b">
-          <h2 className="text-2xl font-semibold text-gray-800">Expense Tracker</h2>
-        </div>
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {navItems.map((item) => (
-              <li key={item.name}>
-                <a href="#" className="flex items-center space-x-2 text-gray-700 hover:bg-gray-200 rounded p-2 transition-colors duration-200">
-                  <item.icon className="h-5 w-5 text-gray-600" />
-                  <span>{item.name}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-
+       <Sidebar />
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
