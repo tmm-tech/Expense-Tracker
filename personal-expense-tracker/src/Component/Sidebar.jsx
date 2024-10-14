@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Use Link from react-router-dom for navigation
 
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navItems = [
-    { name: "Dashboard", icon: Home },
-    { name: "Transactions", icon: FileText },
-    { name: "Budget", icon: BarChart2 },
-    { name: "Goals", icon: Target },
-    { name: "Settings", icon: Settings },
+    { name: "Dashboard", icon: Home, path: "/" },
+    { name: "Transactions", icon: FileText, path: "/transactions" },
+    { name: "Budget", icon: BarChart2, path: "/budget" },
+    { name: "Goals", icon: Target, path: "/goals" },
+    { name: "Settings", icon: Settings, path: "/settings" }
   ];
 
   return (
@@ -33,7 +33,7 @@ const Sidebar = () => {
           {navItems.map((item) => (
             <li key={item.name}>
               <Link
-                to={`/${item.name.toLowerCase()}`}
+                to={item.path} // Link to the path specified in navItems
                 className="flex items-center space-x-2 text-gray-700 hover:bg-gray-200 rounded p-2 transition-colors duration-200"
               >
                 <item.icon className="h-5 w-5 text-gray-600" />
