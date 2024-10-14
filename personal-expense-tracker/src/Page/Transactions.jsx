@@ -1,8 +1,9 @@
-import { useState } from "react"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, CreditCard, DollarSign, Download, Edit, Filter, PlusCircle, Search, Trash2, Wallet } from "lucide-react"
-import { Button } from "../Component/button"
-import { Calendar } from "../Component/calendar"
+import { useState } from "react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, CreditCard, DollarSign, Download, Edit, Filter, PlusCircle, Search, Trash2, Wallet } from "lucide-react";
+import { Button } from "../Component/button";
+import { Calendar } from "../Component/calendar";
+import Sidebar from '../Component/Sidebar';
 import {
   Dialog,
   DialogContent,
@@ -11,26 +12,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../Component/dialog"
+} from "../Component/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "../Component/dropdown-menu"
-import { Input } from "../Component/input"
+} from "../Component/dropdown-menu";
+import { Input } from "../Component/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../Component/popover"
+} from "../Component/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../Component/select"
+} from "../Component/select";
 import {
   Table,
   TableBody,
@@ -38,14 +39,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../Component/table"
+} from "../Component/table";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../Component/card"
+} from "../Component/card";
 
 // Mock data for transactions
 const transactions = [
@@ -98,6 +99,20 @@ export default function Component() {
   }
 
   return (
+     <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
+       <Sidebar />
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+            <Menu className="h-6 w-6" />
+          </Button>
+          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
+          <Button variant="ghost" size="icon">
+            <Settings className="h-6 w-6 text-gray-600" />
+          </Button>
+        </header>
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Transactions</h1>
 
@@ -335,5 +350,7 @@ export default function Component() {
         </DialogContent>
       </Dialog>
     </div>
+    </div>
+  </div>
   )
 }
