@@ -59,15 +59,15 @@ const transactions = [
 ]
 
   export default function  Transactions() {
-  const [selectedDate, setSelectedDate] = useState<Date>()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isEditingTransaction, setIsEditingTransaction] = useState(false)
-  const [editingTransaction, setEditingTransaction] = useState<any>(null)
+   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isEditingTransaction, setIsEditingTransaction] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
-  const itemsPerPage = 10
+  const itemsPerPage = 10;
   const filteredTransactions = transactions.filter(transaction => 
     (searchQuery === "" || transaction.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
     (!selectedDate || transaction.date === format(selectedDate, "yyyy-MM-dd")) &&
