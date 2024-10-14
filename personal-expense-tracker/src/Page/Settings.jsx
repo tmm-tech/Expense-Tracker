@@ -2,21 +2,23 @@
 
 import { useState } from "react"
 import { Bell, ChevronRight, CreditCard, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "../Component/button"
+import { Input } from "../Component/input"
+import { Label } from "../Component/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select"
+import { Switch } from "../Component/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../Component/tabs"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card"
+import { Avatar, AvatarFallback, AvatarImage } from ../Component/avatar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog"
+import { Alert, AlertDescription, AlertTitle } from "../Component/alert"
+import Sidebar from '../Component/Sidebar';
 
 export default function Settings() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
   const [currency, setCurrency] = useState("USD")
   const [language, setLanguage] = useState("en")
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -47,6 +49,20 @@ export default function Settings() {
   }
 
   return (
+      <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
+        <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+            <Menu className="h-6 w-6" />
+          </Button>
+          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
+          <Button variant="ghost" size="icon">
+            <Settings className="h-6 w-6 text-gray-600" />
+          </Button>
+        </header>
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Settings</h1>
 
@@ -299,5 +315,7 @@ export default function Settings() {
         </DialogContent>
       </Dialog>
     </div>
+        </div>
+        </div>
   )
 }
