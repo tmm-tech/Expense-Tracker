@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart"
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-
+import Sidebar from '../Component/Sidebar';
 // Mock data for budgets
 const initialBudgets = [
   { id: 1, category: "Housing", budgeted: 1000, spent: 950 },
@@ -26,7 +26,7 @@ export default function Budget() {
   const [budgets, setBudgets] = useState(initialBudgets)
   const [isAddingBudget, setIsAddingBudget] = useState(false)
   const [editingBudget, setEditingBudget] = useState<any>(null)
-
+const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const totalBudgeted = budgets.reduce((sum, budget) => sum + budget.budgeted, 0)
   const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
 
@@ -60,6 +60,20 @@ export default function Budget() {
   }
 
   return (
+      <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
+        <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+            <Menu className="h-6 w-6" />
+          </Button>
+          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
+          <Button variant="ghost" size="icon">
+            <Settings className="h-6 w-6 text-gray-600" />
+          </Button>
+        </header>
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Budget Overview</h1>
 
@@ -277,5 +291,7 @@ export default function Budget() {
         </DialogContent>
       </Dialog>
     </div>
+        </div>
+        </div>
   )
 }
