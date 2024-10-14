@@ -42,10 +42,10 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const formData = new FormData(event.currentTarget)
     const newGoal = {
       id: goals.length + 1,
-      name: formData.get('name') as string,
+      name: formData.get('name'),
       target: Number(formData.get('target')),
       current: Number(formData.get('current')),
-      deadline: formData.get('deadline') as string,
+      deadline: formData.get('deadline'),
     }
     setGoals([...goals, newGoal])
     setIsAddingGoal(false)
@@ -56,10 +56,10 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const formData = new FormData(event.currentTarget)
     const updatedGoal = {
       ...editingGoal,
-      name: formData.get('name') as string,
+      name: formData.get('name'),
       target: Number(formData.get('target')),
       current: Number(formData.get('current')),
-      deadline: formData.get('deadline') as string,
+      deadline: formData.get('deadline'),
     }
     setGoals(goals.map(goal => goal.id === updatedGoal.id ? updatedGoal : goal))
     setEditingGoal(null)
