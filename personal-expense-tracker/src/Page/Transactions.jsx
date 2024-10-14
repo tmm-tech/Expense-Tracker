@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Download, Edit, Filter, PlusCircle, Search, Trash2, Wallet } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Download, Edit, Filter, PlusCircle, Search, Trash2} from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "../Component/button";
 import { Calendar } from "../Component/calendar";
 import Sidebar from '../Component/Sidebar';
@@ -47,7 +48,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../Component/card";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
+
 // Mock data for transactions
 const transactions = [
   { id: 1, date: "2023-10-01", description: "Grocery Shopping", category: "Food", amount: -120.50, account: "Credit Card" },
