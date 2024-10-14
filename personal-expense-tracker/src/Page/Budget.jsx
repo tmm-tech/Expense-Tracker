@@ -35,7 +35,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const formData = new FormData(event.currentTarget)
     const newBudget = {
       id: budgets.length + 1,
-      category: formData.get('category') as string,
+      category: formData.get('category'),
       budgeted: Number(formData.get('amount')),
       spent: 0,
     }
