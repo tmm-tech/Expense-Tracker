@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Switch } from "../Component/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../Component/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
-import { Avatar, AvatarFallback, AvatarImage } from ../Component/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../Component/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
