@@ -48,7 +48,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const formData = new FormData(event.currentTarget)
     const updatedBudget = {
       ...editingBudget,
-      category: formData.get('category') as string,
+      category: formData.get('category'),
       budgeted: Number(formData.get('amount')),
     }
     setBudgets(budgets.map(budget => budget.id === updatedBudget.id ? updatedBudget : budget))
