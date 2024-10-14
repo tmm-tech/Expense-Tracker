@@ -58,7 +58,7 @@ const transactions = [
   // Add more transactions as needed
 ]
 
-export default function Component() {
+  export default function  Transactions() {
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
