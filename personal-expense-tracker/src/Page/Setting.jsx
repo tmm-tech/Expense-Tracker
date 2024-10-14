@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bell, ChevronRight, CreditCard, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react";
+import { Bell, ChevronRight, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "../Component/button";
 import { Input } from "../Component/input";
 import { Label } from "../Component/label";
@@ -7,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Switch } from "../Component/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../Component/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
-import { Avatar, AvatarFallback, AvatarImage } from ../Component/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../Component/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
 
-export default function Settings() {
+export default function Setting() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
   const [currency, setCurrency] = useState("USD")
   const [language, setLanguage] = useState("en")

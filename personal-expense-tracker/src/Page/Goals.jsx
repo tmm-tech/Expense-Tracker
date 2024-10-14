@@ -1,16 +1,18 @@
-import { useState } from "react"
-import { format, addMonths } from "date-fns"
-import { AlertCircle, ChevronDown, DollarSign, Edit, PlusCircle, Trash2, TrendingUp } from "lucide-react"
-import { Button } from "../Component/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card"
-import { Input } from "../Component/input"
-import { Label } from "../Component/label"
-import { Progress } from "../Component/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog"
-import { Alert, AlertDescription, AlertTitle } from "../Component/alert"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart"
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts"
+import { useState } from "react";
+import { format, addMonths } from "date-fns";
+import { AlertCircle, ChevronDown, Edit, PlusCircle, Trash2} from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
+import { Button } from "../Component/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
+import { Input } from "../Component/input";
+import { Label } from "../Component/label";
+import { Progress } from "../Component/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
+import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+
 import Sidebar from '../Component/Sidebar';
 // Mock data for goals
 const initialGoals = [
@@ -32,7 +34,7 @@ const goalProgressData = [
 export default function Goals() {
   const [goals, setGoals] = useState(initialGoals)
   const [isAddingGoal, setIsAddingGoal] = useState(false)
-  const [editingGoal, setEditingGoal] = useState<any>(null)
+  const [editingGoal, setEditingGoal] = useState("")
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const totalTargetAmount = goals.reduce((sum, goal) => sum + goal.target, 0)
   const totalCurrentAmount = goals.reduce((sum, goal) => sum + goal.current, 0)

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, CreditCard, DollarSign, Download, Edit, Filter, PlusCircle, Search, Trash2, Wallet } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Download, Edit, Filter, PlusCircle, Search, Trash2} from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "../Component/button";
 import { Calendar } from "../Component/calendar";
 import Sidebar from '../Component/Sidebar';
@@ -60,13 +61,13 @@ const transactions = [
 
   export default function  Transactions() {
      const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+   const [selectedDate, setSelectedDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditingTransaction, setIsEditingTransaction] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [editingTransaction, setEditingTransaction] = useState("");
 
   const itemsPerPage = 10;
   const filteredTransactions = transactions.filter(transaction => 
