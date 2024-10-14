@@ -48,13 +48,14 @@ const incomeTrend = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d']
 
 export default function Dashboard() {
+   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const totalAssets = accountData.filter(account => account.type === "asset").reduce((sum, account) => sum + account.balance, 0)
   const totalLiabilities = accountData.filter(account => account.type === "liability").reduce((sum, account) => sum + Math.abs(account.balance), 0)
   const netWorth = totalAssets - totalLiabilities
 
   return (
     <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
-       <Sidebar />
+        <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
