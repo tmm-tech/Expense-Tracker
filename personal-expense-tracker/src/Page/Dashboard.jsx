@@ -62,7 +62,7 @@ export default function Dashboard() {
   const netWorth = totalAssets - totalLiabilities
 
   return (
-    <div className="flex h-screen bg-gray-100 bg-[url('/placeholder.svg?height=1080&width=1920')] bg-cover bg-center bg-fixed">
+    <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
       {/* Sidebar */}
       <aside className={`bg-white bg-opacity-90 w-64 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed lg:relative lg:translate-x-0 z-10`}>
         <div className="p-4 border-b">
