@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertCircle, ChevronDown, DollarSign, Edit, PlusCircle, Trash2 } from "lucide-react";
+import { AlertCircle, ChevronDown, Edit, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from "../Component/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
 import { Input } from "../Component/input";
