@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, CreditCard, DollarSign, Download, Edit, Filter, PlusCircle, Search, Trash2, Wallet } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Download, Edit, Filter, PlusCircle, Search, Trash2, Wallet } from "lucide-react";
 import { Button } from "../Component/button";
 import { Calendar } from "../Component/calendar";
 import Sidebar from '../Component/Sidebar';
