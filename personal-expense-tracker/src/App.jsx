@@ -4,7 +4,7 @@ import Dashboard from './Page/Dashboard';
 import Transactions from './Page/Transactions';
 import Budget from './Page/Budget';
 import Goals from './Page/Goals';
-import Setting from './Page/Settings';
+import Settings from './Page/Settings';
 function App() {
   return (
     <div className="App">
