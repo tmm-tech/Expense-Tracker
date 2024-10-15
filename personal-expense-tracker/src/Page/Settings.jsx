@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bell, ChevronRight, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "../Component/button";
 import { Input } from "../Component/input";
 import { Label } from "../Component/label";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
 
-export default function Setting() {
+export default function Settings() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
   const [currency, setCurrency] = useState("USD")
   const [language, setLanguage] = useState("en")
