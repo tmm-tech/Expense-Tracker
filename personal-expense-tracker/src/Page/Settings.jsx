@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
 
 export default function Settings() {
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [theme, setTheme] = useState("system");
 
   useEffect(() => {
     if (theme === "light") {
