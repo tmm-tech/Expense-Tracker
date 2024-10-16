@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-
+import { ScrollArea } from "../Component/scroll-area";
 import Sidebar from '../Component/Sidebar';
 // Mock data for goals
 const initialGoals = [
@@ -86,6 +86,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
             <Settings className="h-6 w-6 text-gray-600" />
           </Button>
         </header>
+  <ScrollArea className="h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Financial Goals</h1>
 
@@ -346,6 +347,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
         </DialogContent>
       </Dialog>
     </div>
+    </ScrollArea>
         </div>
         </div>
     
