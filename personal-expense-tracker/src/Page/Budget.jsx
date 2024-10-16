@@ -252,7 +252,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           </div>
         </CardContent>
       </Card>
- </ScrollArea>
+
       {/* Edit Budget Modal */}
       <Dialog open={!!editingBudget} onOpenChange={() => setEditingBudget(null)}>
         <DialogContent>
@@ -295,6 +295,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
         </DialogContent>
       </Dialog>
     </div>
+    </ScrollArea>
         </div>
         </div>
   )
