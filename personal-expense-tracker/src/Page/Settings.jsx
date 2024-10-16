@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, ChevronRight, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "../Component/button";
 import { Input } from "../Component/input";
 import { Label } from "../Component/label";
@@ -13,18 +13,33 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
 
-export default function Setting() {
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
-  const [currency, setCurrency] = useState("USD")
-  const [language, setLanguage] = useState("en")
+export default function Settings() {
+  const [theme, setTheme] = useState("system");
+
+  useEffect(() => {
+    if (theme === "light") {
+      document.documentElement.classList.remove("dark");
+    } else if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      const systemDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (systemDarkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, [theme]);
+  const [currency, setCurrency] = useState("USD");
+  const [language, setLanguage] = useState("en");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
     sms: false,
-  })
-  const [isChangingPassword, setIsChangingPassword] = useState(false)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
     setTheme(newTheme)
