@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, Cr
 import { Button } from "../Component/button";
 import { Calendar } from "../Component/calendar";
 import Sidebar from '../Component/Sidebar';
+import { ScrollArea } from "../Component/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -115,6 +116,7 @@ const transactions = [
             <Settings className="h-6 w-6 text-gray-600" />
           </Button>
         </header>
+         <ScrollArea className="h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Transactions</h1>
 
@@ -352,6 +354,7 @@ const transactions = [
         </DialogContent>
       </Dialog>
     </div>
+  </ScrollArea>
     </div>
   </div>
   )
