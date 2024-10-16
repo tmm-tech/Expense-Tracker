@@ -12,6 +12,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import Sidebar from '../Component/Sidebar';
+import { ScrollArea } from "../Component/scroll-area";
+
 // Mock data for budgets
 const initialBudgets = [
   { id: 1, category: "Housing", budgeted: 1000, spent: 950 },
@@ -75,6 +77,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
             <Settings className="h-6 w-6 text-gray-600" />
           </Button>
         </header>
+  <ScrollArea className="h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Budget Overview</h1>
 
@@ -249,7 +252,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           </div>
         </CardContent>
       </Card>
-
+ </ScrollArea>
       {/* Edit Budget Modal */}
       <Dialog open={!!editingBudget} onOpenChange={() => setEditingBudget(null)}>
         <DialogContent>
