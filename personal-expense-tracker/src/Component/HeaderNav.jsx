@@ -8,8 +8,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import logo from "../Asset/Logo/favicon.ico";
 import { Avatar, AvatarFallback, AvatarImage, } from "../Component/avatar";
 const HeaderNav = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const storedUser = localStorage.getItem('user');
   const users = JSON.parse(storedUser);
   let fullname = "";
@@ -26,212 +25,22 @@ const storedUser = localStorage.getItem('user');
       const nameParts = fullname.toLowerCase().split(" ").filter(part => part);
       initials = nameParts.map(part => part[0].toUpperCase()).join("");
     }
-  }
-  useEffect(() => {
-    const getNotifications = async () => {
-        if (!users) return; // Check if user exists
 
-        try {
-            const response = await fetch(`https://ketrb-backend.onrender.com/notifications?id=${users.id}&role=${users.roles}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-            if (response.ok) {
-                const fetchedNotifications = await response.json();
-                setNotifications(fetchedNotifications.notifications);
-                const unreadNotifications = fetchedNotifications.notifications.filter(notification => !notification.is_read);
-                setUnreadCount(unreadNotifications.length); // Update unread count
-            } else {
-                console.error('Failed to fetch notifications');
-            }
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-        }
-    };
-
-    getNotifications();
-}, [users]); // Add users as a dependency
-  
-  const location = useLocation();
-  const getPathname = (path) => path.split('/').filter(Boolean);
-
-  const handleNotificationClick = async (notificationId) => {
-  try {
-    // Call the API to update the notification status
-    const response = await fetch(`https://ketrb-backend.onrender.com/notifications/${notificationId}/status`, {
-      method: 'PUT', // or 'PATCH' depending on your API design
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ is_read: true }), // Adjust this payload as needed
-    });
-
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-
-    // Update local state after successful API call
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId ? { ...notification, is_read: true } : notification
-      )
-    );
-    setUnreadCount((prev) => prev - 1);
-  } catch (error) {
-    console.error("Failed to update notification status:", error);
-    // Optionally, you can show a user-friendly error message here
-  }
-};
-  
-  const handleLogout = async () => {
-    console.log("Logging out...");
-
-    try {
-      const response = await fetch(`https://ketrb-backend.onrender.com/users/logout/${userEmail}`, {
-        method: 'POST',
-        credentials: 'include', // Ensure cookies are included
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log('Logout successful:', data.message);
-        // Optionally redirect to login or another page after logout
-        window.location.href = '/login';
-      } else {
-        console.error('Logout failed:', data.message);
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-  };
-  const breadcrumbItems = () => {
-    const paths = getPathname(location.pathname);
-
-    if (paths.length === 0) {
-      return (
-        <BreadcrumbItem key="dashboard" className="text-sm font-medium">
-          <BreadcrumbLink asChild>
-            <Link to="/" prefetch={false} className="hover:text-blue-500 transition-colors duration-200">
-              Dashboard
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-      );
-    }
-
-    return (
-      <>
-        <BreadcrumbItem key="dashboard" className="text-sm font-medium">
-          <BreadcrumbLink asChild>
-            <Link to="/" prefetch={false} className="hover:text-blue-500 transition-colors duration-200">
-              Dashboard
-            </Link>
-          </BreadcrumbLink>
-          <BreadcrumbSeparator className="mx-1" />
-        </BreadcrumbItem>
-        {paths.map((path, index) => {
-          const url = `/${paths.slice(0, index + 1).join('/')}`;
-          const formattedPath = path
-            .split('%20')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-
-          return (
-            <BreadcrumbItem key={index} className="text-sm font-medium">
-              {index < paths.length - 1 ? (
-                <>
-                  <BreadcrumbLink asChild>
-                    <Link to={url} prefetch={false} className="hover:text-blue-500 transition-colors duration-200">
-                      {formattedPath}
-                    </Link>
-                  </BreadcrumbLink>
-                  <BreadcrumbSeparator className="mx-1" />
-                </>
-              ) : (
-                <BreadcrumbPage className="text-gray-600 font-medium">
-                  {formattedPath}
-                </BreadcrumbPage>
-              )}
-            </BreadcrumbItem>
-          );
-        })}
-      </>
-    );
-  };
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-      <Sheet className="bg-white">
-        <SheetTrigger asChild>
-          <Button size="icon" variant="outline" className="sm:hidden">
-            <MenuIcon className="h-5 w-5" />
-            <span className="sr-only">Toggle Menu</span>
+    <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+            <Menu className="h-6 w-6" />
           </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="sm:max-w-xs">
-          <nav className="grid gap-6 text-lg font-medium">
-            <Link
-              to="/"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-              prefetch={false}
-            >
-              <img
+      <>
+          <img
                 src={logo}
                 alt="KETRB CMS"
                 className="h-10 w-10 transition-all group-hover:scale-110"
               />
-              <span className="sr-only">KETRB CMS</span>
-            </Link>
-            <Link
-              to="/"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-              prefetch={false}
-            >
-              <LayoutGridIcon className="h-5 w-5" />
-              Dashboard
-            </Link>
-            <Link to="/news" className="flex items-center gap-4 px-2.5 text-foreground" prefetch={false}>
-              <NewspaperIcon className="h-5 w-5" />
-              News
-            </Link>
-            <Link to="/images" className="flex items-center gap-4 px-2.5 text-foreground" prefetch={false}>
-              <ImageIcon className="h-5 w-5" />
-              Images
-            </Link>
-            <Link to="/programs" className="flex items-center gap-4 px-2.5 text-foreground" prefetch={false}>
-              <CalendarIcon vmarIcon className="h-5 w-5" />
-              Programs
-            </Link>
-            <Link
-              to="/users"
-              className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-              prefetch={false}
-            >
-              <UsersIcon className="h-5 w-5" />
-              Users
-            </Link>
-            {/* 
-<Link
-  to="/profile"
-  className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-  prefetch={false}
->
-  <SettingsIcon className="h-5 w-5" />
-  Settings
-</Link>
-*/}
-
-          </nav>
-        </SheetContent>
-      </Sheet>
-      <Breadcrumb className="hidden md:flex items-center space-x-2 text-gray-600">
-        <BreadcrumbList>
-          {breadcrumbItems()}
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="relative ml-auto flex-1 md:grow-0">
+              <span className="sr-only">Expense Tracker</span>
+        </>
+         <>
+          <div className="relative ml-auto flex-1 md:grow-0">
         <div className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
@@ -243,11 +52,11 @@ const storedUser = localStorage.getItem('user');
   <DropdownMenuTrigger asChild>
     <Button variant="outline" size="icon" className="relative rounded-full">
       <BellIcon className="h-5 w-5" />
-      {unreadCount > 0 && (
+    
         <span className="absolute top-0 right-0 -mt-2 -mr-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-          {unreadCount}
+          2
         </span>
-      )}
+
     </Button>
   </DropdownMenuTrigger>
   
@@ -255,27 +64,27 @@ const storedUser = localStorage.getItem('user');
     <DropdownMenuLabel>Notifications</DropdownMenuLabel>
     <DropdownMenuSeparator />
     
-    {notifications.length === 0 ? (
+{/*     {notifications.length === 0 ? ( */}
       <div className="p-2 text-sm text-gray-500">No notifications</div>
-    ) : (
-      notifications.filter(notification => !notification.is_read).map((notification) => (
-        <DropdownMenuItem
-          key={notification.id}
-          className="grid grid-cols-[25px_1fr] items-start gap-2 p-2 hover:bg-muted"
-          onClick={() => handleNotificationClick(notification.id)}
-        >
-          <div className="flex h-2 w-2 translate-y-1.5 rounded-full bg-blue-500" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium">
-          {notification.message.length > 40 
-            ? `${notification.message.slice(0, 40)}...` 
-            : notification.message}
-        </p>
-            <p className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleTimeString()}</p>
-          </div>
-        </DropdownMenuItem>
-      ))
-    )}
+    // ) : (
+    //   notifications.filter(notification => !notification.is_read).map((notification) => (
+    //     <DropdownMenuItem
+    //       key={notification.id}
+    //       className="grid grid-cols-[25px_1fr] items-start gap-2 p-2 hover:bg-muted"
+    //       onClick={() => handleNotificationClick(notification.id)}
+    //     >
+    //       <div className="flex h-2 w-2 translate-y-1.5 rounded-full bg-blue-500" />
+    //       <div className="space-y-1">
+    //         <p className="text-sm font-medium">
+    //       {notification.message.length > 40 
+    //         ? `${notification.message.slice(0, 40)}...` 
+    //         : notification.message}
+    //     </p>
+    //         <p className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleTimeString()}</p>
+    //       </div>
+    //     </DropdownMenuItem>
+    //   ))
+    // )}
     
     <DropdownMenuSeparator />
     
@@ -305,7 +114,8 @@ const storedUser = localStorage.getItem('user');
           <DropdownMenuItem onClick={handleLogout}><LogOutIcon className="mr-2 h-4 w-4" />Logout</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </header>
+         </>
+        </header>
   );
 };
 
