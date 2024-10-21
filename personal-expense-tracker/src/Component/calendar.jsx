@@ -55,7 +55,7 @@ function Calendar({
       }}
       {...props} />)
   );
-  console.log(buttonVariants({ variant: "outline" })),
+ 
 }
 Calendar.displayName = "Calendar"
 
