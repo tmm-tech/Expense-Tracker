@@ -11,6 +11,7 @@ function Calendar({
   ...props
 }) {
   return (
+      console.log(buttonVariants({ variant: "outline" }));
     (<DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
@@ -21,7 +22,7 @@ function Calendar({
         caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
-          console.log(buttonVariants({ variant: "outline" }));
+        
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
