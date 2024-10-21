@@ -129,7 +129,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           <h2 className="text-2xl font-semibold">Budget Categories</h2>
           <Dialog open={isAddingBudget} onOpenChange={setIsAddingBudget}>
             <DialogTrigger asChild>
-              <Button>
+              <Button variant="black">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Budget Category
               </Button>
