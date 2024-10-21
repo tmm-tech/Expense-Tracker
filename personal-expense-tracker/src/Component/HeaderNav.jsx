@@ -31,11 +31,6 @@ const HeaderNav = () => {
         <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
           <Menu className="h-6 w-6" />
         </Button>
-        <img
-          src="/placeholder.svg?height=40&width=40"
-          alt="Expense Tracker"
-          className="h-10 w-10 transition-all group-hover:scale-110"
-        />
       </div>
       <div className="flex-1 mx-4">
         <div className="relative">
