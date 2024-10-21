@@ -1,8 +1,6 @@
 const express = require('express');
 require('dotenv').config();
-const path = require('path');
-const fs = require('fs');
-const cors = require('cors');
+// const cors = require('cors');
 const jwt = require('jsonwebtoken');
 // const cloudinary = require('cloudinary').v2;
 // const UserRoutes = require('./routes/UserRoutes');
@@ -15,13 +13,6 @@ const cookieParser = require('cookie-parser');
 const app = express(); 
 
 
-const corsOptions = {
-  origin: 'https://ketrb-cms-one.vercel.app', // Your frontend URL
-  credentials: true, // Allow cookies to be sent
-  methods: 'GET,POST,PUT,DELETE', // Allowed HTTP methods
-  allowedHeaders: 'Content-Type,Authorization' // Allowed headers
-};
-app.use(cors(corsOptions));
 
 // Body parsing
 app.use(express.json({ limit: '50mb' }));
