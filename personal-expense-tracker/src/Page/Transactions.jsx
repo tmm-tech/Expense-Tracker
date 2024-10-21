@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Download, Edit, Filter, PlusCircle, Search, Trash2} from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Download, Edit, Filter, PlusCircle, Search, Trash2, Upload} from "lucide-react";
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "../Component/button";
 import { Calendar } from "../Component/calendar";
@@ -185,9 +185,11 @@ const transactions = [
               <SelectValue placeholder="Account" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Credit Card">Credit Card</SelectItem>
-              <SelectItem value="Checking">Checking</SelectItem>
-              <SelectItem value="Savings">Savings</SelectItem>
+              <SelectItem value="Credit Card">Equity Debit Card</SelectItem>
+              <SelectItem value="Checking">I&M Debit Card</SelectItem>
+              <SelectItem value="Savings">CIC MMF</SelectItem>
+               <SelectItem value="Savings">LoftyCorban MMF</SelectItem>
+               <SelectItem value="Savings">ICEA LIONS INSURANCE</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -195,6 +197,10 @@ const transactions = [
           <Button variant="black">
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Transaction
+          </Button>
+           <Button variant="black">
+            <Upload className="mr-2 h-4 w-4" />
+            Import
           </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
