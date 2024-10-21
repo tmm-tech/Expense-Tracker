@@ -4,6 +4,8 @@ import { Sheet, SheetTrigger, SheetContent } from '../Component/sheet';
 import { Button } from '../Component/button';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '../Component/breadcrumb';
 import { Input } from '../Component/input';
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
+import Sidebar from '../Component/Sidebar';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '../Component/dropdown-menu';
 import logo from "../Asset/Logo/favicon.ico";
 import { Avatar, AvatarFallback, AvatarImage, } from "../Component/avatar";
@@ -112,7 +114,7 @@ const storedUser = localStorage.getItem('user');
           {/* <DropdownMenuLabel><Link to="/profile">My Account</Link></DropdownMenuLabel>*/}
           {/* <DropdownMenuItem><Link to="/profile">Settings</Link></DropdownMenuItem>*/}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout}><LogOutIcon className="mr-2 h-4 w-4" />Logout</DropdownMenuItem>
+          <DropdownMenuItem><LogOutIcon className="mr-2 h-4 w-4" />Logout</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
          </>
