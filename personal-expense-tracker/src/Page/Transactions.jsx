@@ -67,6 +67,7 @@ const transactions = [
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditingTransaction, setIsEditingTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState("");
 
