@@ -7,6 +7,9 @@ import { Calendar } from "../Component/calendar";
 import Sidebar from '../Component/Sidebar';
 import HeaderNav from '../Component/HeaderNav';
 import { ScrollArea } from "../Component/scroll-area";
+import { Label } from "../Component/label";
+import { Calendar } from "../Component/calendar";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -70,7 +73,32 @@ const transactions = [
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditingTransaction, setIsEditingTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState("");
+const [isOpen, setIsOpen] = useState(false)
+  const [date, setDate] = useState<Date>()
+  const [description, setDescription] = useState("")
+  const [category, setCategory] = useState("")
+  const [amount, setAmount] = useState("")
+  const [account, setAccount] = useState("")
 
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    const newTransaction = {
+      id: Date.now(),
+      date: date ? format(date, "yyyy-MM-dd") : "",
+      description,
+      category,
+      amount: parseFloat(amount),
+      account,
+    }
+    onAddTransaction(newTransaction)
+    setIsOpen(false)
+    // Reset form fields
+    setDate(undefined)
+    setDescription("")
+    setCategory("")
+    setAmount("")
+    setAccount("")
+  }
   const itemsPerPage = 10;
   const filteredTransactions = transactions.filter(transaction => 
     (searchQuery === "" || transaction.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
