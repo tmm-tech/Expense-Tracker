@@ -11,7 +11,6 @@ function Calendar({
   ...props
 }) {
   return (
-      console.log(buttonVariants({ variant: "outline" }));
     (<DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
@@ -56,6 +55,7 @@ function Calendar({
       }}
       {...props} />)
   );
+  console.log(buttonVariants({ variant: "outline" })),
 }
 Calendar.displayName = "Calendar"
 
