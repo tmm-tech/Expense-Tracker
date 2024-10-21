@@ -54,7 +54,7 @@ import {
 } from "../Component/card";
 
 // Mock data for transactions
-const transactions = [
+const initialTransactions = [
   { id: 1, date: "2023-10-01", description: "Grocery Shopping", category: "Food", amount: -120.50, account: "Credit Card" },
   { id: 2, date: "2023-10-02", description: "Salary Deposit", category: "Income", amount: 3000, account: "Checking" },
   { id: 3, date: "2023-10-03", description: "Electric Bill", category: "Utilities", amount: -85.20, account: "Checking" },
