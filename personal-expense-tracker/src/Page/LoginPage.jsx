@@ -1,12 +1,10 @@
-"use client"
-
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Eye, EyeOff, Facebook, Github, Loader2, LockIcon, Mail, Twitter } from "lucide-react"
-import { Button } from "../Component/button"
-import { Input } from ../Component/input"
-import { Label } from "../Component/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Facebook, Github, Loader2, LockIcon, Mail, Twitter } from "lucide-react";
+import { Button } from "../Component/button";
+import { Input } from ../Component/input";
+import { Label } from "../Component/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
