@@ -147,7 +147,7 @@ export default function Budget() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Save changes</Button>
+                  <Button type="submit" variant="black">Save changes</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
