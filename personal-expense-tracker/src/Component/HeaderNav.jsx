@@ -25,6 +25,7 @@ const storedUser = localStorage.getItem('user');
       const nameParts = fullname.toLowerCase().split(" ").filter(part => part);
       initials = nameParts.map(part => part[0].toUpperCase()).join("");
     }
+  }
 
   return (
     <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
