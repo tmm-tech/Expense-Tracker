@@ -6,7 +6,8 @@ import { buttonVariants } from "../Component/button"; // Ensure this path is cor
 
 function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
   // Debugging log
-  console.log("Button Variant for Outline:", buttonVariants({ variant: "outline" }));
+  const outlineButtonClasses = buttonVariants.variant["outline"];
+console.log("Button Variant for Outline:", outlineButtonClasses);
 
   return (
     <DayPicker
