@@ -32,7 +32,7 @@ export default function Budget() {
   const [editingBudget, setEditingBudget] = useState("")
   const totalBudgeted = budgets.reduce((sum, budget) => sum + budget.budgeted, 0)
   const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
-
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const handleAddBudget = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
