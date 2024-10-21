@@ -140,7 +140,7 @@ export default function AddTransaction({ onAddTransaction }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Add Transaction</Button>
+            <Button type="submit" variant="black">Add Transaction</Button>
           </DialogFooter>
         </form>
       </DialogContent>
