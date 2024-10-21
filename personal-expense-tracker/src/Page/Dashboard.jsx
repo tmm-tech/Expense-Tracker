@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieCha
 import { Button } from "../Component/button";
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import Sidebar from '../Component/Sidebar';
+import HeaderNav from '../Component/HeaderNav';
 // Mock data for demonstration
 const accountData = [
   { name: "Checking", balance: 2500, icon: Wallet, type: "asset" },
@@ -48,7 +49,7 @@ const incomeTrend = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d']
 
 export default function Dashboard() {
-   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+ 
   const totalAssets = accountData.filter(account => account.type === "asset").reduce((sum, account) => sum + account.balance, 0)
   const totalLiabilities = accountData.filter(account => account.type === "liability").reduce((sum, account) => sum + Math.abs(account.balance), 0)
   const netWorth = totalAssets - totalLiabilities
@@ -59,15 +60,7 @@ export default function Dashboard() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <Menu className="h-6 w-6" />
-          </Button>
-          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-6 w-6 text-gray-600" />
-          </Button>
-        </header>
+        <HeaderNav/>
 
         {/* Dashboard content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-transparent">
