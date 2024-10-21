@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { Link } from "react-router-dom"
 import { Menu, Bell, ChevronRight, LogOut } from "lucide-react"
 import { Button } from "../Component/button"
-import { Input } from "@/components/ui/input"
+import { Input } from "../Component/input"
 import { Avatar, AvatarFallback, AvatarImage } from "../Component/avatar"
 import {
   DropdownMenu,
