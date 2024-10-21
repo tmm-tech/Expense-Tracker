@@ -33,7 +33,8 @@ const goalProgressData = [
 ]
 
 export default function Goals() {
-  const [goals, setGoals] = useState(initialGoals)
+  const [goals, setGoals] = useState(initialGoals);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddingGoal, setIsAddingGoal] = useState(false)
   const [editingGoal, setEditingGoal] = useState("")
 
