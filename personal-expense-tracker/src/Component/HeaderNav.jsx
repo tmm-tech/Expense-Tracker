@@ -64,29 +64,29 @@ const storedUser = localStorage.getItem('user');
   <DropdownMenuContent align="end" className="w-80">
     <DropdownMenuLabel>Notifications</DropdownMenuLabel>
     <DropdownMenuSeparator />
-    
-{/*     {notifications.length === 0 ? ( */}
       <div className="p-2 text-sm text-gray-500">No notifications</div>
-    // ) : (
-    //   notifications.filter(notification => !notification.is_read).map((notification) => (
-    //     <DropdownMenuItem
-    //       key={notification.id}
-    //       className="grid grid-cols-[25px_1fr] items-start gap-2 p-2 hover:bg-muted"
-    //       onClick={() => handleNotificationClick(notification.id)}
-    //     >
-    //       <div className="flex h-2 w-2 translate-y-1.5 rounded-full bg-blue-500" />
-    //       <div className="space-y-1">
-    //         <p className="text-sm font-medium">
-    //       {notification.message.length > 40 
-    //         ? `${notification.message.slice(0, 40)}...` 
-    //         : notification.message}
-    //     </p>
-    //         <p className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleTimeString()}</p>
-    //       </div>
-    //     </DropdownMenuItem>
-    //   ))
-    // )}
-    
+{/*      {notifications.length === 0 ? ( 
+      <div className="p-2 text-sm text-gray-500">No notifications</div>
+    ) : (
+      notifications.filter(notification => !notification.is_read).map((notification) => (
+        <DropdownMenuItem
+          key={notification.id}
+          className="grid grid-cols-[25px_1fr] items-start gap-2 p-2 hover:bg-muted"
+          onClick={() => handleNotificationClick(notification.id)}
+        >
+          <div className="flex h-2 w-2 translate-y-1.5 rounded-full bg-blue-500" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+          {notification.message.length > 40 
+            ? `${notification.message.slice(0, 40)}...` 
+            : notification.message}
+        </p>
+            <p className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleTimeString()}</p>
+          </div>
+        </DropdownMenuItem>
+      ))
+    )}
+     */}
     <DropdownMenuSeparator />
     
     <DropdownMenuItem className="flex items-center justify-between gap-2 p-2 hover:bg-muted">
