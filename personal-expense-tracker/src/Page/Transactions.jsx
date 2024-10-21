@@ -8,7 +8,7 @@ import Sidebar from '../Component/Sidebar';
 import HeaderNav from '../Component/HeaderNav';
 import { ScrollArea } from "../Component/scroll-area";
 import { Label } from "../Component/label";
-import AddTransaction from "../Page/AddTransaction";
+import AddTransaction from "../Component/AddTransaction";
 import {
   Dialog,
   DialogContent,
