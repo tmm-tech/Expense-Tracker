@@ -1,14 +1,15 @@
 const express = require('express');
 require('dotenv').config();
-// const cors = require('cors');
+const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 // const cloudinary = require('cloudinary').v2;
 // const UserRoutes = require('./routes/UserRoutes');
 // const ImageRoutes = require('./routes/ImageRoutes');
 // const ProgramRoutes = require('./routes/ProgramRoutes');
 // const NewsRoutes = require('./routes/NewsRoutes');
 // const NotificationRoutes = require('./routes/NotificationRoutes'); 
-const cookieParser = require('cookie-parser');
+
 
 const app = express(); 
 
