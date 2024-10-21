@@ -138,7 +138,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           <h2 className="text-2xl font-semibold">Your Goals</h2>
           <Dialog open={isAddingGoal} onOpenChange={setIsAddingGoal}>
             <DialogTrigger asChild>
-              <Button>
+              <Button variant="black">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Goal
               </Button>
