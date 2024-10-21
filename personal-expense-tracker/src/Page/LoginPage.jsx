@@ -8,7 +8,7 @@ import { Input } from ../Component/input"
 import { Label } from "../Component/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card"
 
-export default function Component() {
+export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
