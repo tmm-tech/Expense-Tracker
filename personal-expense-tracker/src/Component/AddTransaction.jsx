@@ -10,12 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { format } from "date-fns"
 
 export default function AddTransaction({ onAddTransaction }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [date, setDate] = useState<Date>()
-  const [description, setDescription] = useState("")
-  const [category, setCategory] = useState("")
-  const [amount, setAmount] = useState("")
-  const [account, setAccount] = useState("")
+  const [isOpen, setIsOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+  const [account, setAccount] = useState("");
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
