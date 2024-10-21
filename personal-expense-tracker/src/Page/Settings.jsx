@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../Component/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
 import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
 import Sidebar from '../Component/Sidebar';
-
+import HeaderNav from '../Component/HeaderNav';
 export default function Settings() {
   const [theme, setTheme] = useState("system");
 
@@ -67,16 +67,7 @@ export default function Settings() {
         <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <Menu className="h-6 w-6" />
-          </Button>
-          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-6 w-6 text-gray-600" />
-          </Button>
-        </header>
+       <HeaderNav/>
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Settings</h1>
 
