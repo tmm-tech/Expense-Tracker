@@ -5,6 +5,7 @@ import Transactions from './Page/Transactions';
 import Budget from './Page/Budget';
 import Goals from './Page/Goals';
 import Settings from './Page/Settings';
+import LoginPage from './Page/LoginPage';
 function App() {
   return (
     <div className="App">
@@ -14,6 +15,7 @@ function App() {
             <Route path="/budget" element={<Budget />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/login" element={<LoginPage />} />
       </Routes>
     </div>
   );

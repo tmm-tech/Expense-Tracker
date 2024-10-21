@@ -14,6 +14,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { ScrollArea } from "../Component/scroll-area";
 import Sidebar from '../Component/Sidebar';
+import HeaderNav from '../Component/HeaderNav';
 // Mock data for goals
 const initialGoals = [
   { id: 1, name: "Emergency Fund", target: 10000, current: 5000, deadline: "2024-12-31" },
@@ -35,7 +36,7 @@ export default function Goals() {
   const [goals, setGoals] = useState(initialGoals)
   const [isAddingGoal, setIsAddingGoal] = useState(false)
   const [editingGoal, setEditingGoal] = useState("")
-const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const totalTargetAmount = goals.reduce((sum, goal) => sum + goal.target, 0)
   const totalCurrentAmount = goals.reduce((sum, goal) => sum + goal.current, 0)
 
@@ -76,16 +77,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
         <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <Menu className="h-6 w-6" />
-          </Button>
-          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-6 w-6 text-gray-600" />
-          </Button>
-        </header>
+        <HeaderNav/>
   <ScrollArea className="h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Financial Goals</h1>

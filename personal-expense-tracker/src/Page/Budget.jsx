@@ -12,6 +12,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
 import Sidebar from '../Component/Sidebar';
+import HeaderNav from '../Component/HeaderNav';
 import { ScrollArea } from "../Component/scroll-area";
 
 // Mock data for budgets
@@ -29,7 +30,6 @@ export default function Budget() {
   const [budgets, setBudgets] = useState(initialBudgets)
   const [isAddingBudget, setIsAddingBudget] = useState(false)
   const [editingBudget, setEditingBudget] = useState("")
-const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const totalBudgeted = budgets.reduce((sum, budget) => sum + budget.budgeted, 0)
   const totalSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
 
@@ -68,15 +68,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white bg-opacity-90 border-b p-4 flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <Menu className="h-6 w-6" />
-          </Button>
-          <h1 className="text-2xl font-semibold text-gray-800">Financial Dashboard</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-6 w-6 text-gray-600" />
-          </Button>
-        </header>
+        <HeaderNav/>
   <ScrollArea className="h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Budget Overview</h1>
