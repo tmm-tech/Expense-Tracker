@@ -40,7 +40,7 @@ export default function AddTransaction({ onAddTransaction }) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="default">
+        <Button variant="black">
           Add Transaction
         </Button>
       </DialogTrigger>
