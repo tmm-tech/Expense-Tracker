@@ -199,7 +199,7 @@ const transactions = [
           </Select>
         </div>
         <div className="flex items-center space-x-2">
-          <Button>
+          <Button variant="black">
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Transaction
           </Button>
