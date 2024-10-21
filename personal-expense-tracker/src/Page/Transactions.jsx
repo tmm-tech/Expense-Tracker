@@ -71,12 +71,12 @@ const transactions = [
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditingTransaction, setIsEditingTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState("");
-const [isOpen, setIsOpen] = useState(false)
-  const [date, setDate] = useState<Date>()
-  const [description, setDescription] = useState("")
-  const [category, setCategory] = useState("")
-  const [amount, setAmount] = useState("")
-  const [account, setAccount] = useState("")
+const [isOpen, setIsOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+  const [account, setAccount] = useState("");
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
