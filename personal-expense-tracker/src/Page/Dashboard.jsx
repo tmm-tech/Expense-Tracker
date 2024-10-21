@@ -49,7 +49,7 @@ const incomeTrend = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d']
 
 export default function Dashboard() {
- 
+ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const totalAssets = accountData.filter(account => account.type === "asset").reduce((sum, account) => sum + account.balance, 0)
   const totalLiabilities = accountData.filter(account => account.type === "liability").reduce((sum, account) => sum + Math.abs(account.balance), 0)
   const netWorth = totalAssets - totalLiabilities
