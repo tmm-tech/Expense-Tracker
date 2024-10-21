@@ -35,7 +35,7 @@ const storedUser = localStorage.getItem('user');
       <>
           <img
                 src={logo}
-                alt="KETRB CMS"
+                alt="Expense Tracker"
                 className="h-10 w-10 transition-all group-hover:scale-110"
               />
               <span className="sr-only">Expense Tracker</span>
