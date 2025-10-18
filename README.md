@@ -25,9 +25,9 @@ Expense Tracker Vault is a lightweight, user-authenticated app that allows you t
 
 | Layer       | Technology                      |
 |-------------|----------------------------------|
-| Frontend    | React.js / Next.js               |
-| Backend     | Node.js / Express / NestJS       |
-| Database    | MongoDB / PostgreSQL             |
+| Frontend    | React.js                         |
+| Backend     | Node.js                          |
+| Database    | PostgreSQL                       |
 | Auth        | JWT + bcrypt                     |
 | Deployment  | Vercel                           |
 
@@ -49,5 +49,5 @@ Expense Tracker Vault is a lightweight, user-authenticated app that allows you t
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/expense-tracker-vault.git
+git clone https://github.com/tmm-tech/Expense-Tracker.git
 cd expense-tracker-vault
