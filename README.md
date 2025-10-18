@@ -48,7 +48,7 @@ Expense Tracker Vault is a lightweight, user-authenticated app that allows you t
 
 ### 1. Clone the Repository
 
-```bash
+bash
 git clone https://github.com/tmm-tech/Expense-Tracker.git
 cd expense-tracker-vault
 
@@ -57,7 +57,7 @@ cd expense-tracker-vault
 
 ### 1. Install Dependencies
 
-```bash
+bash
 npm install
 
 # Deployment
