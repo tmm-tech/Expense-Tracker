@@ -1,268 +1,210 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../Component/card";
-import { Progress } from "../Component/progress";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../Component/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Button } from "../Component/button";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
-import Sidebar from '../Component/Sidebar';
-import HeaderNav from '../Component/HeaderNav';
-// Mock data for demonstration
-const accountData = [
-  { name: "Checking", balance: 2500, icon: Wallet, type: "asset" },
-  { name: "Savings", balance: 10000, icon: PiggyBank, type: "asset" },
-  { name: "Credit Card", balance: -500, icon: CreditCard, type: "liability" },
-  { name: "Investment", balance: 5000, icon: Building, type: "asset" },
-  { name: "Mortgage", balance: -200000, icon: Home, type: "liability" },
-]
-
-const budgetData = [
-  { category: "Groceries", spent: 300, budget: 400 },
-  { category: "Entertainment", spent: 150, budget: 200 },
-  { category: "Bills", spent: 800, budget: 1000 },
-  { category: "Transportation", spent: 100, budget: 150 },
-]
-
-const goalData = [
-  { name: "Vacation", current: 2000, target: 5000 },
-  { name: "New Laptop", current: 800, target: 1500 },
-]
-
-const expenseDistribution = [
-  { name: "Housing", value: 1200 },
-  { name: "Food", value: 500 },
-  { name: "Transportation", value: 300 },
-  { name: "Utilities", value: 200 },
-  { name: "Entertainment", value: 150 },
-  { name: "Other", value: 250 },
-]
-
-const incomeTrend = [
-  { month: "Jan", income: 4000 },
-  { month: "Feb", income: 4200 },
-  { month: "Mar", income: 4100 },
-  { month: "Apr", income: 4400 },
-  { month: "May", income: 4300 },
-  { month: "Jun", income: 4550 },
-]
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d']
+import { useState } from "react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import AnimatedNumber from "../Component/AnimatedNumber";
+import TimeRangeSelector from "../Component/TimeRangeSelector";
+import NetWorthChart from "../Component/Charts/NetWorthChart";
+import BudgetChart from "../Component/Charts/BudgetChart";
+import { generateInsights } from "../Services/insights";
+import Sidebar from "../Component/Sidebar";
+import TopBar from "../Component/TopBar";
+import { DragHandleDots2Icon } from "@radix-ui/react-icons";
 
 export default function Dashboard() {
- const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const totalAssets = accountData.filter(account => account.type === "asset").reduce((sum, account) => sum + account.balance, 0)
-  const totalLiabilities = accountData.filter(account => account.type === "liability").reduce((sum, account) => sum + Math.abs(account.balance), 0)
-  const netWorth = totalAssets - totalLiabilities
+  const [range, setRange] = useState("1M");
+
+  const [widgets, setWidgets] = useState([
+    { id: "networth", title: "Net Worth", type: "kpi", primary: true },
+    { id: "cashflow", title: "Cash Flow", type: "kpi" },
+    { id: "chart", title: "Net Worth Trend", type: "chart", wide: true },
+    { id: "budget", title: "Budget Usage", type: "chart" },
+  ]);
+
+  const current = { spend: 2340, savings: 23, netWorth: 124560 };
+  const previous = { spend: 2160, savings: 25, netWorth: 120200 };
+
+  const insights = generateInsights(current, previous);
+
+  function onDragEnd(result) {
+    if (!result.destination) return;
+
+    const items = Array.from(widgets);
+    const [moved] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, moved);
+    setWidgets(items);
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
-        <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <HeaderNav/>
+    <div style={styles.wrapper}>
+      <Sidebar />
+      <main style={styles.main}>
+        <TopBar />
 
-        {/* Dashboard content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-transparent">
-          <div className="container mx-auto p-4">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {accountData.map((account) => (
-                <Card key={account.name} className="bg-white bg-opacity-90">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-700">{account.name}</CardTitle>
-                    <account.icon className="h-4 w-4 text-gray-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${account.type === 'asset' ? 'text-green-600' : 'text-red-600'}`}>
-                      ${Math.abs(account.balance).toLocaleString()}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {account.type === 'asset' ? 'Asset' : 'Liability'}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="mt-6 grid gap-6 md:grid-cols-3">
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Total Assets</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600 flex items-center">
-                    <TrendingUp className="h-6 w-6 mr-2 text-gray-600" />
-                    ${totalAssets.toLocaleString()}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Total Liabilities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-red-600 flex items-center">
-                    <TrendingDown className="h-6 w-6 mr-2 text-gray-600" />
-                    ${totalLiabilities.toLocaleString()}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Net Worth</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-3xl font-bold flex items-center ${netWorth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    <DollarSign className="h-6 w-6 mr-2 text-gray-600" />
-                    {netWorth.toLocaleString()}
-                    {netWorth > 0 ? (
-                      <ArrowUpRight className="h-4 w-4 text-green-500 ml-2" />
-                    ) : (
-                      <ArrowDownRight className="h-4 w-4 text-red-500 ml-2" />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Monthly Budget Progress</CardTitle>
-                  <CardDescription className="text-gray-500">Track your spending across categories</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      spent: {
-                        label: "Spent",
-                        color: "hsl(var(--chart-1))",
-                      },
-                      budget: {
-                        label: "Budget",
-                        color: "hsl(var(--chart-2))",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={budgetData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="category" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="spent" fill="var(--color-spent)" name="Spent" />
-                        <Bar dataKey="budget" fill="var(--color-budget)" name="Budget" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Financial Goals</CardTitle>
-                  <CardDescription className="text-gray-500">Track your progress towards your goals</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  {goalData.map((goal) => (
-                    <div key={goal.name} className="space-y-2">
-                      <div className="flex items-center">
-                        <Target className="h-4 w-4 mr-2 text-gray-500" />
-                        <span className="text-sm font-medium text-gray-700">{goal.name}</span>
-                        <span className="ml-auto text-sm text-gray-500">
-                          ${goal.current} / ${goal.target}
-                        </span>
-                      </div>
-                      <Progress value={(goal.current / goal.target) * 100} className="h-2 bg-gray-200">
-                        <div className="h-full bg-gray-600 rounded-full" style={{ width: `${(goal.current / goal.target) * 100}%` }} />
-                      </Progress>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Expense Distribution</CardTitle>
-                  <CardDescription className="text-gray-500">Breakdown of your monthly expenses</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      expenses: {
-                        label: "Expenses",
-                        color: "hsl(var(--chart-1))",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={expenseDistribution}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {expenseDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                  <div className="mt-4 flex flex-wrap justify-center">
-                    {expenseDistribution.map((entry, index) => (
-                      <div key={`legend-${index}`} className="flex items-center mr-4 mb-2">
-                        <div className="w-3 h-3 mr-1" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                        <span className="text-sm text-gray-600">{entry.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white bg-opacity-90">
-                <CardHeader>
-                  <CardTitle className="text-gray-700">Income Trend</CardTitle>
-                  <CardDescription className="text-gray-500">Your income over the last 6 months</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      income: {
-                        label: "Income",
-                        color: "hsl(var(--chart-1))",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={incomeTrend}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-            </div>
-          
+        {/* HEADER */}
+        <div style={styles.header}>
+          <div>
+            <h2>Overview</h2>
+            <p style={styles.subtext}>Snapshot of your financial health</p>
           </div>
-        </main>
-      </div>
+          <TimeRangeSelector value={range} onChange={setRange} />
+        </div>
+
+        {/* DASHBOARD GRID */}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="dashboard">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                style={styles.grid}
+              >
+                {widgets.map((w, index) => (
+                  <Draggable key={w.id} draggableId={w.id} index={index}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`card ${w.wide ? "card-wide" : ""}`}
+                        style={{
+                          ...provided.draggableProps.style,
+                          gridColumn: w.wide ? "span 2" : "auto",
+                        }}
+                      >
+                        {/* WIDGET HEADER */}
+                        <div style={styles.widgetHeader}>
+                          <h3>{w.title}</h3>
+                          <span
+                            {...provided.dragHandleProps}
+                            style={styles.dragHandle}
+                            title="Drag to reorder"
+                          >
+                            <DragHandleDots2Icon />
+                          </span>
+                        </div>
+
+                        {/* KPI */}
+                        {w.type === "kpi" && (
+                          <div style={styles.kpi}>
+                            <h2
+                              className="amount"
+                              style={{
+                                fontSize: w.primary ? 36 : 28,
+                              }}
+                            >
+                              <AnimatedNumber
+                                value={
+                                  w.id === "networth"
+                                    ? current.netWorth
+                                    : current.spend
+                                }
+                                prefix="$"
+                              />
+                            </h2>
+                            <span style={styles.kpiMeta}>
+                              {w.id === "networth"
+                                ? "Total assets minus liabilities"
+                                : "Net this period"}
+                            </span>
+                          </div>
+                        )}
+                        {/* CHARTS */}
+                        {w.id === "chart" && <NetWorthChart />}
+                        {w.id === "budget" && <BudgetChart />}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+        {/* AI INSIGHTS */}
+        <div className="card" style={styles.insights}>
+          <h3>What changed</h3>
+          <div style={styles.insightList}>
+            {insights.map((i, idx) => (
+              <div key={idx} style={styles.insightItem}>
+                🤖 {i}
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
     </div>
-  )
+  );
 }
+
+/* ===================== STYLES ===================== */
+
+const styles = {
+  wrapper: {
+    display: "flex",
+    height: "100vh",
+    overflow: "hidden",
+  },
+
+  main: {
+    flex: 1,
+    padding: 32,
+    overflowY: "auto",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+  },
+
+  subtext: {
+    marginTop: 4,
+    color: "var(--text-secondary)",
+    fontSize: 14,
+  },
+
+  insights: {
+    marginTop: 20,
+  },
+
+  insightList: {
+    display: "grid",
+    gap: 8,
+    marginTop: 8,
+  },
+
+  insightItem: {
+    padding: "8px 12px",
+    borderRadius: 10,
+    background: "rgba(255,255,255,0.06)",
+    fontSize: 14,
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gap: 24,
+    marginTop: 24,
+  },
+
+  widgetHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  dragHandle: {
+    cursor: "grab",
+    opacity: 0.6,
+  },
+
+  kpi: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+
+  kpiMeta: {
+    fontSize: 13,
+    color: "var(--text-secondary)",
+  },
+};

@@ -1,388 +1,235 @@
 import { useState } from "react";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Download, Edit, Filter, PlusCircle, Search, Trash2, Upload} from "lucide-react";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Settings, Menu, TrendingUp, TrendingDown } from "lucide-react";
-import { Button } from "../Component/button";
-import { Calendar } from "../Component/calendar";
-import Sidebar from '../Component/Sidebar';
-import HeaderNav from '../Component/HeaderNav';
-import { ScrollArea } from "../Component/scroll-area";
-import { Label } from "../Component/label";
-import AddTransaction from "../Component/AddTransaction";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../Component/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "../Component/dropdown-menu";
-import { Input } from "../Component/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../Component/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../Component/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../Component/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../Component/card";
+  MagnifyingGlassIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+} from "@radix-ui/react-icons";
+import Sidebar from "../Component/Sidebar";
 
-// Mock data for transactions
-const initialTransactions = [
-  { id: 1, date: "2023-10-01", description: "Grocery Shopping", category: "Food", amount: -120.50, account: "Credit Card" },
-  { id: 2, date: "2023-10-02", description: "Salary Deposit", category: "Income", amount: 3000, account: "Checking" },
-  { id: 3, date: "2023-10-03", description: "Electric Bill", category: "Utilities", amount: -85.20, account: "Checking" },
-  { id: 4, date: "2023-10-04", description: "Online Purchase", category: "Shopping", amount: -65.99, account: "Credit Card" },
-  { id: 5, date: "2023-10-05", description: "Restaurant Dinner", category: "Food", amount: -45.80, account: "Credit Card" },
-  // Add more transactions as needed
-]
+export default function Transactions() {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
 
-  export default function  Transactions() {
-   const [selectedDate, setSelectedDate] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedAccount, setSelectedAccount] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isEditingTransaction, setIsEditingTransaction] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState("");
-const [isOpen, setIsOpen] = useState(false);
-  const [date, setDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [amount, setAmount] = useState("");
-  const [account, setAccount] = useState("");
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const transactions = [
+    {
+      id: 1,
+      date: "2025-05-02",
+      name: "Salary",
+      category: "Income",
+      amount: 4500,
+    },
+    {
+      id: 2,
+      date: "2025-05-01",
+      name: "Starbucks",
+      category: "Food",
+      amount: -5.6,
+    },
+    {
+      id: 3,
+      date: "2025-05-01",
+      name: "Netflix",
+      category: "Entertainment",
+      amount: -15,
+    },
+    {
+      id: 4,
+      date: "2025-04-30",
+      name: "Uber",
+      category: "Travel",
+      amount: -18.2,
+    },
+  ];
 
-  const onAddTransaction = (transaction) => {
-    setTransactions((prevTransactions) => [...prevTransactions, transaction]);
-  };
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    const newTransaction = {
-      id: Date.now(),
-      date: date ? format(date, "yyyy-MM-dd") : "",
-      description,
-      category,
-      amount: parseFloat(amount),
-      account,
-    }
-    onAddTransaction(newTransaction)
-    setIsOpen(false)
-    // Reset form fields
-    setDate(undefined)
-    setDescription("")
-    setCategory("")
-    setAmount("")
-    setAccount("")
-  }
-  const itemsPerPage = 10;
-  const filteredTransactions = transactions.filter(transaction => 
-    (searchQuery === "" || transaction.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (!selectedDate || transaction.date === format(selectedDate, "yyyy-MM-dd")) &&
-    (!selectedCategory || transaction.category === selectedCategory) &&
-    (!selectedAccount || transaction.account === selectedAccount)
-  )
+  const filtered = transactions.filter((t) => {
+    const matchesQuery = t.name
+      .toLowerCase()
+      .includes(query.toLowerCase());
 
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "income" && t.amount > 0) ||
+      (filter === "expense" && t.amount < 0);
 
-  const totalIncome = filteredTransactions.reduce((sum, transaction) => 
-    transaction.amount > 0 ? sum + transaction.amount : sum, 0
-  )
-  const totalExpenses = filteredTransactions.reduce((sum, transaction) => 
-    transaction.amount < 0 ? sum + Math.abs(transaction.amount) : sum, 0
-  )
-
-  const handleEditTransaction = (transaction: any) => {
-    setEditingTransaction(transaction)
-    setIsEditingTransaction(true)
-  }
-
-  const handleDeleteTransaction = (id: number) => {
-    // Implement delete functionality here
-    console.log(`Deleting transaction with id: ${id}`)
-  }
+    return matchesQuery && matchesFilter;
+  });
 
   return (
-     <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
-       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <HeaderNav/>
-         <ScrollArea className="h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">Transactions</h1>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">${totalExpenses.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${(totalIncome - totalExpenses).toFixed(2)}</div>
-          </CardContent>
-        </Card>
+    <div style={styles.wrapper}>
+      <Sidebar />
+      <main style={styles.main}>
+      {/* HEADER */}
+      <div style={styles.header}>
+        <div>
+          <h2>Transactions</h2>
+          <p>Your recent financial activity</p>
+        </div>
       </div>
 
-      {/* Filters and Actions */}
-      <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
-        <div className="flex flex-wrap items-center space-x-2 space-y-2 md:space-y-0">
-          <Input
-            placeholder="Search transactions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full md:w-auto"
+      {/* CONTROLS */}
+      <div style={styles.controls}>
+        <div style={styles.search}>
+          <MagnifyingGlassIcon />
+          <input
+            placeholder="Search transactions"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={styles.input}
           />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full md:w-auto">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <Select onValueChange={(value) => setSelectedCategory(value)}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Food">Food</SelectItem>
-              <SelectItem value="Income">Income</SelectItem>
-              <SelectItem value="Utilities">Utilities</SelectItem>
-              <SelectItem value="Shopping">Shopping</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select onValueChange={(value) => setSelectedAccount(value)}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Account" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Credit Card">Equity Debit Card</SelectItem>
-              <SelectItem value="Checking">I&M Debit Card</SelectItem>
-              <SelectItem value="Savings">CIC MMF</SelectItem>
-               <SelectItem value="Savings">LoftyCorban MMF</SelectItem>
-               <SelectItem value="Savings">ICEA LIONS INSURANCE</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-        <div className="flex items-center space-x-2">
-           <AddTransaction onAddTransaction={onAddTransaction} />
-           <Button variant="black">
-            <Upload className="mr-2 h-4 w-4" />
-            Import
-          </Button>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
+
+        <div style={styles.filters}>
+          {["all", "income", "expense"].map((f) => (
+            <button
+            class="capitalize"
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                ...styles.filterBtn,
+                background:
+                  filter === f
+                    ? "rgba(38, 50, 63, 0.2)"
+                    : "transparent",
+              }}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Account</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>{transaction.date}</TableCell>
-                <TableCell>{transaction.description}</TableCell>
-                <TableCell>{transaction.category}</TableCell>
-                <TableCell className={transaction.amount >= 0 ? "text-green-600" : "text-red-600"}>
-                  ${Math.abs(transaction.amount).toFixed(2)}
-                </TableCell>
-                <TableCell>{transaction.account}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleEditTransaction(transaction)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteTransaction(transaction.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+      {/* TABLE */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <table width="100%">
+          <thead>
+            <tr style={styles.headRow}>
+              <th align="left">Date</th>
+              <th align="left">Merchant</th>
+              <th align="left">Category</th>
+              <th align="right">Amount</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.map((t) => (
+              <tr key={t.id} style={styles.row}>
+                <td>{t.date}</td>
+                <td>
+                  <strong>{t.name}</strong>
+                </td>
+                <td>{t.category}</td>
+                <td align="right">
+                  <span
+                    style={{
+                      ...styles.amount,
+                      color:
+                        t.amount > 0
+                          ? "var(--green)"
+                          : "var(--red)",
+                    }}
+                  >
+                    {t.amount > 0 ? (
+                      <ArrowUpIcon />
+                    ) : (
+                      <ArrowDownIcon />
+                    )}
+                    ${Math.abs(t.amount)}
+                  </span>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-700">
-          Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
-        </p>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan="4" style={styles.empty}>
+                  No transactions found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-
-      {/* Edit Transaction Modal */}
-      <Dialog open={isEditingTransaction} onOpenChange={setIsEditingTransaction}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Transaction</DialogTitle>
-            <DialogDescription>Make changes to your transaction here. Click save when you're done.</DialogDescription>
-          </DialogHeader>
-          {editingTransaction && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="date" className="text-right">
-                  Date
-                </label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={editingTransaction.date}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="description" className="text-right">
-                  Description
-                </label>
-                <Input
-                  id="description"
-                  value={editingTransaction.description}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="category" className="text-right">
-                  Category
-                </label>
-                <Select defaultValue={editingTransaction.category}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Food">Food</SelectItem>
-                    <SelectItem value="Income">Income</SelectItem>
-                    <SelectItem value="Utilities">Utilities</SelectItem>
-                    <SelectItem value="Shopping">Shopping</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="amount" className="text-right">
-                  Amount
-                </label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={Math.abs(editingTransaction.amount)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="account" className="text-right">
-                  Account
-                </label>
-                <Select defaultValue={editingTransaction.account}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Credit Card">Credit Card</SelectItem>
-                    <SelectItem value="Checking">Checking</SelectItem>
-                    <SelectItem value="Savings">Savings</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button type="submit">Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </main>
     </div>
-  </ScrollArea>
-    </div>
-  </div>
-  )
+  );
 }
+
+/* ===================== STYLES ===================== */
+
+const styles = {
+  wrapper: {
+    display: "flex",
+    height: "100vh",
+    overflow: "hidden",
+  },
+
+  main: {
+    flex: 1,
+    padding: 32,
+    overflowY: "auto",
+  },
+  
+  header: {
+    marginBottom: 12,
+  },
+
+  controls: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 16,
+    flexWrap: "wrap",
+  },
+
+  search: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "8px 12px",
+    borderRadius: 12,
+    background: "rgba(255,255,255,0.06)",
+  },
+
+  input: {
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: "white",
+  },
+
+  filters: {
+    display: "flex",
+    gap: 8,
+  },
+
+  filterBtn: {
+    padding: "6px 14px",
+    borderRadius: 16,
+    border: "none",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  headRow: {
+    color: "var(--text-secondary)",
+    fontSize: 13,
+  },
+
+  row: {
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+  },
+
+  amount: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    fontWeight: 600,
+  },
+
+  empty: {
+    textAlign: "center",
+    padding: 24,
+    color: "var(--text-secondary)",
+  },
+};

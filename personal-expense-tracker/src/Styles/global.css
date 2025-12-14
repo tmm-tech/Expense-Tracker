@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900;1&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&family=Oswald:wght@200..700&display=swap');
+
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@import "./theme.css";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+h1, h2, h3 {
+  margin: 0;
+}
+
+p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.amount {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* Glass Card */
+.card {
+  background: var(--bg-card);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 35px rgba(77, 163, 255, 0.25);
+}

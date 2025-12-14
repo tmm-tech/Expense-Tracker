@@ -1,326 +1,226 @@
-import { useState, useEffect } from "react";
-import { Bell, ChevronRight, Download, Globe, Lock, Moon, Palette, Sun, Trash2, Upload, User } from "lucide-react";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Target, PiggyBank, CreditCard, Building, Home, BarChart2, FileText, Menu, TrendingUp, TrendingDown } from "lucide-react";
-import { Button } from "../Component/button";
-import { Input } from "../Component/input";
-import { Label } from "../Component/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Component/select";
-import { Switch } from "../Component/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../Component/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../Component/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../Component/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../Component/dialog";
-import { Alert, AlertDescription, AlertTitle } from "../Component/alert";
-import Sidebar from '../Component/Sidebar';
-import HeaderNav from '../Component/HeaderNav';
+import { useState } from "react";
+import {
+  MoonIcon,
+  BellIcon,
+  GlobeIcon,
+  LockClosedIcon,
+} from "@radix-ui/react-icons";
+import Sidebar from "../Component/Sidebar";
+
 export default function Settings() {
-  const [theme, setTheme] = useState("system");
-
-  useEffect(() => {
-    if (theme === "light") {
-      document.documentElement.classList.remove("dark");
-    } else if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      const systemDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (systemDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  }, [theme]);
+  const [darkMode, setDarkMode] = useState(true);
+  const [emailReports, setEmailReports] = useState(false);
   const [currency, setCurrency] = useState("USD");
-  const [language, setLanguage] = useState("en");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    sms: false,
-  });
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-
-  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
-    setTheme(newTheme)
-    // Here you would implement the actual theme change logic
-  }
-
-  const handleNotificationChange = (type: "email" | "push" | "sms") => {
-    setNotifications(prev => ({ ...prev, [type]: !prev[type] }))
-  }
-
-  const handlePasswordChange = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    // Here you would implement the actual password change logic
-    setIsChangingPassword(false)
-  }
-
-  const handleDeleteAccount = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    // Here you would implement the actual account deletion logic
-    setIsDeletingAccount(false)
-  }
 
   return (
-      <div className="flex h-screen bg-gray-100 bg-[url('https://unsplash.com/photos/a-blurry-photo-of-a-white-background-GJKx5lhwU3M')] bg-cover bg-center bg-fixed">
-        <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-       <HeaderNav/>
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">Settings</h1>
+    <div style={styles.wrapper}>
+      <Sidebar />
+      <main style={styles.main}>
+        {/* HEADER */}
+        <div style={styles.header}>
+          <div>
+            <h2>Settings</h2>
+            <p>Manage your account preferences</p>
+          </div>
+        </div>
 
-      <Tabs defaultValue="account" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-4">
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="data">Data Management</TabsTrigger>
-        </TabsList>
+        {/* APPEARANCE */}
+        <section className="card" style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <MoonIcon />
+            <h3>Appearance</h3>
+          </div>
 
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Information</CardTitle>
-              <CardDescription>Manage your account details and security settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold">John Doe</h3>
-                  <p className="text-sm text-gray-500">john.doe@example.com</p>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value="John Doe" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value="john.doe@example.com" />
-              </div>
-              <Button variant="outline" onClick={() => setIsChangingPassword(true)}>
-                <Lock className="mr-2 h-4 w-4" />
-                Change Password
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <SettingRow
+            label="Dark mode"
+            description="Reduce eye strain and save battery life"
+          >
+            <Toggle checked={darkMode} onChange={setDarkMode} />
+          </SettingRow>
+        </section>
 
-        <TabsContent value="preferences">
-          <Card>
-            <CardHeader>
-              <CardTitle>Preferences</CardTitle>
-              <CardDescription>Customize your app experience</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Theme</Label>
-                <div className="flex space-x-2">
-                  <Button
-                    variant={theme === "light" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleThemeChange("light")}
-                  >
-                    <Sun className="mr-2 h-4 w-4" />
-                    Light
-                  </Button>
-                  <Button
-                    variant={theme === "dark" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleThemeChange("dark")}
-                  >
-                    <Moon className="mr-2 h-4 w-4" />
-                    Dark
-                  </Button>
-                  <Button
-                    variant={theme === "system" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleThemeChange("system")}
-                  >
-                    <Palette className="mr-2 h-4 w-4" />
-                    System
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger id="currency">
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD - US Dollar</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
-                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                    <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Select value={language} onValueChange={setLanguage}>
-                  <SelectTrigger id="language">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Español</SelectItem>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="de">Deutsch</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* NOTIFICATIONS */}
+        <section className="card" style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <BellIcon />
+            <h3>Notifications</h3>
+          </div>
 
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>Manage how you receive notifications</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="email-notifications">Email Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive notifications via email</p>
-                </div>
-                <Switch
-                  id="email-notifications"
-                  checked={notifications.email}
-                  onCheckedChange={() => handleNotificationChange("email")}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="push-notifications">Push Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive notifications on your device</p>
-                </div>
-                <Switch
-                  id="push-notifications"
-                  checked={notifications.push}
-                  onCheckedChange={() => handleNotificationChange("push")}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="sms-notifications">SMS Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive notifications via SMS</p>
-                </div>
-                <Switch
-                  id="sms-notifications"
-                  checked={notifications.sms}
-                  onCheckedChange={() => handleNotificationChange("sms")}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <SettingRow
+            label="Monthly email reports"
+            description="Receive a summary of your finances each month"
+          >
+            <Toggle checked={emailReports} onChange={setEmailReports} />
+          </SettingRow>
+        </section>
 
-        <TabsContent value="data">
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Management</CardTitle>
-              <CardDescription>Manage your data and account settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">Export Data</h3>
-                  <p className="text-sm text-gray-500">Download all your data</p>
-                </div>
-                <Button variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">Import Data</h3>
-                  <p className="text-sm text-gray-500">Upload data from another source</p>
-                </div>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">Delete Account</h3>
-                  <p className="text-sm text-gray-500">Permanently delete your account and all data</p>
-                </div>
-                <Button variant="destructive" onClick={() => setIsDeletingAccount(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {/* REGIONAL */}
+        <section className="card" style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <GlobeIcon />
+            <h3>Regional</h3>
+          </div>
 
-      {/* Change Password Dialog */}
-      <Dialog open={isChangingPassword} onOpenChange={setIsChangingPassword}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>Enter your current password and a new password.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handlePasswordChange}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input id="current-password" type="password" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type="password" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input id="confirm-password" type="password" required />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Change Password</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          <SettingRow
+            label="Currency"
+            description="Choose how amounts are displayed"
+          >
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              style={styles.select}
+            >
+              <option  value="USD">USD – US Dollar</option>
+              <option value="EUR">EUR – Euro</option>
+              <option value="GBP">GBP – British Pound</option>
+              <option value="KES">KES – Kenya Shilling</option>
+            </select>
+          </SettingRow>
+        </section>
 
-      {/* Delete Account Dialog */}
-      <Dialog open={isDeletingAccount} onOpenChange={setIsDeletingAccount}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete your account? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleDeleteAccount}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="delete-confirmation">
-                  Type "DELETE" to confirm
-                </Label>
-                <Input id="delete-confirmation" required />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" variant="destructive">Delete Account</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        {/* SECURITY */}
+        <section className="card" style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <LockClosedIcon />
+            <h3>Security</h3>
+          </div>
+
+          <SettingRow
+            label="Change password"
+            description="Update your account password regularly"
+          >
+            <button style={styles.secondaryBtn}>Update</button>
+          </SettingRow>
+
+          <SettingRow
+            label="Sign out of all sessions"
+            description="Log out from all devices"
+          >
+            <button style={styles.dangerBtn}>Sign out</button>
+          </SettingRow>
+        </section>
+      </main>
     </div>
-        </div>
-        </div>
-  )
+  );
 }
+
+/* ===================== COMPONENTS ===================== */
+
+function SettingRow({ label, description, children }) {
+  return (
+    <div style={styles.row}>
+      <div>
+        <strong>{label}</strong>
+        <p style={styles.description}>{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      style={{
+        ...styles.toggle,
+        background: checked ? "var(--blue)" : "rgba(255,255,255,0.2)",
+      }}
+    >
+      <div
+        style={{
+          ...styles.knob,
+          transform: checked ? "translateX(18px)" : "translateX(0)",
+        }}
+      />
+    </button>
+  );
+}
+
+/* ===================== STYLES ===================== */
+
+const styles = {
+   wrapper: {
+    display: "flex",
+    height: "100vh",
+    overflow: "hidden",
+  },
+
+  main: {
+    flex: 1,
+    padding: 32,
+    overflowY: "auto",
+  },
+  header: {
+    marginBottom: 24,
+  },
+
+  section: {
+    marginBottom: 24,
+  },
+
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  row: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 0",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+  },
+
+  description: {
+    fontSize: 13,
+    color: "var(--text-secondary)",
+    marginTop: 2,
+  },
+
+  toggle: {
+    width: 42,
+    height: 24,
+    borderRadius: 20,
+    border: "none",
+    padding: 3,
+    cursor: "pointer",
+    transition: "background 0.2s ease",
+  },
+
+  knob: {
+    width: 18,
+    height: 18,
+    borderRadius: "50%",
+    background: "white",
+    transition: "transform 0.2s ease",
+  },
+
+  select: {
+    padding: "6px 10px",
+    borderRadius: 8,
+    background: "rgba(255,255,255,0.1)",
+    color: "white",
+    border: "none",
+  },
+
+  secondaryBtn: {
+    padding: "6px 14px",
+    borderRadius: 10,
+    border: "none",
+    background: "rgba(255,255,255,0.12)",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  dangerBtn: {
+    padding: "6px 14px",
+    borderRadius: 10,
+    border: "none",
+    background: "rgba(255,92,124,0.25)",
+    color: "white",
+    cursor: "pointer",
+  },
+};
