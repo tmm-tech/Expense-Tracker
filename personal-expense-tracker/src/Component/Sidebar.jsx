@@ -73,7 +73,7 @@ export default function Sidebar({ role = "user" }) {
       <div style={styles.logoRow}>
         <h2 style={styles.logo}>
           {collapsed ? "A" : "Aure"}
-          <span style={{ color: "var(--blue)" }}>X</span>
+          <span style={styles.logoAccent}>X</span>
         </h2>
 
         <button
@@ -132,8 +132,20 @@ const styles = {
   },
 
   logo: {
+    fontSize: 30,
     fontWeight: 700,
-    fontSize: 20,
+    letterSpacing: "-1.5px",
+    background: "linear-gradient(90deg,#ffffff,#c7d2fe,#ffffff)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    animation: "logoShimmer 6s ease infinite",
+  },
+
+  logoAccent: {
+    color: "#4da3ff",
+    background: "linear-gradient(90deg,#4da3ff,#2cff9a)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
   },
 
   toggle: {

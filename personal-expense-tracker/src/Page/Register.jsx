@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   EnvelopeClosedIcon,
@@ -10,8 +10,14 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmpassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [show, setShow] = useState(false);
+  
+    useEffect(() => {
+      setTimeout(() => setShow(true), 300);
+    }, []);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -22,8 +28,13 @@ export default function Register() {
     setTimeout(() => {
       setLoading(false);
 
-      if (!name || !email || !password) {
+      if (!name || !email || !password || !confirmpassword) {
         setError("All fields are required.");
+        return;
+      }
+
+      if (password !== confirmpassword) {
+        setError("Passwords do not match.");
         return;
       }
 
@@ -38,16 +49,43 @@ export default function Register() {
 
   return (
     <div style={styles.wrapper}>
-      {/* BRAND */}
-      <div style={styles.brand}>
-        <h1>
-          Aure<span style={{ color: "var(--blue)" }}>X</span>
-        </h1>
-        <p>Your all-in-one personal finance platform</p>
-      </div>
+      {/* ANIMATED BACKGROUND */}
+      <div style={styles.gradient} />
+      <div style={{ ...styles.orb, ...styles.orb1 }} />
+      <div style={{ ...styles.orb, ...styles.orb2 }} />
+      <div style={{ ...styles.orb, ...styles.orb3 }} />
 
-      {/* CARD */}
-      <form className="card" style={styles.card} onSubmit={handleSubmit}>
+      {/* CONTENT */}
+      <div style={styles.content}>
+        {/* BRAND */}
+        <div
+          style={{
+            ...styles.brand,
+            opacity: show ? 1 : 0,
+            transform: show ? "translateY(0)" : "translateY(10px)",
+          }}
+        >
+          <h1 style={styles.logo}>
+            Aure<span style={styles.logoAccent}>X</span>
+          </h1>
+          <p className="tagline">
+            <span>Smart. </span>
+            <span>Secure. </span>
+            <span>Personal </span>
+            <span>Finance.</span>
+          </p>
+        </div>
+
+        {/* CARD */}
+        <form
+          className="card login-card"
+          style={{
+            ...styles.card,
+            opacity: show ? 1 : 0,
+            transform: show ? "translateY(0)" : "translateY(20px)",
+          }}
+          onSubmit={handleSubmit}
+        >
         <h2>Create your account</h2>
         <p style={styles.subtitle}>
           Start tracking, budgeting, and investing smarter
@@ -57,7 +95,7 @@ export default function Register() {
         {error && <div style={styles.error}>{error}</div>}
 
         {/* NAME */}
-        <div style={styles.field}>
+        <div className="input-wrapper" style={styles.field}>
           <PersonIcon />
           <input
             type="text"
@@ -69,7 +107,7 @@ export default function Register() {
         </div>
 
         {/* EMAIL */}
-        <div style={styles.field}>
+        <div className="input-wrapper" style={styles.field}>
           <EnvelopeClosedIcon />
           <input
             type="email"
@@ -81,7 +119,7 @@ export default function Register() {
         </div>
 
         {/* PASSWORD */}
-        <div style={styles.field}>
+        <div className="input-wrapper" style={styles.field}>
           <LockClosedIcon />
           <input
             type="password"
@@ -91,7 +129,17 @@ export default function Register() {
             style={styles.input}
           />
         </div>
-
+          {/*CONFIRM PASSWORD */}
+        <div className="input-wrapper" style={styles.field}>
+          <LockClosedIcon />
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmpassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            style={styles.input}
+          />
+        </div>
         {/* PASSWORD HINT */}
         <div style={styles.hint}>
           Use at least 8 characters with a mix of letters and numbers.
@@ -123,6 +171,7 @@ export default function Register() {
         </p>
       </form>
     </div>
+    </div>
   );
 }
 
@@ -130,28 +179,96 @@ export default function Register() {
 
 const styles = {
   wrapper: {
+    position: "relative",
     minHeight: "100vh",
+    overflow: "hidden",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  gradient: {
+    position: "absolute",
+    inset: 0,
+    background: "linear-gradient(120deg,#0f172a,#020617,#020617,#0b1220)",
+    backgroundSize: "400% 400%",
+    animation: "gradientMove 20s ease infinite",
+  },
+
+  orb: {
+    position: "absolute",
+    width: 320,
+    height: 320,
+    borderRadius: "50%",
+    filter: "blur(80px)",
+    opacity: 0.5,
+    animation: "float 18s ease-in-out infinite",
+  },
+
+  orb1: {
+    background: "#4da3ff",
+    top: "10%",
+    left: "15%",
+  },
+
+  orb2: {
+    background: "#2cff9a",
+    bottom: "15%",
+    right: "20%",
+    animationDelay: "4s",
+  },
+
+  orb3: {
+    background: "#a78bfa",
+    top: "40%",
+    right: "35%",
+    animationDelay: "8s",
+  },
+
+  content: {
+    position: "relative",
+    zIndex: 2,
+    display: "flex",
     gap: 80,
-    padding: 24,
+    alignItems: "center",
   },
 
   brand: {
-    maxWidth: 320,
+    maxWidth: 480,
+    transition: "all 0.8s ease",
+  },
+
+  logo: {
+    fontSize: 68,
+    fontWeight: 900,
+    letterSpacing: "-1.5px",
+    lineHeight: 1.1,
+    background: "linear-gradient(90deg,#ffffff,#c7d2fe,#ffffff)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    animation: "logoShimmer 6s ease infinite",
+  },
+
+  logoAccent: {
+    color: "#4da3ff",
+    background: "linear-gradient(90deg,#4da3ff,#2cff9a)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
   },
 
   card: {
-    width: 400,
+    width: 380,
+    padding: 28,
     display: "flex",
     flexDirection: "column",
     gap: 14,
+    backdropFilter: "blur(20px)",
+    transition: "all 0.8s ease",
   },
 
   subtitle: {
     fontSize: 14,
-    color: "var(--text-secondary)",
+    color: "#9aa4bf",
   },
 
   field: {
@@ -161,6 +278,7 @@ const styles = {
     padding: "10px 12px",
     borderRadius: 12,
     background: "rgba(255,255,255,0.08)",
+    transition: "box-shadow 0.3s ease, background 0.3s ease",
   },
 
   input: {
@@ -169,13 +287,6 @@ const styles = {
     border: "none",
     outline: "none",
     color: "white",
-    fontSize: 14,
-  },
-
-  hint: {
-    fontSize: 12,
-    color: "var(--text-secondary)",
-    marginTop: -4,
   },
 
   submit: {
@@ -184,7 +295,6 @@ const styles = {
     borderRadius: 14,
     border: "none",
     background: "linear-gradient(90deg,#4da3ff,#2cff9a)",
-    color: "black",
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -192,16 +302,20 @@ const styles = {
   footer: {
     textAlign: "center",
     fontSize: 13,
-    marginTop: 6,
+    marginTop: 8,
   },
 
   link: {
-    background: "none",
-    border: "none",
-    color: "var(--blue)",
-    cursor: "pointer",
-    padding: 0,
+    color: "#4da3ff",
   },
+
+
+  hint: {
+    fontSize: 12,
+    color: "var(--text-secondary)",
+    marginTop: -4,
+  },
+
 
   trust: {
     marginTop: 6,
