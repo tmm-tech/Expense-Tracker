@@ -3,16 +3,16 @@ require('dotenv').config();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-// const cloudinary = require('cloudinary').v2;
-// const UserRoutes = require('./routes/UserRoutes');
-// const ImageRoutes = require('./routes/ImageRoutes');
-// const ProgramRoutes = require('./routes/ProgramRoutes');
-// const NewsRoutes = require('./routes/NewsRoutes');
-// const NotificationRoutes = require('./routes/NotificationRoutes'); 
+const UserRoutes = require('./routes/UserRoutes');
+const BudgetRoutes = require('./routes/BudgetRoutes');
+const DashboardRoutes = require('./routes/DashboardRoutes');
+const ImportRoutes = require('./routes/ImportRoutes');
+const TransactionRoutes = require('./routes/TransactionRoutes');
+ 
 
 
 const app = express(); 
-
+app.use(cors());
 
 
 // Body parsing
@@ -37,13 +37,14 @@ const addTokenToRequest = async (req, res, next) => {
 app.use(addTokenToRequest);
 
 // // Route handling
-// app.use('/users', UserRoutes);
-// app.use('/images', ImageRoutes);
-// app.use('/programs', ProgramRoutes);
-// app.use('/notifications', NotificationRoutes);
-// app.use('/news', NewsRoutes);
+app.use('/users', UserRoutes);
+app.use('/budgets', BudgetRoutes);
+app.use('/dashboard', DashboardRoutes);
+app.use('/import', ImportRoutes);
+app.use('/transactions', TransactionRoutes);
+
 app.get('/', (req, res) => {
-    res.json({ message: "Confirmed Connection to KETRB CMS" });
+    res.json({ message: "Confirmed Connection to Aurex Expense Tracker" });
 });
 
 

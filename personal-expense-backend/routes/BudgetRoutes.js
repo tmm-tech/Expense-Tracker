@@ -1,24 +1,31 @@
-import express from "express";
-import prisma from "../prisma.js";
+const BudgetRoutes = require('express').Router();
+const { checkAuth } = require('../controllers/UserControllers');
 
-const BudgetRoutes = express.Router();
+const {
+  createBudget,
+  getAllBudgets,
+  getBudgetById,
+  updateBudget,
+  deleteBudget,
+  getBudgetByUserId
+} = require('../controllers/BudgetControllers');
 
-/* Get budgets for month */
-BudgetRoutes.get("/", async (req, res) => {
-  const { month } = req.query;
-  const budgets = await prisma.budget.findMany({
-    where: { userId: req.user.id, month },
-  });
-  res.json(budgets);
-});
+// Create a new budget
+BudgetRoutes.post('/create', checkAuth, createBudget);
 
-/* Update budget limit (drag) */
-BudgetRoutes.put("/:id", async (req, res) => {
-  const budget = await prisma.budget.update({
-    where: { id: req.params.id },
-    data: { limit: req.body.limit },
-  });
-  res.json(budget);
-});
+// Get all budgets
+BudgetRoutes.get('/all', checkAuth, getAllBudgets);
 
-export default router;
+// Get budget by ID
+BudgetRoutes.get('/:id', checkAuth, getBudgetById);
+
+// Get budgets by user ID
+BudgetRoutes.get('/user/:userId', checkAuth, getBudgetByUserId);
+
+// Update budget
+BudgetRoutes.put('/update/:id', checkAuth, updateBudget);
+
+// Delete budget
+BudgetRoutes.delete('/delete/:id', checkAuth, deleteBudget);
+
+module.exports = BudgetRoutes;

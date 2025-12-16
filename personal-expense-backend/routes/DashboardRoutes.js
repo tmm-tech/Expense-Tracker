@@ -1,27 +1,26 @@
-import express from "express";
-import prisma from "../prisma.js";
+const DashboardRoutes = require('express').Router();
 
-const DashboardRoutes = express.Router();
+const {
+  createDashboardEntry,
+  getAllDashboardEntries,
+  updateDashboardEntry,
+  deleteDashboardEntry,
+  getDashboardEntry,
+} = require('../controllers/DashboardControllers');
 
-/* Load layout */
-DashboardRoutes.get("/layout", async (req, res) => {
-  const layout = await prisma.dashboardLayout.findFirst({
-    where: { userId: req.user.id },
-  });
-  res.json(layout?.layout || null);
-});
+// Create a new dashboard entry
+DashboardRoutes.post('/entry', createDashboardEntry);
 
-/* Save layout */
-DashboardRoutes.post("/layout", async (req, res) => {
-  const { layout } = req.body;
+// Get all dashboard entries
+DashboardRoutes.get('/entries', getAllDashboardEntries);
 
-  const saved = await prisma.dashboardLayout.upsert({
-    where: { userId: req.user.id },
-    update: { layout },
-    create: { userId: req.user.id, layout },
-  });
+// Get a specific dashboard entry by ID
+DashboardRoutes.get('/entry/:id', getDashboardEntry);
 
-  res.json(saved);
-});
+// Update a specific dashboard entry by ID
+DashboardRoutes.put('/entry/:id', updateDashboardEntry);
 
-export default DashboardRoutes;
+// Delete a specific dashboard entry by ID
+DashboardRoutes.delete('/entry/:id', deleteDashboardEntry);
+
+module.exports = DashboardRoutes;

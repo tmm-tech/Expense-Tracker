@@ -15,12 +15,13 @@ export default function Dashboard() {
   const [widgets, setWidgets] = useState([
     { id: "networth", title: "Net Worth", type: "kpi", primary: true },
     { id: "cashflow", title: "Cash Flow", type: "kpi" },
+    { id: "liability", title: "Liability", type: "kpi" },
     { id: "chart", title: "Net Worth Trend", type: "chart", wide: true },
     { id: "budget", title: "Budget Usage", type: "chart" },
   ]);
 
-  const current = { spend: 2340, savings: 23, netWorth: 124560 };
-  const previous = { spend: 2160, savings: 25, netWorth: 120200 };
+  const current = { spend: 2340, savings: 23, netWorth: 124560, liability: 5000 };
+  const previous = { spend: 2160, savings: 25, netWorth: 120200, liability: 4800 };
 
   const insights = generateInsights(current, previous);
 
@@ -36,6 +37,7 @@ export default function Dashboard() {
   return (
     <div style={styles.wrapper}>
       <Sidebar />
+
       <main style={styles.main}>
         <TopBar />
 
@@ -88,25 +90,31 @@ export default function Dashboard() {
                               className="amount"
                               style={{
                                 fontSize: w.primary ? 36 : 28,
+                                color: w.id === "networth" ? "#10b981" : w.id === "liability" ? "#ef4444" : "inherit",
                               }}
                             >
                               <AnimatedNumber
                                 value={
                                   w.id === "networth"
                                     ? current.netWorth
-                                    : current.spend
+                                    : w.id === "cashflow"
+                                    ? current.spend
+                                    : current.liability
                                 }
-                                prefix="$"
+                                prefix={w.id === "liability" ? "-$" : "$"}
                               />
                             </h2>
                             <span style={styles.kpiMeta}>
                               {w.id === "networth"
                                 ? "Total assets minus liabilities"
+                                : w.id === "cashflow"
+                                ? "Total spend this period"
+                                : w.id === "liability"
+                                ? "Total liabilities"
                                 : "Net this period"}
                             </span>
                           </div>
                         )}
-                        {/* CHARTS */}
                         {w.id === "chart" && <NetWorthChart />}
                         {w.id === "budget" && <BudgetChart />}
                       </div>

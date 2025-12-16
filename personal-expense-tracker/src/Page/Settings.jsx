@@ -10,7 +10,7 @@ import Sidebar from "../Component/Sidebar";
 export default function Settings() {
   const [darkMode, setDarkMode] = useState(true);
   const [emailReports, setEmailReports] = useState(false);
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("KES");
 
   return (
     <div style={styles.wrapper}>
@@ -55,30 +55,30 @@ export default function Settings() {
         </section>
 
         {/* REGIONAL */}
-        <section className="card" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <GlobeIcon />
-            <h3>Regional</h3>
-          </div>
+          <section className="card" style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <GlobeIcon />
+              <h3>Regional</h3>
+            </div>
 
-          <SettingRow
-            label="Currency"
-            description="Choose how amounts are displayed"
-          >
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              style={styles.select}
+            <SettingRow
+              label="Currency"
+              description="Choose how amounts are displayed"
             >
-              <option  value="USD">USD – US Dollar</option>
-              <option value="EUR">EUR – Euro</option>
-              <option value="GBP">GBP – British Pound</option>
-              <option value="KES">KES – Kenya Shilling</option>
-            </select>
-          </SettingRow>
-        </section>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                style={{ ...styles.select, color: "black", backgroundColor: "lightgray" }}
+              >
+                <option value="USD">USD – US Dollar</option>
+                <option value="EUR">EUR – Euro</option>
+                <option value="GBP">GBP – British Pound</option>
+                <option value="KES">KES – Kenya Shilling</option>
+              </select>
+            </SettingRow>
+          </section>
 
-        {/* SECURITY */}
+          {/* SECURITY */}
         <section className="card" style={styles.section}>
           <div style={styles.sectionHeader}>
             <LockClosedIcon />
