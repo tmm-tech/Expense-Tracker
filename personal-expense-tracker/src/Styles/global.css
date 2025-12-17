@@ -96,6 +96,13 @@ tagline {
   }
 }
 
+@media (max-width: 768px) {
+  .card {
+    touch-action: none;
+  }
+}
+
+
 @keyframes logoShimmer {
   0% {
     background-position: 0% 50%;

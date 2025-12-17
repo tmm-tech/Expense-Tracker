@@ -1,26 +1,15 @@
+import { getInsights, getLayout, getSummary, saveLayout } from "../controller/DashboardControllers.js";
+import auth from "../middleware/auth.js";
+
 const DashboardRoutes = require('express').Router();
 
-const {
-  createDashboardEntry,
-  getAllDashboardEntries,
-  updateDashboardEntry,
-  deleteDashboardEntry,
-  getDashboardEntry,
-} = require('../controllers/DashboardControllers');
+/* Layout */
+DashboardRoutes.get("/layout", auth, getLayout);
+DashboardRoutes.post("/layout", auth, saveLayout);
 
-// Create a new dashboard entry
-DashboardRoutes.post('/entry', createDashboardEntry);
+/* Data */
+DashboardRoutes.post("/summary", auth, getSummary);
+DashboardRoutes.post("/insights", auth, getInsights);
 
-// Get all dashboard entries
-DashboardRoutes.get('/entries', getAllDashboardEntries);
-
-// Get a specific dashboard entry by ID
-DashboardRoutes.get('/entry/:id', getDashboardEntry);
-
-// Update a specific dashboard entry by ID
-DashboardRoutes.put('/entry/:id', updateDashboardEntry);
-
-// Delete a specific dashboard entry by ID
-DashboardRoutes.delete('/entry/:id', deleteDashboardEntry);
 
 module.exports = DashboardRoutes;

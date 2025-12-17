@@ -1,22 +1,15 @@
 const ImportRoutes = require('express').Router();
-
-const {
-    importData,
-    getAllImports,
-    getImportById,
-    updateImport,
-    deleteImport
-} = require('../controllers/ImportControllers');
+const multer = require("multer");
+const auth = require("../middleware/auth");
+const { importTransactions, importBudgets } = require('../controller/ImportControllers');
+const upload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
 
 // Import data
-ImportRoutes.post('/import', importData);
+ImportRoutes.post('/transactions', auth, upload.single('file'), importTransactions);
 // Get all imports
-ImportRoutes.get('/imports', getAllImports);
-// Get a specific import by ID
-ImportRoutes.get('/import/:id', getImportById);
-// Update an import
-ImportRoutes.put('/import/:id', updateImport);
-// Delete an import
-ImportRoutes.delete('/import/:id', deleteImport);
+ImportRoutes.get('/budgets', auth, upload.single("file"), importBudgets);
+
 
 module.exports = ImportRoutes;

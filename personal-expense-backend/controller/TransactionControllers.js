@@ -2,81 +2,223 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-// Get all transactions
-exports.getAllTransactions = async (req, res) => {
-    try {
-        const transactions = await prisma.transaction.findMany({
-            orderBy: { createdAt: 'desc' },
-        });
-        res.status(200).json(transactions);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+/**
+ * NOTE:
+ * req.user.id is assumed to be set by auth middleware
+ */
 
-// Get transaction by ID
-exports.getTransactionById = async (req, res) => {
+module.exports = {
+  /* ===========================
+     CREATE TRANSACTION
+  ============================ */
+  createTransaction: async (req, res) => {
     try {
-        const { id } = req.params;
-        const transaction = await prisma.transaction.findUnique({
-            where: { id: parseInt(id) },
-        });
-        if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-        res.status(200).json(transaction);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+      const { name, category, amount, date } = req.body;
 
-// Create transaction
-exports.createTransaction = async (req, res) => {
-    try {
-        const { amount, category, description, type } = req.body;
-        const transaction = await prisma.transaction.create({
-            data: {
-                amount: parseFloat(amount),
-                category,
-                description,
-                type,
-            },
-        });
-        res.status(201).json(transaction);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-};
+      const transaction = await prisma.transaction.create({
+        data: {
+          userId: req.user.id,
+          name,
+          category,
+          amount: Number(amount),
+          date: new Date(date),
+        },
+      });
 
-// Update transaction
-exports.updateTransaction = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { amount, category, description, type } = req.body;
-        const transaction = await prisma.transaction.update({
-            where: { id: parseInt(id) },
-            data: {
-                amount: amount ? parseFloat(amount) : undefined,
-                category,
-                description,
-                type,
-            },
-        });
-        res.status(200).json(transaction);
+      res.json({
+        success: true,
+        message: "Transaction created successfully",
+        data: transaction,
+      });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      console.error("Create transaction error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Create Transaction Error: ${error.message}`,
+      });
     }
-};
+  },
 
-// Delete transaction
-exports.deleteTransaction = async (req, res) => {
+  /* ===========================
+     GET TRANSACTIONS (FILTERED)
+     Query params:
+     - page
+     - limit
+     - category
+     - type (income | expense)
+     - from / to (date range)
+  ============================ */
+  getTransactions: async (req, res) => {
     try {
-        const { id } = req.params;
-        await prisma.transaction.delete({
-            where: { id: parseInt(id) },
-        });
-        res.status(204).send();
+      const {
+        page = 1,
+        limit = 20,
+        category,
+        type,
+        from,
+        to,
+      } = req.query;
+
+      const where = {
+        userId: req.user.id,
+      };
+
+      if (category) where.category = category;
+
+      if (type === "income") where.amount = { gt: 0 };
+      if (type === "expense") where.amount = { lt: 0 };
+
+      if (from || to) {
+        where.date = {};
+        if (from) where.date.gte = new Date(from);
+        if (to) where.date.lte = new Date(to);
+      }
+
+      const [transactions, total] = await Promise.all([
+        prisma.transaction.findMany({
+          where,
+          orderBy: { date: "desc" },
+          skip: (page - 1) * limit,
+          take: Number(limit),
+        }),
+        prisma.transaction.count({ where }),
+      ]);
+
+      res.json({
+        success: true,
+        data: transactions,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      console.error("Get transactions error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Get Transactions Error: ${error.message}`,
+      });
     }
+  },
+
+  /* ===========================
+     GET SINGLE TRANSACTION
+  ============================ */
+  getTransactionById: async (req, res) => {
+    try {
+      const transaction = await prisma.transaction.findFirst({
+        where: {
+          id: req.params.id,
+          userId: req.user.id,
+        },
+      });
+
+      if (!transaction) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Transaction not found" });
+      }
+
+      res.json({ success: true, data: transaction });
+    } catch (error) {
+      console.error("Get transaction error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Get Transaction Error: ${error.message}`,
+      });
+    }
+  },
+
+  /* ===========================
+     UPDATE TRANSACTION
+  ============================ */
+  updateTransaction: async (req, res) => {
+    try {
+      const { name, category, amount, date } = req.body;
+
+      const updated = await prisma.transaction.updateMany({
+        where: {
+          id: req.params.id,
+          userId: req.user.id,
+        },
+        data: {
+          name,
+          category,
+          amount: amount !== undefined ? Number(amount) : undefined,
+          date: date ? new Date(date) : undefined,
+        },
+      });
+
+      if (!updated.count) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Transaction not found" });
+      }
+
+      res.json({
+        success: true,
+        message: "Transaction updated successfully",
+      });
+    } catch (error) {
+      console.error("Update transaction error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Update Transaction Error: ${error.message}`,
+      });
+    }
+  },
+
+  /* ===========================
+     DELETE TRANSACTION
+  ============================ */
+  deleteTransaction: async (req, res) => {
+    try {
+      const deleted = await prisma.transaction.deleteMany({
+        where: {
+          id: req.params.id,
+          userId: req.user.id,
+        },
+      });
+
+      if (!deleted.count) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Transaction not found" });
+      }
+
+      res.json({
+        success: true,
+        message: "Transaction deleted successfully",
+      });
+    } catch (error) {
+      console.error("Delete transaction error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Delete Transaction Error: ${error.message}`,
+      });
+    }
+  },
+
+  /* ===========================
+     TRANSACTION SUMMARY (REPORTS)
+  ============================ */
+  getTransactionSummary: async (req, res) => {
+    try {
+      const summary = await prisma.transaction.groupBy({
+        by: ["category"],
+        where: { userId: req.user.id },
+        _sum: { amount: true },
+      });
+
+      res.json({ success: true, data: summary });
+    } catch (error) {
+      console.error("Transaction summary error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Transaction Summary Error: ${error.message}`,
+      });
+    }
+  },
 };

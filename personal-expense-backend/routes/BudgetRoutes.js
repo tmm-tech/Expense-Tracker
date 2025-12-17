@@ -1,31 +1,20 @@
-const BudgetRoutes = require('express').Router();
-const { checkAuth } = require('../controllers/UserControllers');
-
-const {
+import {
+  getBudgets,
   createBudget,
-  getAllBudgets,
-  getBudgetById,
-  updateBudget,
+  getBudgetUsage,
+  applyRollover,
   deleteBudget,
-  getBudgetByUserId
-} = require('../controllers/BudgetControllers');
+  applyRollover,
 
-// Create a new budget
-BudgetRoutes.post('/create', checkAuth, createBudget);
+} from "../controllers/budget.controller.js";
+import auth from "../middleware/auth.js";
 
-// Get all budgets
-BudgetRoutes.get('/all', checkAuth, getAllBudgets);
+const BudgetRoutes = require('express').Router();
 
-// Get budget by ID
-BudgetRoutes.get('/:id', checkAuth, getBudgetById);
+BudgetRoutes.get("/", auth, createBudget);
+BudgetRoutes.post("/", auth, getBudgets);
+BudgetRoutes.put("/usage", auth, getBudgetUsage);
+BudgetRoutes.delete("/:id", auth, deleteBudget);
+BudgetRoutes.post("/rollover", auth, applyRollover);
 
-// Get budgets by user ID
-BudgetRoutes.get('/user/:userId', checkAuth, getBudgetByUserId);
-
-// Update budget
-BudgetRoutes.put('/update/:id', checkAuth, updateBudget);
-
-// Delete budget
-BudgetRoutes.delete('/delete/:id', checkAuth, deleteBudget);
-
-module.exports = BudgetRoutes;
+export default BudgetRoutes;

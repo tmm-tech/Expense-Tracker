@@ -1,303 +1,270 @@
-const { query } = require('../config/sqlConfig');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const validateCreateUserSchema = require('../services/RegistrationValidation');
-const reportService = require('../services/SendEmailService');
-const { createToken } = require('../services/jwtServices');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const validateCreateUserSchema = require("../services/RegistrationValidation");
+const reportService = require("../services/SendEmailService");
+const { createToken } = require("../services/jwtServices");
 
 module.exports = {
-    // Create a new user
-    createUser: async (req, res) => {
-        const details = req.body;
-        try {
-            let value = await validateCreateUserSchema(details);
-            let hashed_pwd = await bcrypt.hash(value.password, 8);
+  /* ===========================
+     CREATE USER (REGISTER)
+  ============================ */
+  createUser: async (req, res) => {
+    try {
+      const value = await validateCreateUserSchema(req.body);
+      const hashed_pwd = await bcrypt.hash(value.password, 10);
 
-            const insertUserQuery = `
-                INSERT INTO users (fullname, email, password, gender, roles, status)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING id;
-            `;
-            const params = [
-                value.fullname,
-                value.email,
-                hashed_pwd,
-                value.gender,
-                value.roles,
-                'active',
-            ];
+      const user = await prisma.user.create({
+        data: {
+          name: value.fullname,
+          email: value.email,
+          password: hashed_pwd,
+          roles: value.roles,
+          status: "active",
+        },
+      });
 
-            const result = await query(insertUserQuery, params);
-            reportService.sendAccountCreation(value.email, value.password, value.fullname, value.roles);
+      reportService.sendAccountCreation(
+        user.email,
+        value.password,
+        user.name,
+        user.roles
+      );
 
-            res.json({ success: true, message: 'Registration successful', userId: result.rows[0].id });
-        } catch (error) {
-            console.error('Error registering user:', error);
-            res.status(500).json({ success: false, message: `Error registering user: ${error.message}` });
-        }
-    },
+      res.json({
+        success: true,
+        message: "Registration successful",
+        userId: user.id,
+      });
+    } catch (error) {
+      console.error("Error registering user:", error);
+      res.status(500).json({
+        success: false,
+        message: `Error registering user: ${error.message}`,
+      });
+    }
+  },
 
-    // User login and JWT token generation
-    loginUser: async (req, res) => {
-        const details = req.body;
-        try {
-            const findUserQuery = `
-                SELECT * FROM users WHERE email = $1;
-            `;
-            const userResult = await query(findUserQuery, [details.email]);
+  /* ===========================
+     LOGIN USER
+  ============================ */
+  loginUser: async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-            if (userResult.rows.length > 0) {
-                const user = userResult.rows[0];
-                const match = await bcrypt.compare(details.password, user.password);
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
 
-                if (match) {
-                    // Create JWT Token
-                    let token = await createToken({ email: user.email, id: user.id });
+      if (!user) {
+        return res
+          .status(401)
+          .json(
+          { success: false, message: "Invalid email or password" }
+        );
+      }
 
-                    // Set token as a cookie (HttpOnly and valid for 1 hour)
-                    res.cookie('token', token, {
-                        httpOnly: true,
-                        secure: true, // Ensures cookie is sent only over HTTPS
-                        sameSite: 'None', // Allows cross-site cookies
-                        maxAge: 60 * 60 * 1000 // 1 hour
-                    });
-                    // Respond with user data
-                    res.json({ success: true, data: user });
-                } else {
-                    res.status(401).json({ success: false, message: 'Invalid Credentials' });
-                }
-            } else {
-                res.status(401).json({ success: false, message: 'Invalid email or password' });
-            }
-        } catch (error) {
-            console.error('Error logging in:', error);
-            res.status(500).json({ success: false, message: 'Error logging in' });
-        }
-    },
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid credentials" });
+      }
 
-    // Get all Users
-    getAllUser: async (req, res) => {
-        try {
-            // SQL query to get all users where isdeleted is TRUE
-            const getUserQuery = `
-                SELECT * FROM users;
-            `;
-            const userResult = await query(getUserQuery); // Execute the query
+      const token = await createToken({
+        id: user.id,
+        email: user.email,
+        roles: user.roles,
+      });
 
-            if (userResult.rows.length > 0) {
-                // Send the user data if found
-                res.json({
-                    success: true,
-                    message: 'Users retrieved successfully',
-                    data: userResult.rows // Send all user data
-                });
-            } else {
-                // No users found, send a 404 response
-                res.status(404).json({
-                    success: false,
-                    message: 'No users found'
-                });
-            }
-        } catch (error) {
-            // Log the error and send a 500 response
-            console.error('Error getting users:', error);
-            res.status(500).json({
-                success: false,
-                message: `Get User Details Error: ${error.message}`
-            });
-        }
-    },
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 60 * 60 * 1000,
+      });
 
+      res.json({ success: true, data: user });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ success: false, message: "Error logging in" });
+    }
+  },
 
-    getAUser: async (req, res) => {
-        const { id } = req.params;
-        try {
-            const getUserQuery = `
-                SELECT * FROM users WHERE id = $1;
-            `;
-            const userResult = await query(getUserQuery, [id]);
+  /* ===========================
+     GET ALL USERS (ADMIN)
+  ============================ */
+  getAllUser: async (req, res) => {
+    try {
+      const users = await prisma.user.findMany();
 
+      if (!users.length) {
+        return res
+          .status(404)
+          .json({ success: false, message: "No users found" });
+      }
 
-            if (userResult.rows.length > 0) {
+      res.json({
+        success: true,
+        message: "Users retrieved successfully",
+        data: users,
+      });
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Get User Details Error: ${error.message}`,
+      });
+    }
+  },
 
-                res.json({ success: true, message: 'User retrieved successfully', data: userResult.rows[0] });
+  /* ===========================
+     GET SINGLE USER
+  ============================ */
+  getAUser: async (req, res) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.params.id },
+      });
 
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
 
-            } else {
-                res.status(404).json({ success: false, message: 'User not found' });
+      res.json({
+        success: true,
+        message: "User retrieved successfully",
+        data: user,
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Get User Details Error: ${error.message}`,
+      });
+    }
+  },
 
-            }
-        } catch (error) {
-            console.error('Error getting user:', error);
-            res.status(500).json({ success: false, message: `Get User Details Error: ${error.message}` });
+  /* ===========================
+     UPDATE USER
+  ============================ */
+  updateUser: async (req, res) => {
+    try {
+      const { fullname, email, roles, password } = req.body;
+      const data = {
+        name: fullname,
+        email,
+        roles,
+      };
 
-        }
-    },
+      if (password) {
+        data.password = await bcrypt.hash(password, 10);
+      }
 
-    // Update user details
-    updateUser: async (req, res) => {
-        const { fullname, email, roles, password } = req.body;
-        const { id } = req.params;
+      const user = await prisma.user.update({
+        where: { id: req.params.id },
+        data,
+      });
 
-        try {
-            
-            // Build the query and parameters
-            let updateUserQuery = `
-                UPDATE users
-                SET fullname = $1, email = $2, roles = $3
-            `;
-            let params = [fullname, email, roles];
+      reportService.sendPasswordUpdate({
+        email: user.email,
+        fullname: user.name,
+        roles: user.roles,
+        password: !!password,
+      });
 
-            // Check if the password is being updated
-            if (password) {
-                // You should hash the password before updating it in the database
-                const hashedPassword = await hashPassword(password); // hashPassword is a hypothetical function to hash the password
-                updateUserQuery += `, password = $4`;
-                params.push(hashedPassword); // Add the hashed password to the parameters
-            }
+      res.json({
+        success: true,
+        message: "User updated successfully",
+        data: user,
+      });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Error updating user: ${error.message}`,
+      });
+    }
+  },
 
-            // Finalize the query
-            updateUserQuery += ` WHERE id = $${params.length + 1} RETURNING *;`;
-            params.push(id);
+  /* ===========================
+     SOFT DELETE USER
+  ============================ */
+  SoftDeleteUser: async (req, res) => {
+    try {
+      const user = await prisma.user.update({
+        where: { id: req.params.userId },
+        data: { isDeleted: true, status: "inactive" },
+      });
 
-            // Execute the query
-            const result = await query(updateUserQuery, params);
+      reportService.sendAccountDeactivation(user.email, user.name);
 
-            if (result.rowCount > 0) {
-                const emailContent = {
-                    email: result.rows[0].email,
-                    fullname: result.rows[0].fullname,
-                    roles: result.rows[0].roles,
-                    password: !!password // Indicate if the password was updated
-                };
-                reportService.sendPasswordUpdate(emailContent);
-                res.json({ success: true, message: 'User updated successfully', data: result.rows[0] });
-            } else {
-                res.status(404).json({ success: false, message: 'User not found' });
-            }
-        } catch (error) {
-            console.error('Error updating user:', error);
-            res.status(500).json({ success: false, message: `Error updating user: ${error.message}` });
-        }
-    },
+      res.json({
+        success: true,
+        message: "User deactivated successfully",
+        user,
+      });
+    } catch (error) {
+      console.error("Soft delete error:", error);
+      res.status(500).json({
+        success: false,
+        message: `Remove User Error: ${error.message}`,
+      });
+    }
+  },
 
+  /* ===========================
+     ACTIVATE USER
+  ============================ */
+  refreshUserStatus: async (req, res) => {
+    try {
+      const user = await prisma.user.update({
+        where: { id: req.params.userId },
+        data: { isDeleted: false, status: "active" },
+      });
 
-    // Soft delete (deactivate) user
-    SoftDeleteUser: async (req, res) => {
-        const { userId } = req.params;
-        try {
-            // Query to get the user's email and full name before deleting
-            const getUserQuery = `
-            SELECT email, fullname 
-            FROM users 
-            WHERE id = $1;
-        `;
-            const userResult = await query(getUserQuery, [userId]);
+      reportService.sendAccountActivation(user.email, user.name);
 
-            if (userResult.rowCount === 0) {
-                return res.status(404).json({ success: false, message: 'User not found' });
-            }
+      res.json({
+        success: true,
+        message: "Account activated successfully",
+        user,
+      });
+    } catch (error) {
+      console.error("Activate user error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
 
-            // Store the email and full name from the database result
-            const { email, fullname } = userResult.rows[0];
+  /* ===========================
+     AUTH CHECK
+  ============================ */
+  checkAuth: (req, res) => {
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(401).json({ authenticated: false });
+    }
 
-            // Perform the soft delete
-            const deleteUserQuery = `
-            UPDATE users 
-            SET isdeleted = TRUE, status = 'inactive' 
-            WHERE id = $1 
-            RETURNING *;
-        `;
-            const result = await query(deleteUserQuery, [userId]);
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      res.json({ authenticated: true });
+    } catch (error) {
+      res.status(401).json({ authenticated: false });
+    }
+  },
 
-            if (result.rowCount > 0) {
-                // Send the account deactivation email
-                reportService.sendAccountDeactivation(email, fullname);
-
-                // Return success response
-                return res.json({ success: true, message: 'User deleted successfully', user: result.rows[0] });
-            } else {
-                return res.status(404).json({ success: false, message: 'User not found' });
-            }
-        } catch (error) {
-            console.error('Error deleting user:', error);
-            return res.status(500).json({ success: false, message: `Remove User Error: ${error.message}` });
-        }
-    },
-
-    // Example check for authentication in your routes (backend)
-    checkAuth: (req, res, next) => {
-        const token = req.cookies ? req.cookies.token : null;
-        if (token) {
-            try {
-                const decodedToken = jwt.verify(token, process.env.SECRET);
-                req.user = decodedToken; // Attach decoded token data to request if needed
-                res.status(200).json({ authenticated: true });
-            } catch (error) {
-                console.error('Token verification failed:', error);
-                res.status(401).json({ authenticated: false, message: 'Invalid token.' });
-            }
-        } else {
-            res.status(401).json({ authenticated: false, message: 'No token provided.' });
-        }
-    },
-
-    refreshUserStatus: async (req, res) => {
-        const { userId } = req.params;
-
-        try {
-            // Query to get the user's email and full name before deleting
-            const getUserQuery = `
-             SELECT email, fullname 
-             FROM users 
-             WHERE id = $1;
-         `;
-            const userResult = await query(getUserQuery, [userId]);
-
-            if (userResult.rowCount === 0) {
-                return res.status(404).json({ success: false, message: 'User not found' });
-            }
-
-            // Store the email and full name from the database result
-            const { email, fullname } = userResult.rows[0];
-
-            const activateUserQuery = `
-                UPDATE users 
-                SET isdeleted = FALSE, status = 'active' 
-                WHERE id = $1 RETURNING *;
-            `;
-            const result = await query(activateUserQuery, [userId]);
-
-            if (result.rowCount > 0) {
-                res.json({ success: true, message: 'Account Activated successfully', user: result.rows[0] });
-                reportService.sendAccountActivation(email, fullname);
-            } else {
-                res.status(404).json({ success: false, message: 'User not found' });
-            }
-        } catch (error) {
-            console.error('Error activating user:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    },
-    // User logout and token invalidation
-    Logout: async (req, res) => {
-        const { email } = req.params;
-        try {
-            const updateUserStatusQuery = `
-                 SELECT * FROM users WHERE email = $1;
-            `;
-            const result = await query(updateUserStatusQuery, [email]);
-
-            if (result.rowCount > 0) {
-                // Clear the token cookie
-                res.clearCookie('token');
-                res.json({ success: true, message: 'User logged out successfully' });
-            } else {
-                res.status(404).json({ success: false, message: 'User not found' });
-            }
-        } catch (error) {
-            console.error('Error logging out:', error);
-            res.status(500).json({ success: false, message: `Log Out Error: ${error.message}` });
-        }
-    },
+  /* ===========================
+     LOGOUT
+  ============================ */
+  Logout: async (req, res) => {
+    res.clearCookie("token");
+    res.json({ success: true, message: "User logged out successfully" });
+  },
 };

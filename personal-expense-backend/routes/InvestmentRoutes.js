@@ -2,21 +2,21 @@ const InvestmentRoutes = require('express').Router();
 
 const {
     createInvestment,
-    getAllInvestments,
+    getInvestments,
     getInvestmentById,
     updateInvestment,
     deleteInvestment,
-    getInvestmentsByUserId
+    getPortfolioSummary
 } = require('../controllers/InvestmentControllers');
 
 // Create a new investment
 InvestmentRoutes.post('/create', createInvestment);
 
 // Get all investments
-InvestmentRoutes.get('/all', getAllInvestments);
+InvestmentRoutes.get('/all', getInvestments);
 
 // Get investments by user ID
-InvestmentRoutes.get('/user/:userId', getInvestmentsByUserId);
+InvestmentRoutes.get('/summary', getPortfolioSummary);
 
 // Get a specific investment by ID
 InvestmentRoutes.get('/:id', getInvestmentById);
