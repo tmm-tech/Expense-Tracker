@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState} from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import AnimatedNumber from "../Component/AnimatedNumber";
 import TimeRangeSelector from "../Component/TimeRangeSelector";
@@ -8,10 +8,10 @@ import { generateInsights } from "../Services/insights";
 import Sidebar from "../Component/Sidebar";
 import TopBar from "../Component/TopBar";
 import { DragHandleDots2Icon } from "@radix-ui/react-icons";
+import KPIBadge from "../Component/KPIBadge";
 
 export default function Dashboard() {
   const [range, setRange] = useState("1M");
-
   const [widgets, setWidgets] = useState([
     { id: "networth", title: "Net Worth", type: "kpi", primary: true },
     { id: "cashflow", title: "Cash Flow", type: "kpi" },
@@ -21,7 +21,7 @@ export default function Dashboard() {
   ]);
 
   const current = { spend: 2340, savings: 23, netWorth: 124560, liability: 5000 };
-  const previous = { spend: 2160, savings: 25, netWorth: 120200, liability: 4800 };
+  const previous = { spend: 3160, savings: 25, netWorth: 120200, liability: 4800 };
 
   const insights = generateInsights(current, previous);
 
@@ -103,7 +103,23 @@ export default function Dashboard() {
                                 }
                                 prefix={w.id === "liability" ? "-$" : "$"}
                               />
-                            </h2>
+                              <KPIBadge
+                                current={
+                                w.id === "networth"
+                                  ? current.netWorth
+                                  : w.id === "cashflow"
+                                  ? current.spend
+                                  : current.liability
+                              }
+                              previous={
+                                w.id === "networth"
+                                  ? previous.netWorth
+                                  : w.id === "cashflow"
+                                  ? previous.spend
+                                  : previous.liability
+                              }
+                                />
+                              </h2>
                             <span style={styles.kpiMeta}>
                               {w.id === "networth"
                                 ? "Total assets minus liabilities"

@@ -80,6 +80,19 @@ tagline {
 .tagline span:nth-child(3) { animation-delay: 0.5s; }
 .tagline span:nth-child(4) { animation-delay: 0.65s; }
 
+.skeleton-bar {
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.18),
+    rgba(255,255,255,0.08)
+  );
+  margin-bottom: 8px;
+  animation: shimmer 1.2s infinite;
+}
+
+
 @keyframes fadeUp {
   to {
     opacity: 1;
@@ -100,7 +113,12 @@ tagline {
   .card {
     touch-action: none;
   }
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
+
+
 
 
 @keyframes logoShimmer {

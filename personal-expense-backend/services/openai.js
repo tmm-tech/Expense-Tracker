@@ -1,19 +1,19 @@
 import OpenAI from "openai";
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI();
 
-module.exports = {
-  explainChanges: async (data) => {
-    const prompt = `
-  Explain financial changes simply:
-  ${JSON.stringify(data)}
-  Keep it concise, actionable, friendly.
-  `;
+export async function explainChange(req, res) {
+  const { current, previous } = req.body;
 
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-    });
+  const prompt = `
+Explain in simple terms:
+Previous: ${JSON.stringify(previous)}
+Current: ${JSON.stringify(current)}
+`;
 
-    return res.choices[0].message.content;
-  },
-};
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  res.json({ explanation: response.choices[0].message.content });
+}
