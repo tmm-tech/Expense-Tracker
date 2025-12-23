@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <title>Aurex - Master Your Money with Intelligence</title>
+    <meta name="description" content="Track expenses, manage budgets, monitor investments, and get AI-powered financial insights—all in one powerful platform" />
+    <meta name="author" content="Aurex" />
+    <meta name="keywords" content="personal finance, expense tracker, budget management, investment monitoring, AI financial insights, money management, financial planning, budgeting app, expense management, investment tracking" />
+    <meta property="og:title" content="Aurex - Master Your Money with Intelligence" />
+    <meta
+      property="og:description"
+      content="Track expenses, manage budgets, monitor investments, and get AI-powered financial insights—all in one powerful platform"
+    />
+    <meta property="og:type" content="website" />
+    <!-- Detect dark mode preference and set the class before next-themes loads. This avoids a flash of unstyled content (FOUC) when the page loads. -->
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("theme");
+          if (theme === "system" || !theme) {
+            var prefersDark = window.matchMedia(
+              "(prefers-color-scheme: dark)",
+            ).matches;
+            theme = prefersDark ? "dark" : "light";
+          }
+          document.documentElement.classList.add(theme);
+        } catch (e) {}
+      })();
+    </script>
+    <link href="/src/index.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
