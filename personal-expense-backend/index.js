@@ -3,7 +3,6 @@ require('dotenv').config();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const UserRoutes = require('./routes/UserRoutes');
 const BudgetRoutes = require('./routes/BudgetRoutes');
 const DashboardRoutes = require('./routes/DashboardRoutes');
 const ImportRoutes = require('./routes/ImportRoutes');
@@ -37,7 +36,6 @@ const addTokenToRequest = async (req, res, next) => {
 app.use(addTokenToRequest);
 
 // // Route handling
-app.use('/users', UserRoutes);
 app.use('/budgets', BudgetRoutes);
 app.use('/dashboard', DashboardRoutes);
 app.use('/import', ImportRoutes);
