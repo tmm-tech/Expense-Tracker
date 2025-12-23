@@ -36,9 +36,9 @@ const addTokenToRequest = async (req, res, next) => {
 app.use(addTokenToRequest);
 
 // // Route handling
-app.use('/budgets', BudgetRoutes);
-app.use('/dashboard', DashboardRoutes);
-app.use('/import', ImportRoutes);
+// app.use('/budgets', BudgetRoutes);
+// app.use('/dashboard', DashboardRoutes);
+// app.use('/import', ImportRoutes);
 app.use('/transactions', TransactionRoutes);
 
 app.get('/', (req, res) => {

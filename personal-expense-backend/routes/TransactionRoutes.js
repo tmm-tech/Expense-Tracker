@@ -7,7 +7,7 @@ const {
     updateTransaction,
     deleteTransaction,
     getTransactionSummary
-} = require('../controllers/TransactionControllers');
+} = require('../controller/TransactionControllers');
 
 // Create and insert a new transaction
 TransactionRoutes.post('/transactions', createTransaction);

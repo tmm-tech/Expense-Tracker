@@ -1,20 +1,16 @@
-import {
-  getBudgets,
-  createBudget,
-  getBudgetUsage,
-  applyRollover,
-  deleteBudget,
-  applyRollover,
+// import {
+//   getBudgets,
+//   createBudget,
+//   getBudgetUsage,
+//   // applyRollover,
+// } from "../controller/BudgetControllers.js";
+// import { authMiddleware } from "../middleware/auth.js";
 
-} from "../controllers/budget.controller.js";
-import auth from "../middleware/auth.js";
+// const BudgetRoutes = require('express').Router();
 
-const BudgetRoutes = require('express').Router();
-
-BudgetRoutes.get("/", auth, createBudget);
-BudgetRoutes.post("/", auth, getBudgets);
-BudgetRoutes.put("/usage", auth, getBudgetUsage);
-BudgetRoutes.delete("/:id", auth, deleteBudget);
-BudgetRoutes.post("/rollover", auth, applyRollover);
-
-export default BudgetRoutes;
+// BudgetRoutes.get("/", authMiddleware, createBudget);
+// BudgetRoutes.post("/", authMiddleware, getBudgets);
+// BudgetRoutes.put("/usage", authMiddleware, getBudgetUsage);
+// // BudgetRoutes.delete("/:id", authMiddleware, deleteBudget);
+// // BudgetRoutes.post("/rollover", authMiddleware, applyRollover);
+// export default BudgetRoutes;
