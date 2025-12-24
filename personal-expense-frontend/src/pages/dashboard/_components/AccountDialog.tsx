@@ -1,218 +1,230 @@
-// import { useEffect, useState } from "react";
-// import { useMutation } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog.tsx";
-// import { Button } from "@/components/ui/button.tsx";
-// import { Input } from "@/components/ui/input.tsx";
-// import { Label } from "@/components/ui/label.tsx";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
-// import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
+import type { Account } from "@/types/account.ts";
+/* ---------------- TYPES ---------------- */
 
-// interface AccountDialogProps {
-//   open: boolean;
-//   onOpenChange: (open: boolean) => void;
-//   editingId: Id<"accounts"> | null;
-//   accounts: Doc<"accounts">[];
-// }
+interface AccountDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editingId: string | null;
+  accounts: Account[];
+}
 
-// const ACCOUNT_TYPES = ["Bank", "MMF", "SACCO", "Cash", "Mobile Money", "Credit Card", "Other"] as const;
+/* ---------------- CONSTANTS ---------------- */
 
-// const CURRENCY_OPTIONS = [
-//   { value: "KES", label: "KES" },
-//   { value: "USD", label: "USD" },
-//   { value: "EUR", label: "EUR" },
-//   { value: "GBP", label: "GBP" },
-// ];
+const ACCOUNT_TYPES = [
+  "Bank",
+  "MMF",
+  "SACCO",
+  "Cash",
+  "Mpesa",
+  "Credit Card",
+  "Debit Card",
+  "Other",
+] as const;
 
-// export default function AccountDialog({ open, onOpenChange, editingId, accounts }: AccountDialogProps) {
-//   const createAccount = useMutation(api.accounts.create);
-//   const updateAccount = useMutation(api.accounts.update);
+const CURRENCY_OPTIONS = ["KES", "USD", "EUR", "GBP"];
 
-//   const [name, setName] = useState("");
-//   const [type, setType] = useState<typeof ACCOUNT_TYPES[number]>("Bank");
-//   const [institutionName, setInstitutionName] = useState("");
-//   const [accountNumber, setAccountNumber] = useState("");
-//   const [balance, setBalance] = useState("");
-//   const [currency, setCurrency] = useState("KES");
+/* ---------------- COMPONENT ---------------- */
 
-//   const editingAccount = editingId ? accounts.find((a) => a._id === editingId) : null;
+export default function AccountDialog({
+  open,
+  onOpenChange,
+  editingId,
+  accounts,
+}: AccountDialogProps) {
+  const queryClient = useQueryClient();
 
-//   useEffect(() => {
-//     if (editingAccount) {
-//       setName(editingAccount.name);
-//       setType(editingAccount.type);
-//       setInstitutionName(editingAccount.institutionName || "");
-//       setAccountNumber(editingAccount.accountNumber || "");
-//       setBalance(editingAccount.balance.toString());
-//       setCurrency(editingAccount.currency || "KES");
-//     } else {
-//       setName("");
-//       setType("Bank");
-//       setInstitutionName("");
-//       setAccountNumber("");
-//       setBalance("");
-//       setCurrency("KES");
-//     }
-//   }, [editingAccount, open]);
+  const editingAccount = editingId
+    ? accounts.find((a) => a.id === editingId)
+    : null;
 
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
+  const [name, setName] = useState("");
+  const [type, setType] = useState<(typeof ACCOUNT_TYPES)[number]>("Bank");
+  const [institutionName, setInstitutionName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [balance, setBalance] = useState("");
+  const [currency, setCurrency] = useState("KES");
 
-//     if (!name.trim() || !balance) {
-//       toast.error("Please fill in all required fields");
-//       return;
-//     }
+  /* ---------- Mutations ---------- */
 
-//     const balanceNum = parseFloat(balance);
-//     if (isNaN(balanceNum)) {
-//       toast.error("Please enter a valid balance");
-//       return;
-//     }
+  const createAccount = useMutation({
+    mutationFn: (payload: Omit<Account, "id">) =>
+      apiFetch("/api/accounts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      toast.success("Account created successfully");
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Failed to create account"),
+  });
 
-//     try {
-//       if (editingId) {
-//         await updateAccount({
-//           id: editingId,
-//           name: name.trim(),
-//           type,
-//           institutionName: institutionName.trim() || undefined,
-//           accountNumber: accountNumber.trim() || undefined,
-//           balance: balanceNum,
-//           currency,
-//         });
-//         toast.success("Account updated successfully");
-//       } else {
-//         await createAccount({
-//           name: name.trim(),
-//           type,
-//           institutionName: institutionName.trim() || undefined,
-//           accountNumber: accountNumber.trim() || undefined,
-//           balance: balanceNum,
-//           currency,
-//         });
-//         toast.success("Account created successfully");
-//       }
-//       onOpenChange(false);
-//     } catch (error) {
-//       toast.error(editingId ? "Failed to update account" : "Failed to create account");
-//       console.error(error);
-//     }
-//   };
+  const updateAccount = useMutation({
+    mutationFn: (payload: Account) =>
+      apiFetch(`/api/accounts/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      toast.success("Account updated successfully");
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Failed to update account"),
+  });
 
-//   return (
-//     <Dialog open={open} onOpenChange={onOpenChange}>
-//       <DialogContent className="glass-strong max-w-md">
-//         <DialogHeader>
-//           <DialogTitle>{editingId ? "Edit Account" : "Create New Account"}</DialogTitle>
-//           <DialogDescription>
-//             {editingId ? "Update your account details" : "Add a new account to track your finances"}
-//           </DialogDescription>
-//         </DialogHeader>
-//         <form onSubmit={handleSubmit} className="space-y-4">
-//           <div className="space-y-2">
-//             <Label htmlFor="name">
-//               Account Name <span className="text-destructive">*</span>
-//             </Label>
-//             <Input
-//               id="name"
-//               value={name}
-//               onChange={(e) => setName(e.target.value)}
-//               placeholder="My Savings Account"
-//               className="glass"
-//               required
-//             />
-//           </div>
+  /* ---------- Sync form ---------- */
 
-//           <div className="space-y-2">
-//             <Label htmlFor="type">
-//               Account Type <span className="text-destructive">*</span>
-//             </Label>
-//             <Select value={type} onValueChange={(value) => setType(value as typeof ACCOUNT_TYPES[number])}>
-//               <SelectTrigger id="type" className="glass">
-//                 <SelectValue />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 {ACCOUNT_TYPES.map((t) => (
-//                   <SelectItem key={t} value={t}>
-//                     {t}
-//                   </SelectItem>
-//                 ))}
-//               </SelectContent>
-//             </Select>
-//           </div>
+  useEffect(() => {
+    if (editingAccount) {
+      setName(editingAccount.name);
+      setType(editingAccount.type);
+      setInstitutionName(editingAccount.institutionName || "");
+      setAccountNumber(editingAccount.accountNumber || "");
+      setBalance(editingAccount.balance.toString());
+      setCurrency(editingAccount.currency || "KES");
+    } else {
+      setName("");
+      setType("Bank");
+      setInstitutionName("");
+      setAccountNumber("");
+      setBalance("");
+      setCurrency("KES");
+    }
+  }, [editingAccount, open]);
 
-//           <div className="space-y-2">
-//             <Label htmlFor="institution">Institution Name</Label>
-//             <Input
-//               id="institution"
-//               value={institutionName}
-//               onChange={(e) => setInstitutionName(e.target.value)}
-//               placeholder="Equity Bank"
-//               className="glass"
-//             />
-//           </div>
+  /* ---------- Submit ---------- */
 
-//           <div className="space-y-2">
-//             <Label htmlFor="accountNum">Account Number</Label>
-//             <Input
-//               id="accountNum"
-//               value={accountNumber}
-//               onChange={(e) => setAccountNumber(e.target.value)}
-//               placeholder="1234567890"
-//               className="glass"
-//             />
-//           </div>
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-//           <div className="grid grid-cols-2 gap-4">
-//             <div className="space-y-2">
-//               <Label htmlFor="balance">
-//                 Current Balance <span className="text-destructive">*</span>
-//               </Label>
-//               <Input
-//                 id="balance"
-//                 type="number"
-//                 step="0.01"
-//                 value={balance}
-//                 onChange={(e) => setBalance(e.target.value)}
-//                 placeholder="0.00"
-//                 className="glass"
-//                 required
-//               />
-//             </div>
+    const balanceNum = Number(balance);
+    if (!name.trim() || isNaN(balanceNum)) {
+      toast.error("Please fill in all required fields correctly");
+      return;
+    }
 
-//             <div className="space-y-2">
-//               <Label htmlFor="currency">Currency</Label>
-//               <Select value={currency} onValueChange={setCurrency}>
-//                 <SelectTrigger id="currency" className="glass">
-//                   <SelectValue />
-//                 </SelectTrigger>
-//                 <SelectContent>
-//                   {CURRENCY_OPTIONS.map((curr) => (
-//                     <SelectItem key={curr.value} value={curr.value}>
-//                       {curr.label}
-//                     </SelectItem>
-//                   ))}
-//                 </SelectContent>
-//               </Select>
-//             </div>
-//           </div>
+    const payload = {
+      name: name.trim(),
+      type,
+      institutionName: institutionName || undefined,
+      accountNumber: accountNumber || undefined,
+      balance: balanceNum,
+      currency,
+    };
 
-//           <DialogFooter>
-//             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-//               Cancel
-//             </Button>
-//             <Button type="submit">{editingId ? "Update" : "Create"} Account</Button>
-//           </DialogFooter>
-//         </form>
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
+    if (editingId) {
+      updateAccount.mutate({ id: editingId, ...payload });
+    } else {
+      createAccount.mutate(payload);
+    }
+  };
+
+  /* ---------- UI ---------- */
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="glass-strong max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {editingId ? "Edit Account" : "Create New Account"}
+          </DialogTitle>
+          <DialogDescription>
+            {editingId
+              ? "Update your account details"
+              : "Add a new account to track your finances"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Account Name *</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Account Type *</Label>
+            <Select value={type} onValueChange={(v) => setType(v as any)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCOUNT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Input
+            placeholder="Institution Name"
+            value={institutionName}
+            onChange={(e) => setInstitutionName(e.target.value)}
+          />
+
+          <Input
+            placeholder="Account Number"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              type="number"
+              placeholder="Balance"
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
+            />
+
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCY_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {editingId ? "Update" : "Create"} Account
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

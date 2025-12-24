@@ -1,351 +1,337 @@
-// import { format } from "date-fns";
-// import { useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import {
-//   ArrowLeftIcon,
-//   CalendarIcon,
-//   TrendingDownIcon,
-//   ClockIcon,
-//   DollarSignIcon,
-// } from "lucide-react";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
-// import { Button } from "@/components/ui/button.tsx";
-// import {
-//   Card,
-//   CardContent,
-//   CardDescription,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card.tsx";
-// import { Badge } from "@/components/ui/badge.tsx";
-// import { Progress } from "@/components/ui/progress.tsx";
-// import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { format } from "date-fns";
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  TrendingDownIcon,
+  ClockIcon,
+  DollarSignIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import type { Debt } from "@/types/debt";
+/* =========================
+   Types (REST)
+========================= */
 
-// type Debt = Doc<"debts">;
+interface DebtPayment {
+  id: string;
+  amount: number;
+  paymentDate: number;
+  notes?: string;
+}
 
-// interface DebtDetailViewProps {
-//   debt: Debt;
-//   onBack: () => void;
-// }
+interface DebtDetailViewProps {
+  debt: Debt;
+  onBack: () => void;
+}
 
-// const COLORS = {
-//   chart1: "hsl(var(--chart-1))",
-//   chart2: "hsl(var(--chart-2))",
-//   chart3: "hsl(var(--chart-3))",
-//   chart4: "hsl(var(--chart-4))",
-//   chart5: "hsl(var(--chart-5))",
-// };
+/* =========================
+   Chart Colors
+========================= */
 
-// export default function DebtDetailView({ debt, onBack }: DebtDetailViewProps) {
-//   const payments = useQuery(api.debts.getPayments, { debtId: debt._id });
+const COLORS = {
+  chart1: "hsl(var(--chart-1))",
+  chart2: "hsl(var(--chart-2))",
+  chart3: "hsl(var(--chart-3))",
+};
 
-//   if (!payments) {
-//     return (
-//       <div className="space-y-4">
-//         <Button variant="ghost" onClick={onBack} className="gap-2">
-//           <ArrowLeftIcon className="h-4 w-4" />
-//           Back to Debts
-//         </Button>
-//         <div className="h-96 glass-card animate-pulse" />
-//       </div>
-//     );
-//   }
+/* =========================
+   Component
+========================= */
 
-//   const progress = ((debt.originalAmount - debt.currentBalance) / debt.originalAmount) * 100;
-//   const totalPaid = debt.originalAmount - debt.currentBalance;
-  
-//   // Calculate payoff timeline with minimum payment
-//   const calculatePayoffTimeline = () => {
-//     const monthlyRate = debt.interestRate / 100 / 12;
-//     let balance = debt.currentBalance;
-//     let months = 0;
-//     let totalInterest = 0;
-//     const timeline = [];
+export default function DebtDetailView({ debt, onBack }: DebtDetailViewProps) {
+  const {
+    data: payments = [],
+    isLoading,
+    isError,
+  } = useQuery<DebtPayment[]>({
+    queryKey: ["debtPayments", debt.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/debts/${debt.id}/payments`);
+      if (!res.ok) throw new Error("Failed to fetch payments");
+      return res.json();
+    },
+  });
 
-//     while (balance > 0 && months < 360) { // Cap at 30 years
-//       const interestCharge = balance * monthlyRate;
-//       const principalPayment = Math.min(debt.minimumPayment - interestCharge, balance);
-      
-//       totalInterest += interestCharge;
-//       balance -= principalPayment;
-//       months++;
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" onClick={onBack} className="gap-2">
+          <ArrowLeftIcon className="h-4 w-4" />
+          Back to Debts
+        </Button>
+        <div className="h-96 glass-card animate-pulse" />
+      </div>
+    );
+  }
 
-//       if (months % 6 === 0 || balance <= 0) { // Record every 6 months
-//         timeline.push({
-//           month: months,
-//           balance: Math.max(0, balance),
-//           totalInterest,
-//           totalPaid: debt.currentBalance - balance,
-//         });
-//       }
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" onClick={onBack}>
+          Back to Debts
+        </Button>
+        <p className="text-destructive">Failed to load payment history.</p>
+      </div>
+    );
+  }
 
-//       if (balance <= 0) break;
-//     }
+  /* =========================
+     Calculations
+  ========================= */
 
-//     return { months, totalInterest, timeline };
-//   };
+  const progress =
+    debt.originalAmount > 0
+      ? ((debt.originalAmount - debt.currentBalance) / debt.originalAmount) *
+        100
+      : 0;
 
-//   const payoffData = calculatePayoffTimeline();
-//   const payoffDate = new Date();
-//   payoffDate.setMonth(payoffDate.getMonth() + payoffData.months);
+  const totalPaid = debt.originalAmount - debt.currentBalance;
 
-//   // Payment history chart data
-//   const paymentHistory = payments.map((p) => ({
-//     date: format(p.paymentDate, "MMM dd"),
-//     amount: p.amount,
-//   })).reverse().slice(-10); // Last 10 payments
+  const calculatePayoffTimeline = () => {
+    const monthlyRate = debt.interestRate / 100 / 12;
+    let balance = debt.currentBalance;
+    let months = 0;
+    let totalInterest = 0;
+    const timeline: {
+      month: number;
+      balance: number;
+      totalInterest: number;
+    }[] = [];
 
-//   return (
-//     <div className="space-y-6">
-//       <Button variant="ghost" onClick={onBack} className="gap-2">
-//         <ArrowLeftIcon className="h-4 w-4" />
-//         Back to Debts
-//       </Button>
+    while (balance > 0 && months < 360) {
+      const interest = balance * monthlyRate;
+      const principal = Math.max(
+        Math.min(debt.minimumPayment - interest, balance),
+        0
+      );
 
-//       {/* Header Card */}
-//       <Card className="glass-card border-primary/20">
-//         <CardHeader>
-//           <div className="flex items-start justify-between">
-//             <div>
-//               <CardTitle className="text-2xl">{debt.name}</CardTitle>
-//               <CardDescription className="mt-2 flex items-center gap-2">
-//                 <span>{debt.type}</span>
-//                 <span>•</span>
-//                 <span>{debt.creditor}</span>
-//               </CardDescription>
-//             </div>
-//             <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400">
-//               {debt.status}
-//             </Badge>
-//           </div>
-//         </CardHeader>
-//         <CardContent className="space-y-4">
-//           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-//             <div className="space-y-1">
-//               <div className="text-sm text-muted-foreground">Current Balance</div>
-//               <div className="text-2xl font-bold">KES {debt.currentBalance.toFixed(2)}</div>
-//             </div>
-//             <div className="space-y-1">
-//               <div className="text-sm text-muted-foreground">Interest Rate</div>
-//               <div className="text-2xl font-bold text-yellow-400">{debt.interestRate.toFixed(2)}%</div>
-//             </div>
-//             <div className="space-y-1">
-//               <div className="text-sm text-muted-foreground">Min Payment</div>
-//               <div className="text-2xl font-bold">KES {debt.minimumPayment.toFixed(2)}</div>
-//             </div>
-//             <div className="space-y-1">
-//               <div className="text-sm text-muted-foreground">Due Day</div>
-//               <div className="text-2xl font-bold">{debt.dueDay}</div>
-//             </div>
-//           </div>
-//           <div className="space-y-2">
-//             <div className="flex items-center justify-between text-sm">
-//               <span className="text-muted-foreground">Progress</span>
-//               <span className="font-medium">{progress.toFixed(1)}% paid off</span>
-//             </div>
-//             <Progress value={progress} className="h-3" />
-//             <div className="flex items-center justify-between text-xs text-muted-foreground">
-//               <span>KES {totalPaid.toFixed(2)} paid</span>
-//               <span>KES {debt.currentBalance.toFixed(2)} remaining</span>
-//             </div>
-//           </div>
-//         </CardContent>
-//       </Card>
+      totalInterest += interest;
+      balance -= principal;
+      months++;
 
-//       {/* Payoff Projections */}
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//         <Card className="glass-card border-green-500/20">
-//           <CardHeader className="pb-3">
-//             <CardDescription className="flex items-center gap-2">
-//               <CalendarIcon className="h-4 w-4" />
-//               Payoff Date
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <CardTitle className="text-lg font-bold text-green-400">
-//               {format(payoffDate, "MMM dd, yyyy")}
-//             </CardTitle>
-//             <div className="mt-1 text-sm text-muted-foreground">
-//               {payoffData.months} months
-//             </div>
-//           </CardContent>
-//         </Card>
+      if (months % 6 === 0 || balance <= 0) {
+        timeline.push({
+          month: months,
+          balance: Math.max(balance, 0),
+          totalInterest,
+        });
+      }
 
-//         <Card className="glass-card border-red-500/20">
-//           <CardHeader className="pb-3">
-//             <CardDescription className="flex items-center gap-2">
-//               <TrendingDownIcon className="h-4 w-4" />
-//               Total Interest
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <CardTitle className="text-lg font-bold text-red-400">
-//               KES {payoffData.totalInterest.toFixed(2)}
-//             </CardTitle>
-//             <div className="mt-1 text-sm text-muted-foreground">
-//               Over {payoffData.months} months
-//             </div>
-//           </CardContent>
-//         </Card>
+      if (principal <= 0) break;
+    }
 
-//         <Card className="glass-card border-blue-500/20">
-//           <CardHeader className="pb-3">
-//             <CardDescription className="flex items-center gap-2">
-//               <DollarSignIcon className="h-4 w-4" />
-//               Total Cost
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <CardTitle className="text-lg font-bold text-blue-400">
-//               KES {(debt.currentBalance + payoffData.totalInterest).toFixed(2)}
-//             </CardTitle>
-//             <div className="mt-1 text-sm text-muted-foreground">
-//               Principal + Interest
-//             </div>
-//           </CardContent>
-//         </Card>
-//       </div>
+    return { months, totalInterest, timeline };
+  };
 
-//       {/* Payoff Timeline Chart */}
-//       <Card className="glass-card">
-//         <CardHeader>
-//           <CardTitle>Payoff Timeline</CardTitle>
-//           <CardDescription>
-//             Projected balance and interest with minimum payments
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent>
-//           <ResponsiveContainer width="100%" height={300}>
-//             <LineChart data={payoffData.timeline}>
-//               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-//               <XAxis
-//                 dataKey="month"
-//                 stroke="hsl(var(--foreground))"
-//                 tick={{ fill: "hsl(var(--muted-foreground))" }}
-//                 label={{ value: "Months", position: "insideBottom", offset: -5, fill: "hsl(var(--muted-foreground))" }}
-//               />
-//               <YAxis
-//                 stroke="hsl(var(--foreground))"
-//                 tick={{ fill: "hsl(var(--muted-foreground))" }}
-//                 label={{ value: "Amount (KES)", angle: -90, position: "insideLeft", fill: "hsl(var(--muted-foreground))" }}
-//               />
-//               <Tooltip
-//                 contentStyle={{
-//                   backgroundColor: "hsl(var(--card))",
-//                   border: "1px solid hsl(var(--border))",
-//                   borderRadius: "8px",
-//                   color: "hsl(var(--foreground))",
-//                 }}
-//                 formatter={(value: number) => [`KES ${value.toFixed(2)}`, ""]}
-//               />
-//               <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
-//               <Line
-//                 type="monotone"
-//                 dataKey="balance"
-//                 stroke={COLORS.chart1}
-//                 strokeWidth={3}
-//                 name="Remaining Balance"
-//                 dot={{ fill: COLORS.chart1, r: 4 }}
-//               />
-//               <Line
-//                 type="monotone"
-//                 dataKey="totalInterest"
-//                 stroke={COLORS.chart3}
-//                 strokeWidth={3}
-//                 name="Total Interest"
-//                 dot={{ fill: COLORS.chart3, r: 4 }}
-//               />
-//             </LineChart>
-//           </ResponsiveContainer>
-//         </CardContent>
-//       </Card>
+  const payoffData = calculatePayoffTimeline();
+  const payoffDate = new Date();
+  payoffDate.setMonth(payoffDate.getMonth() + payoffData.months);
 
-//       {/* Payment History */}
-//       {payments.length > 0 && (
-//         <>
-//           <Card className="glass-card">
-//             <CardHeader>
-//               <CardTitle>Payment History</CardTitle>
-//               <CardDescription>
-//                 Last {Math.min(payments.length, 10)} payments
-//               </CardDescription>
-//             </CardHeader>
-//             <CardContent>
-//               <ResponsiveContainer width="100%" height={250}>
-//                 <BarChart data={paymentHistory}>
-//                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-//                   <XAxis
-//                     dataKey="date"
-//                     stroke="hsl(var(--foreground))"
-//                     tick={{ fill: "hsl(var(--muted-foreground))" }}
-//                   />
-//                   <YAxis
-//                     stroke="hsl(var(--foreground))"
-//                     tick={{ fill: "hsl(var(--muted-foreground))" }}
-//                   />
-//                   <Tooltip
-//                     contentStyle={{
-//                       backgroundColor: "hsl(var(--card))",
-//                       border: "1px solid hsl(var(--border))",
-//                       borderRadius: "8px",
-//                       color: "hsl(var(--foreground))",
-//                     }}
-//                     formatter={(value: number) => [`KES ${value.toFixed(2)}`, "Payment"]}
-//                   />
-//                   <Bar dataKey="amount" fill={COLORS.chart2} radius={[8, 8, 0, 0]} />
-//                 </BarChart>
-//               </ResponsiveContainer>
-//             </CardContent>
-//           </Card>
+  const paymentHistory = payments
+    .slice(-10)
+    .map((p) => ({
+      date: format(p.paymentDate, "MMM dd"),
+      amount: p.amount,
+    }));
 
-//           <Card className="glass-card">
-//             <CardHeader>
-//               <CardTitle>All Payments</CardTitle>
-//               <CardDescription>
-//                 {payments.length} payment{payments.length !== 1 ? "s" : ""} recorded
-//               </CardDescription>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="space-y-3">
-//                 {payments.map((payment) => (
-//                   <div
-//                     key={payment._id}
-//                     className="flex items-center justify-between p-3 rounded-lg border border-border/50"
-//                   >
-//                     <div className="flex items-center gap-3">
-//                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-//                         <ClockIcon className="w-5 h-5 text-primary" />
-//                       </div>
-//                       <div>
-//                         <div className="font-medium">KES {payment.amount.toFixed(2)}</div>
-//                         <div className="text-sm text-muted-foreground">
-//                           {format(payment.paymentDate, "MMM dd, yyyy")}
-//                         </div>
-//                         {payment.notes && (
-//                           <div className="text-xs text-muted-foreground mt-1">
-//                             {payment.notes}
-//                           </div>
-//                         )}
-//                       </div>
-//                     </div>
-//                   </div>
-//                 ))}
-//               </div>
-//             </CardContent>
-//           </Card>
-//         </>
-//       )}
+  /* =========================
+     UI
+  ========================= */
 
-//       {debt.notes && (
-//         <Card className="glass-card">
-//           <CardHeader>
-//             <CardTitle>Notes</CardTitle>
-//           </CardHeader>
-//           <CardContent>
-//             <p className="text-muted-foreground">{debt.notes}</p>
-//           </CardContent>
-//         </Card>
-//       )}
-//     </div>
-//   );
-// }
+  return (
+    <div className="space-y-6">
+      <Button variant="ghost" onClick={onBack} className="gap-2">
+        <ArrowLeftIcon className="h-4 w-4" />
+        Back to Debts
+      </Button>
+
+      {/* Header */}
+      <Card className="glass-card">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl">{debt.name}</CardTitle>
+              <CardDescription className="mt-1">
+                {debt.type} • {debt.creditor}
+              </CardDescription>
+            </div>
+            {debt.status && (
+              <Badge variant="outline">{debt.status}</Badge>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Stat label="Balance" value={`KES ${debt.currentBalance.toFixed(2)}`} />
+            <Stat label="Interest" value={`${debt.interestRate.toFixed(2)}%`} />
+            <Stat label="Min Payment" value={`KES ${debt.minimumPayment.toFixed(2)}`} />
+            <Stat label="Due Day" value={`${debt.dueDay}`} />
+          </div>
+
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <span>Progress</span>
+              <span>{progress.toFixed(1)}%</span>
+            </div>
+            <Progress value={progress} className="h-3" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payoff Summary */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <SummaryCard
+          icon={<CalendarIcon className="h-4 w-4" />}
+          label="Payoff Date"
+          value={format(payoffDate, "MMM dd, yyyy")}
+          sub={`${payoffData.months} months`}
+        />
+        <SummaryCard
+          icon={<TrendingDownIcon className="h-4 w-4" />}
+          label="Total Interest"
+          value={`KES ${payoffData.totalInterest.toFixed(2)}`}
+        />
+        <SummaryCard
+          icon={<DollarSignIcon className="h-4 w-4" />}
+          label="Total Cost"
+          value={`KES ${(debt.currentBalance + payoffData.totalInterest).toFixed(
+            2
+          )}`}
+        />
+      </div>
+
+      {/* Charts */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Payoff Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={payoffData.timeline}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line
+                dataKey="balance"
+                stroke={COLORS.chart1}
+                strokeWidth={3}
+                name="Balance"
+              />
+              <Line
+                dataKey="totalInterest"
+                stroke={COLORS.chart3}
+                strokeWidth={3}
+                name="Interest"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Payments */}
+      {payments.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Payment History</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {payments.map((p) => (
+              <div
+                key={p.id}
+                className="flex justify-between p-3 border rounded-lg"
+              >
+                <div>
+                  <div className="font-medium">
+                    KES {p.amount.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(p.paymentDate, "MMM dd, yyyy")}
+                  </div>
+                </div>
+                <ClockIcon className="h-5 w-5 text-muted-foreground" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {debt.notes && (
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">{debt.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* =========================
+   Small UI helpers
+========================= */
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <Card className="glass-card">
+      <CardHeader className="pb-2">
+        <CardDescription className="flex items-center gap-2">
+          {icon}
+          {label}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-lg font-bold">{value}</div>
+        {sub && (
+          <div className="text-sm text-muted-foreground">{sub}</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

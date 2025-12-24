@@ -1,159 +1,166 @@
-// import { useMutation, useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import type { Id } from "@/convex/_generated/dataModel.d.ts";
-// import { useForm } from "react-hook-form";
-// import { zodResolver } from "@hookform/resolvers/zod";
-// import { z } from "zod";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog.tsx";
-// import {
-//   Form,
-//   FormControl,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from "@/components/ui/form.tsx";
-// import { Input } from "@/components/ui/input.tsx";
-// import { Button } from "@/components/ui/button.tsx";
-// import { toast } from "sonner";
-// import { ConvexError } from "convex/values";
-// import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import type { Goal } from "@/types/goal";
 
-// const progressSchema = z.object({
-//   amount: z.coerce.number().positive("Amount must be positive"),
-// });
+/* =========================
+   Schema
+========================= */
 
-// type ProgressFormData = z.infer<typeof progressSchema>;
+const progressSchema = z.object({
+  amount: z.coerce.number().positive("Amount must be positive"),
+});
 
-// interface GoalProgressDialogProps {
-//   goalId: Id<"goals"> | null;
-//   onOpenChange: () => void;
-// }
+type ProgressFormData = z.infer<typeof progressSchema>;
 
-// export function GoalProgressDialog({
-//   goalId,
-//   onOpenChange,
-// }: GoalProgressDialogProps) {
-//   const goals = useQuery(api.goals.list, {});
-//   const updateProgress = useMutation(api.goals.updateProgress);
-//   const [isSubmitting, setIsSubmitting] = useState(false);
+interface GoalProgressDialogProps {
+  goalId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
-//   const goal = goalId && goals ? goals.find((g) => g._id === goalId) : null;
+/* =========================
+   Component
+========================= */
 
-//   const form = useForm<ProgressFormData>({
-//     resolver: zodResolver(progressSchema),
-//     defaultValues: {
-//       amount: 0,
-//     },
-//   });
+export function GoalProgressDialog({
+  goalId,
+  open,
+  onOpenChange,
+}: GoalProgressDialogProps) {
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-//   useEffect(() => {
-//     if (!goalId) {
-//       form.reset();
-//     }
-//   }, [goalId, form]);
+  const form = useForm<ProgressFormData>({
+    resolver: zodResolver(progressSchema),
+    defaultValues: { amount: 0 },
+  });
 
-//   const onSubmit = async (data: ProgressFormData) => {
-//     if (!goalId) return;
+  /* -------------------------
+     Load goal
+  -------------------------- */
+  useEffect(() => {
+    if (!goalId || !open) return;
 
-//     setIsSubmitting(true);
-//     try {
-//       await updateProgress({
-//         id: goalId,
-//         amount: data.amount,
-//       });
-//       toast.success("Progress updated!");
-//       form.reset();
-//       onOpenChange();
-//     } catch (error) {
-//       if (error instanceof ConvexError) {
-//         const { message } = error.data as { code: string; message: string };
-//         toast.error(`Error: ${message}`);
-//       } else {
-//         toast.error("Failed to update progress");
-//       }
-//     } finally {
-//       setIsSubmitting(false);
-//     }
-//   };
+    apiFetch(`/api/goals/${goalId}`)
+      .then((res) => setGoal(res as Goal))
+      .catch(() => {
+        toast.error("Failed to load goal");
+        onOpenChange(false);
+      });
+  }, [goalId, open, onOpenChange]);
 
-//   if (!goal) return null;
+  /* -------------------------
+     Submit
+  -------------------------- */
+  const onSubmit = async (data: ProgressFormData) => {
+    if (!goalId) return;
 
-//   const remainingAmount = goal.targetAmount - goal.currentAmount;
+    setIsSubmitting(true);
+    try {
+      await apiFetch(`/api/goals/${goalId}/progress`, {
+        method: "POST",
+        body: JSON.stringify({ amount: data.amount }),
+      });
 
-//   return (
-//     <Dialog open={goalId !== null} onOpenChange={onOpenChange}>
-//       <DialogContent className="glass-strong max-w-sm">
-//         <DialogHeader>
-//           <DialogTitle>Add Progress</DialogTitle>
-//           <DialogDescription>{goal.name}</DialogDescription>
-//         </DialogHeader>
+      toast.success("Progress added");
 
-//         <div className="space-y-2 rounded-lg bg-muted/50 p-4 text-sm">
-//           <div className="flex justify-between">
-//             <span className="text-muted-foreground">Current:</span>
-//             <span className="font-medium">
-//               KES {goal.currentAmount.toLocaleString()}
-//             </span>
-//           </div>
-//           <div className="flex justify-between">
-//             <span className="text-muted-foreground">Target:</span>
-//             <span className="font-medium">
-//               KES {goal.targetAmount.toLocaleString()}
-//             </span>
-//           </div>
-//           <div className="flex justify-between border-t border-border pt-2">
-//             <span className="text-muted-foreground">Remaining:</span>
-//             <span className="font-semibold">
-//               KES {remainingAmount.toLocaleString()}
-//             </span>
-//           </div>
-//         </div>
+      const updatedGoal = await apiFetch(`/api/goals/${goalId}`);
+      setGoal(updatedGoal as Goal);
 
-//         <Form {...form}>
-//           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-//             <FormField
-//               control={form.control}
-//               name="amount"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Amount to Add (KES)</FormLabel>
-//                   <FormControl>
-//                     <Input
-//                       type="number"
-//                       step="0.01"
-//                       placeholder="0.00"
-//                       autoFocus
-//                       {...field}
-//                     />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+      form.reset();
+      onOpenChange(false);
+    } catch {
+      toast.error("Failed to update progress");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-//             <div className="flex justify-end gap-3">
-//               <Button
-//                 type="button"
-//                 variant="outline"
-//                 onClick={onOpenChange}
-//                 disabled={isSubmitting}
-//               >
-//                 Cancel
-//               </Button>
-//               <Button type="submit" disabled={isSubmitting}>
-//                 {isSubmitting ? "Adding..." : "Add Progress"}
-//               </Button>
-//             </div>
-//           </form>
-//         </Form>
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
+  if (!goal) return null;
+
+  const remaining = goal.targetAmount - goal.currentAmount;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="glass-strong max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Add Progress</DialogTitle>
+          <DialogDescription>{goal.name}</DialogDescription>
+        </DialogHeader>
+
+        <div className="rounded-lg bg-muted/50 p-4 text-sm space-y-2">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Current</span>
+            <span>KES {goal.currentAmount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Target</span>
+            <span>KES {goal.targetAmount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between border-t pt-2 font-semibold">
+            <span>Remaining</span>
+            <span>KES {remaining.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amount (KES)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      autoFocus
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Adding..." : "Add Progress"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

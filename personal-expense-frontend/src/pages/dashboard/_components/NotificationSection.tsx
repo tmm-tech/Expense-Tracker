@@ -1,99 +1,157 @@
-// import { useState, useEffect } from "react";
-// import { useMutation, useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import { Button } from "@/components/ui/button.tsx";
-// import { Label } from "@/components/ui/label.tsx";
-// import { Switch } from "@/components/ui/switch.tsx";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-// import { Bell } from "lucide-react";
-// import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Bell } from "lucide-react";
+import { toast } from "sonner";
 
-// export default function NotificationsSection() {
-//   const user = useQuery(api.users.getCurrentUser);
-//   const updateSettings = useMutation(api.users.updateSettings);
+type NotificationSettings = {
+  emailNotifications: boolean;
+  budgetAlerts: boolean;
+  goalReminders: boolean;
+};
 
-//   const [emailNotifications, setEmailNotifications] = useState(true);
-//   const [budgetAlerts, setBudgetAlerts] = useState(true);
-//   const [goalReminders, setGoalReminders] = useState(true);
+export default function NotificationsSection() {
+  const queryClient = useQueryClient();
 
-//   useEffect(() => {
-//     if (user) {
-//       setEmailNotifications(user.emailNotifications ?? true);
-//       setBudgetAlerts(user.budgetAlerts ?? true);
-//       setGoalReminders(user.goalReminders ?? true);
-//     }
-//   }, [user]);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [budgetAlerts, setBudgetAlerts] = useState(true);
+  const [goalReminders, setGoalReminders] = useState(true);
 
-//   const handleSave = async () => {
-//     try {
-//       await updateSettings({
-//         emailNotifications,
-//         budgetAlerts,
-//         goalReminders,
-//       });
-//       toast.success("Notification settings updated");
-//     } catch (error) {
-//       toast.error("Failed to update notification settings");
-//       console.error(error);
-//     }
-//   };
+  // 🔐 Auth user (guard)
+  const { data: authUser } = useQuery({
+    queryKey: ["auth-user"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser();
+      return data.user;
+    },
+  });
 
-//   return (
-//     <Card className="glass-card">
-//       <CardHeader>
-//         <CardTitle className="flex items-center gap-2">
-//           <Bell className="h-5 w-5" />
-//           Notification Settings
-//         </CardTitle>
-//         <CardDescription>Manage how you receive updates</CardDescription>
-//       </CardHeader>
-//       <CardContent className="space-y-6">
-//         <div className="flex items-center justify-between">
-//           <div className="space-y-0.5">
-//             <Label htmlFor="email-notifications">Email Notifications</Label>
-//             <p className="text-sm text-muted-foreground">
-//               Receive email updates about your finances
-//             </p>
-//           </div>
-//           <Switch
-//             id="email-notifications"
-//             checked={emailNotifications}
-//             onCheckedChange={setEmailNotifications}
-//           />
-//         </div>
+  // 🔔 Load notification settings
+  const { data: settings, isLoading } = useQuery<NotificationSettings>({
+    queryKey: ["notification-settings"],
+    enabled: !!authUser,
+    queryFn: () => apiFetch("/api/users/me/notifications"),
+  });
 
-//         <div className="flex items-center justify-between">
-//           <div className="space-y-0.5">
-//             <Label htmlFor="budget-alerts">Budget Alerts</Label>
-//             <p className="text-sm text-muted-foreground">
-//               Get notified when approaching budget limits
-//             </p>
-//           </div>
-//           <Switch
-//             id="budget-alerts"
-//             checked={budgetAlerts}
-//             onCheckedChange={setBudgetAlerts}
-//           />
-//         </div>
+  useEffect(() => {
+    if (settings) {
+      setEmailNotifications(settings.emailNotifications);
+      setBudgetAlerts(settings.budgetAlerts);
+      setGoalReminders(settings.goalReminders);
+    }
+  }, [settings]);
 
-//         <div className="flex items-center justify-between">
-//           <div className="space-y-0.5">
-//             <Label htmlFor="goal-reminders">Goal Reminders</Label>
-//             <p className="text-sm text-muted-foreground">
-//               Receive reminders about your financial goals
-//             </p>
-//           </div>
-//           <Switch
-//             id="goal-reminders"
-//             checked={goalReminders}
-//             onCheckedChange={setGoalReminders}
-//           />
-//         </div>
+  // 💾 Save mutation
+  const saveSettings = useMutation({
+    mutationFn: (payload: NotificationSettings) =>
+      apiFetch("/api/users/me/notifications", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      toast.success("Notification settings updated");
+      queryClient.invalidateQueries({
+        queryKey: ["notification-settings"],
+      });
+    },
+    onError: () => {
+      toast.error("Failed to update notification settings");
+    },
+  });
 
-//         <Button onClick={handleSave} className="w-full">
-//           Save Notification Settings
-//         </Button>
-//       </CardContent>
-//     </Card>
-//   );
-// }
+  if (isLoading) {
+    return (
+      <Card className="glass-card">
+        <CardContent className="p-6 space-y-4 animate-pulse">
+          <div className="h-4 w-40 bg-muted rounded" />
+          <div className="h-10 bg-muted rounded" />
+          <div className="h-10 bg-muted rounded" />
+          <div className="h-10 bg-muted rounded" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          Notification Settings
+        </CardTitle>
+        <CardDescription>
+          Manage how you receive updates
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        {/* Email notifications */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Email Notifications</Label>
+            <p className="text-sm text-muted-foreground">
+              Receive email updates about your finances
+            </p>
+          </div>
+          <Switch
+            checked={emailNotifications}
+            onCheckedChange={setEmailNotifications}
+          />
+        </div>
+
+        {/* Budget alerts */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Budget Alerts</Label>
+            <p className="text-sm text-muted-foreground">
+              Get notified when approaching budget limits
+            </p>
+          </div>
+          <Switch
+            checked={budgetAlerts}
+            onCheckedChange={setBudgetAlerts}
+          />
+        </div>
+
+        {/* Goal reminders */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Goal Reminders</Label>
+            <p className="text-sm text-muted-foreground">
+              Receive reminders about your financial goals
+            </p>
+          </div>
+          <Switch
+            checked={goalReminders}
+            onCheckedChange={setGoalReminders}
+          />
+        </div>
+
+        <Button
+          className="w-full"
+          disabled={saveSettings.isPending}
+          onClick={() =>
+            saveSettings.mutate({
+              emailNotifications,
+              budgetAlerts,
+              goalReminders,
+            })
+          }
+        >
+          Save Notification Settings
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}

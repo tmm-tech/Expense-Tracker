@@ -1,358 +1,263 @@
-// import { useForm } from "react-hook-form";
-// import { zodResolver } from "@hookform/resolvers/zod";
-// import { z } from "zod";
-// import { useMutation, useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
-// import { Button } from "@/components/ui/button.tsx";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog.tsx";
-// import {
-//   Form,
-//   FormControl,
-//   FormDescription,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from "@/components/ui/form.tsx";
-// import { Input } from "@/components/ui/input.tsx";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select.tsx";
-// import { Textarea } from "@/components/ui/textarea.tsx";
-// import { toast } from "sonner";
-// import { format } from "date-fns";
-// import { Switch } from "@/components/ui/switch.tsx";
+import { format } from "date-fns";
+import {
+  CalendarIcon,
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  MoreVerticalIcon,
+  Trash2Icon,
+  EditIcon,
+  CheckIcon,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
+import type { Bill } from "@/types/bill.ts";
+import type { Account } from "@/types/account.ts";
 
-// type Bill = Doc<"bills">;
-// type Account = Doc<"accounts">;
+interface BillListProps {
+  bills: Bill[];
+  accounts: Account[];
+  onEdit: (bill: Bill) => void;
+  onDelete: (id: string) => void;
+  onMarkPaid: (id: string) => void;
+}
 
-// const billSchema = z.object({
-//   name: z.string().min(1, "Bill name is required"),
-//   category: z.string().min(1, "Category is required"),
-//   amount: z.string().min(1, "Amount is required"),
-//   dueDate: z.string().min(1, "Due date is required"),
-//   frequency: z.enum(["one-time", "weekly", "monthly", "quarterly", "yearly"]),
-//   accountId: z.string().optional(),
-//   reminderDays: z.string().min(0, "Reminder days must be 0 or more"),
-//   notes: z.string().optional(),
-//   autoPayEnabled: z.boolean(),
-// });
+export default function BillList({
+  bills,
+  accounts,
+  onEdit,
+  onDelete,
+  onMarkPaid,
+}: BillListProps) {
+  if (bills.length === 0) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <CalendarIcon />
+          </EmptyMedia>
+          <EmptyTitle>No bills yet</EmptyTitle>
+          <EmptyDescription>
+            Create your first bill to start tracking payments
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
 
-// type BillFormData = z.infer<typeof billSchema>;
+  const getAccount = (accountId?: string): Account | undefined => {
+    return accounts.find((a) => a.id === accountId);
+  };
 
-// interface BillDialogProps {
-//   open: boolean;
-//   onClose: () => void;
-//   bill?: Bill | null;
-//   accounts: Account[];
-// }
+  const getStatusBadge = (bill: Bill) => {
+    const now = Date.now();
+    const daysUntilDue = Math.ceil((bill.dueDate - now) / (1000 * 60 * 60 * 24));
 
-// export default function BillDialog({
-//   open,
-//   onClose,
-//   bill,
-//   accounts,
-// }: BillDialogProps) {
-//   const createBill = useMutation(api.bills.create);
-//   const updateBill = useMutation(api.bills.update);
-//   const categories = useQuery(api.categories.listByType, { type: "expense" });
+    if (bill.status === "paid") {
+      return (
+        <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-400">
+          <CheckCircle2Icon className="mr-1 h-3 w-3" />
+          Paid
+        </Badge>
+      );
+    }
 
-//   const form = useForm<BillFormData>({
-//     resolver: zodResolver(billSchema),
-//     defaultValues: {
-//       name: bill?.name || "",
-//       category: bill?.category || "",
-//       amount: bill?.amount.toString() || "",
-//       dueDate: bill?.dueDate
-//         ? format(bill.dueDate, "yyyy-MM-dd")
-//         : format(Date.now(), "yyyy-MM-dd"),
-//       frequency: bill?.frequency || "monthly",
-//       accountId: bill?.accountId || "none",
-//       reminderDays: bill?.reminderDays.toString() || "7",
-//       notes: bill?.notes || "",
-//       autoPayEnabled: bill?.autoPayEnabled || false,
-//     },
-//   });
+    if (bill.status === "overdue" || (bill.status === "pending" && bill.dueDate < now)) {
+      return (
+        <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-400">
+          <AlertCircleIcon className="mr-1 h-3 w-3" />
+          Overdue
+        </Badge>
+      );
+    }
 
-//   const onSubmit = async (data: BillFormData) => {
-//     try {
-//       const dueDate = new Date(data.dueDate).getTime();
+    if (daysUntilDue <= bill.reminderDays) {
+      return (
+        <Badge variant="outline" className="border-yellow-500/30 bg-yellow-500/10 text-yellow-400">
+          <CalendarIcon className="mr-1 h-3 w-3" />
+          Due soon
+        </Badge>
+      );
+    }
 
-//       if (bill) {
-//         await updateBill({
-//           id: bill._id,
-//           name: data.name,
-//           category: data.category,
-//           amount: parseFloat(data.amount),
-//           dueDate,
-//           frequency: data.frequency,
-//           accountId:
-//             data.accountId && data.accountId !== "none"
-//               ? (data.accountId as Id<"accounts">)
-//               : undefined,
-//           reminderDays: parseInt(data.reminderDays),
-//           notes: data.notes || undefined,
-//           autoPayEnabled: data.autoPayEnabled,
-//         });
-//         toast.success("Bill updated successfully");
-//       } else {
-//         await createBill({
-//           name: data.name,
-//           category: data.category,
-//           amount: parseFloat(data.amount),
-//           dueDate,
-//           frequency: data.frequency,
-//           accountId:
-//             data.accountId && data.accountId !== "none"
-//               ? (data.accountId as Id<"accounts">)
-//               : undefined,
-//           reminderDays: parseInt(data.reminderDays),
-//           notes: data.notes || undefined,
-//           autoPayEnabled: data.autoPayEnabled,
-//         });
-//         toast.success("Bill created successfully");
-//       }
+    return (
+      <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400">
+        Pending
+      </Badge>
+    );
+  };
 
-//       form.reset();
-//       onClose();
-//     } catch (error) {
-//       toast.error("Failed to save bill");
-//     }
-//   };
+  const getFrequencyLabel = (frequency: Bill["frequency"]) => {
+    const labels = {
+      "one-time": "One-time",
+      weekly: "Weekly",
+      monthly: "Monthly",
+      quarterly: "Quarterly",
+      yearly: "Yearly",
+    };
+    return labels[frequency];
+  };
 
-//   return (
-//     <Dialog open={open} onOpenChange={onClose}>
-//       <DialogContent className="glass max-h-[90vh] overflow-y-auto">
-//         <DialogHeader>
-//           <DialogTitle>{bill ? "Edit Bill" : "Create Bill"}</DialogTitle>
-//           <DialogDescription>
-//             {bill
-//               ? "Update bill details and payment schedule"
-//               : "Add a new bill to track payments"}
-//           </DialogDescription>
-//         </DialogHeader>
-//         <Form {...form}>
-//           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-//             <FormField
-//               control={form.control}
-//               name="name"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Bill Name</FormLabel>
-//                   <FormControl>
-//                     <Input placeholder="Electricity" {...field} />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+  // Group bills by status
+  const upcomingBills = bills.filter(
+    (b) => b.status === "pending" && b.dueDate >= Date.now()
+  );
+  const overdueBills = bills.filter(
+    (b) => b.status === "overdue" || (b.status === "pending" && b.dueDate < Date.now())
+  );
+  const paidBills = bills.filter((b) => b.status === "paid");
 
-//             <FormField
-//               control={form.control}
-//               name="category"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Category</FormLabel>
-//                   <Select
-//                     onValueChange={field.onChange}
-//                     defaultValue={field.value}
-//                   >
-//                     <FormControl>
-//                       <SelectTrigger>
-//                         <SelectValue placeholder="Select category" />
-//                       </SelectTrigger>
-//                     </FormControl>
-//                     <SelectContent className="glass">
-//                       {categories?.map((cat) => (
-//                         <SelectItem key={cat._id} value={cat.name}>
-//                           {cat.name}
-//                         </SelectItem>
-//                       ))}
-//                     </SelectContent>
-//                   </Select>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+  const renderBillCard = (bill: Bill) => {
+    const account = getAccount(bill.accountId);
 
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="amount"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Amount (KES)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         step="0.01"
-//                         placeholder="0.00"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
+    return (
+      <Card key={bill.id} className="glass-card">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-lg">{bill.name}</CardTitle>
+              <CardDescription className="mt-1 flex items-center gap-2">
+                <span>{bill.category}</span>
+                <span>•</span>
+                <span>{getFrequencyLabel(bill.frequency)}</span>
+                {account && (
+                  <>
+                    <span>•</span>
+                    <Badge
+                      variant="outline"
+                      className="text-xs"
+                      style={{
+                        borderColor: account.color || undefined,
+                        backgroundColor: account.color
+                          ? `${account.color}20`
+                          : undefined,
+                      }}
+                    >
+                      {account.name}
+                    </Badge>
+                  </>
+                )}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusBadge(bill)}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVerticalIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="glass">
+                  {bill.status !== "paid" && (
+                    <DropdownMenuItem onClick={() => onMarkPaid(bill.id)}>
+                      <CheckIcon className="mr-2 h-4 w-4" />
+                      Mark as Paid
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => onEdit(bill)}>
+                    <EditIcon className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDelete(bill.id)}
+                    className="text-red-400"
+                  >
+                    <Trash2Icon className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-2xl font-bold">KES {bill.amount.toFixed(2)}</div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarIcon className="h-4 w-4" />
+                <span>Due: {format(bill.dueDate, "MMM dd, yyyy")}</span>
+              </div>
+              {bill.reminderDays > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Reminder: {bill.reminderDays} days before
+                </div>
+              )}
+              {bill.autoPayEnabled && (
+                <Badge variant="outline" className="text-xs">
+                  Auto-pay enabled
+                </Badge>
+              )}
+            </div>
+          </div>
+          {bill.notes && (
+            <div className="mt-3 text-sm text-muted-foreground">
+              {bill.notes}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
-//               <FormField
-//                 control={form.control}
-//                 name="dueDate"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Due Date</FormLabel>
-//                     <FormControl>
-//                       <Input type="date" {...field} />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             </div>
+  return (
+    <div className="space-y-6">
+      {overdueBills.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-red-400">
+              Overdue Bills
+            </h3>
+            <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-400">
+              {overdueBills.length}
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {overdueBills.map(renderBillCard)}
+          </div>
+        </div>
+      )}
 
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="frequency"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Frequency</FormLabel>
-//                     <Select
-//                       onValueChange={field.onChange}
-//                       defaultValue={field.value}
-//                     >
-//                       <FormControl>
-//                         <SelectTrigger>
-//                           <SelectValue />
-//                         </SelectTrigger>
-//                       </FormControl>
-//                       <SelectContent className="glass">
-//                         <SelectItem value="one-time">One-time</SelectItem>
-//                         <SelectItem value="weekly">Weekly</SelectItem>
-//                         <SelectItem value="monthly">Monthly</SelectItem>
-//                         <SelectItem value="quarterly">Quarterly</SelectItem>
-//                         <SelectItem value="yearly">Yearly</SelectItem>
-//                       </SelectContent>
-//                     </Select>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
+      {upcomingBills.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Upcoming Bills</h3>
+            <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400">
+              {upcomingBills.length}
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {upcomingBills.map(renderBillCard)}
+          </div>
+        </div>
+      )}
 
-//               <FormField
-//                 control={form.control}
-//                 name="reminderDays"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Reminder (days before)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         min="0"
-//                         placeholder="7"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             </div>
-
-//             <FormField
-//               control={form.control}
-//               name="accountId"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Account (Optional)</FormLabel>
-//                   <Select
-//                     onValueChange={field.onChange}
-//                     defaultValue={field.value}
-//                   >
-//                     <FormControl>
-//                       <SelectTrigger>
-//                         <SelectValue placeholder="Select account" />
-//                       </SelectTrigger>
-//                     </FormControl>
-//                     <SelectContent className="glass">
-//                       <SelectItem value="none">No account</SelectItem>
-//                       {accounts.map((account) => (
-//                         <SelectItem key={account._id} value={account._id}>
-//                           {account.name} ({account.type})
-//                         </SelectItem>
-//                       ))}
-//                     </SelectContent>
-//                   </Select>
-//                   <FormDescription>
-//                     Account to deduct payment from
-//                   </FormDescription>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
-
-//             <FormField
-//               control={form.control}
-//               name="autoPayEnabled"
-//               render={({ field }) => (
-//                 <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 p-4">
-//                   <div className="space-y-0.5">
-//                     <FormLabel className="text-base">Auto-pay</FormLabel>
-//                     <FormDescription>
-//                       Automatically create transaction on due date
-//                     </FormDescription>
-//                   </div>
-//                   <FormControl>
-//                     <Switch
-//                       checked={field.value}
-//                       onCheckedChange={field.onChange}
-//                     />
-//                   </FormControl>
-//                 </FormItem>
-//               )}
-//             />
-
-//             <FormField
-//               control={form.control}
-//               name="notes"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Notes (Optional)</FormLabel>
-//                   <FormControl>
-//                     <Textarea
-//                       placeholder="Additional details..."
-//                       className="resize-none"
-//                       {...field}
-//                     />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
-
-//             <DialogFooter>
-//               <Button type="button" variant="outline" onClick={onClose}>
-//                 Cancel
-//               </Button>
-//               <Button type="submit">
-//                 {bill ? "Update Bill" : "Create Bill"}
-//               </Button>
-//             </DialogFooter>
-//           </form>
-//         </Form>
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
+      {paidBills.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Paid Bills</h3>
+            <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-400">
+              {paidBills.length}
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paidBills.map(renderBillCard)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

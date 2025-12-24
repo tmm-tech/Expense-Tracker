@@ -1,6 +1,3 @@
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
-import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +7,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.tsx";
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -18,13 +15,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
-import { Button } from "@/components/ui/button.tsx";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ConvexError } from "convex/values";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
+import type { Goal } from "@/types/goal";
+/* =========================
+   Validation
+========================= */
 
 const goalSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -40,98 +41,116 @@ type GoalFormData = z.infer<typeof goalSchema>;
 interface GoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingId?: Id<"goals"> | null;
-  goals: Doc<"goals">[];
+  editingId?: string | null;
+  goals: Goal[];
+  onSaved: () => void;
 }
+
+/* =========================
+   Component
+========================= */
 
 export function GoalDialog({
   open,
   onOpenChange,
   editingId,
   goals,
+  onSaved,
 }: GoalDialogProps) {
-  const createGoal = useMutation(api.goals.create);
-  const updateGoal = useMutation(api.goals.update);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const editingGoal = editingId
-    ? goals.find((g) => g._id === editingId)
+    ? goals.find((g) => g.id === editingId)
     : null;
 
   const form = useForm<GoalFormData>({
     resolver: zodResolver(goalSchema),
-    defaultValues: editingGoal
-      ? {
-          name: editingGoal.name,
-          targetAmount: editingGoal.targetAmount,
-          currentAmount: editingGoal.currentAmount,
-          deadline: new Date(editingGoal.deadline).toISOString().split("T")[0],
-          category: editingGoal.category,
-          description: editingGoal.description || "",
-        }
-      : {
-          name: "",
-          targetAmount: 0,
-          currentAmount: 0,
-          deadline: "",
-          category: "",
-          description: "",
-        },
+    defaultValues: {
+      name: "",
+      targetAmount: 0,
+      currentAmount: 0,
+      deadline: "",
+      category: "",
+      description: "",
+    },
   });
 
+  /* -------------------------
+     Populate form on edit
+  -------------------------- */
+  useEffect(() => {
+    if (editingGoal) {
+      form.reset({
+        name: editingGoal.name,
+        targetAmount: editingGoal.targetAmount,
+        currentAmount: editingGoal.currentAmount,
+        deadline: new Date(editingGoal.deadline)
+          .toISOString()
+          .split("T")[0],
+        category: editingGoal.category,
+        description: editingGoal.description || "",
+      });
+    } else {
+      form.reset();
+    }
+  }, [editingGoal, open, form]);
+
+  /* -------------------------
+     Submit
+  -------------------------- */
   const onSubmit = async (data: GoalFormData) => {
     setIsSubmitting(true);
     try {
-      const deadline = new Date(data.deadline).getTime();
+      const deadlineTs = new Date(data.deadline).getTime();
 
-      if (deadline < Date.now()) {
+      if (deadlineTs < Date.now()) {
         toast.error("Deadline must be in the future");
-        setIsSubmitting(false);
         return;
       }
 
       if (data.currentAmount > data.targetAmount) {
-        toast.error("Current amount cannot exceed target amount");
-        setIsSubmitting(false);
+        toast.error("Current amount cannot exceed target");
         return;
       }
 
+      const payload = {
+        name: data.name,
+        targetAmount: data.targetAmount,
+        currentAmount: data.currentAmount,
+        deadline: deadlineTs,
+        category: data.category,
+        description: data.description || undefined,
+      };
+
       if (editingGoal) {
-        await updateGoal({
-          id: editingGoal._id,
-          name: data.name,
-          targetAmount: data.targetAmount,
-          currentAmount: data.currentAmount,
-          deadline,
-          category: data.category,
-          description: data.description,
+        await apiFetch(`/api/goals/${editingGoal.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
         });
         toast.success("Goal updated");
       } else {
-        await createGoal({
-          name: data.name,
-          targetAmount: data.targetAmount,
-          currentAmount: data.currentAmount,
-          deadline,
-          category: data.category,
-          description: data.description,
+        await apiFetch("/api/goals", {
+          method: "POST",
+          body: JSON.stringify(payload),
         });
         toast.success("Goal created");
       }
 
-      form.reset();
+      onSaved();
       onOpenChange(false);
-    } catch (error) {
-      if (error instanceof ConvexError) {
-        const { message } = error.data as { code: string; message: string };
-        toast.error(`Error: ${message}`);
-      } else {
-        toast.error(`Failed to ${editingGoal ? "update" : "create"} goal`);
-      }
+      form.reset();
+    } catch {
+      toast.error(
+        `Failed to ${editingGoal ? "update" : "create"} goal`
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +174,7 @@ export function GoalDialog({
                   <FormLabel>Goal Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g. Emergency Fund, Vacation"
+                      placeholder="e.g. Emergency Fund"
                       {...field}
                     />
                   </FormControl>
@@ -171,7 +190,10 @@ export function GoalDialog({
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Savings, Travel" {...field} />
+                    <Input
+                      placeholder="Savings, Travel, Education"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -186,12 +208,7 @@ export function GoalDialog({
                   <FormItem>
                     <FormLabel>Target Amount (KES)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                      />
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -205,12 +222,7 @@ export function GoalDialog({
                   <FormItem>
                     <FormLabel>Current Amount (KES)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                      />
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -239,11 +251,7 @@ export function GoalDialog({
                 <FormItem>
                   <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="e.g. Saving for a trip to Mombasa"
-                      rows={3}
-                      {...field}
-                    />
+                    <Textarea rows={3} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -263,8 +271,8 @@ export function GoalDialog({
                 {isSubmitting
                   ? "Saving..."
                   : editingGoal
-                    ? "Update"
-                    : "Create"}
+                  ? "Update"
+                  : "Create"}
               </Button>
             </div>
           </form>

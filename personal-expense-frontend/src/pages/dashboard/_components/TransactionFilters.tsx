@@ -1,327 +1,341 @@
-// import { useState, useEffect } from "react";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-// import { Button } from "@/components/ui/button.tsx";
-// import { Input } from "@/components/ui/input.tsx";
-// import { Label } from "@/components/ui/label.tsx";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
-// import { Search, X, Calendar, DollarSign, Tag, Filter } from "lucide-react";
-// import { startOfWeek, startOfMonth, subDays, startOfDay, endOfDay } from "date-fns";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  X,
+  Calendar,
+  DollarSign,
+  Tag,
+  Filter,
+} from "lucide-react";
+import {
+  startOfWeek,
+  startOfMonth,
+  subDays,
+  startOfDay,
+  endOfDay,
+} from "date-fns";
+import type { Transaction } from "@/types/transaction";
+import type { Account } from "@/types/account";
+/* ---------------- TYPES ---------------- */
 
-// interface TransactionFiltersProps {
-//   transactions: Doc<"transactions">[];
-//   accounts: Doc<"accounts">[];
-//   onFilteredTransactionsChange: (filtered: Doc<"transactions">[]) => void;
-// }
+interface TransactionFiltersProps {
+  transactions: Transaction[];
+  accounts: Account[];
+  onFilteredTransactionsChange: (filtered: Transaction[]) => void;
+}
 
-// type DatePreset = "all" | "today" | "week" | "month" | "30days" | "custom";
+type DatePreset =
+  | "all"
+  | "today"
+  | "week"
+  | "month"
+  | "30days"
+  | "custom";
 
-// export default function TransactionFilters({
-//   transactions,
-//   accounts,
-//   onFilteredTransactionsChange,
-// }: TransactionFiltersProps) {
-//   const [searchQuery, setSearchQuery] = useState("");
-//   const [datePreset, setDatePreset] = useState<DatePreset>("all");
-//   const [customStartDate, setCustomStartDate] = useState("");
-//   const [customEndDate, setCustomEndDate] = useState("");
-//   const [selectedType, setSelectedType] = useState<"all" | "income" | "expense">("all");
-//   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-//   const [selectedAccount, setSelectedAccount] = useState<string>("all");
-//   const [minAmount, setMinAmount] = useState("");
-//   const [maxAmount, setMaxAmount] = useState("");
+/* ---------------- COMPONENT ---------------- */
 
-//   // Get unique categories from transactions
-//   const categories = Array.from(new Set(transactions.map((t) => t.category))).sort();
+export default function TransactionFilters({
+  transactions,
+  accounts,
+  onFilteredTransactionsChange,
+}: TransactionFiltersProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [selectedType, setSelectedType] =
+    useState<"all" | "income" | "expense">("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedAccount, setSelectedAccount] = useState("all");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
 
-//   // Auto-apply filters when any filter changes
-//   useEffect(() => {
-//     applyFilters();
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [
-//     searchQuery,
-//     datePreset,
-//     customStartDate,
-//     customEndDate,
-//     selectedType,
-//     selectedCategory,
-//     selectedAccount,
-//     minAmount,
-//     maxAmount,
-//     transactions,
-//   ]);
+  /* --------- Derived values --------- */
 
-//   const applyFilters = () => {
-//     let filtered = [...transactions];
+  const categories = Array.from(
+    new Set(transactions.map((t) => t.category).filter(Boolean)),
+  ).sort();
 
-//     // Search filter (description)
-//     if (searchQuery.trim()) {
-//       const query = searchQuery.toLowerCase();
-//       filtered = filtered.filter((t) =>
-//         t.description.toLowerCase().includes(query)
-//       );
-//     }
+  /* --------- Auto apply filters --------- */
 
-//     // Date range filter
-//     if (datePreset !== "all") {
-//       const now = Date.now();
-//       let startDate = 0;
-//       let endDate = now;
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    searchQuery,
+    datePreset,
+    customStartDate,
+    customEndDate,
+    selectedType,
+    selectedCategory,
+    selectedAccount,
+    minAmount,
+    maxAmount,
+    transactions,
+  ]);
 
-//       switch (datePreset) {
-//         case "today":
-//           startDate = startOfDay(new Date()).getTime();
-//           endDate = endOfDay(new Date()).getTime();
-//           break;
-//         case "week":
-//           startDate = startOfWeek(new Date()).getTime();
-//           break;
-//         case "month":
-//           startDate = startOfMonth(new Date()).getTime();
-//           break;
-//         case "30days":
-//           startDate = subDays(new Date(), 30).getTime();
-//           break;
-//         case "custom":
-//           if (customStartDate) {
-//             startDate = new Date(customStartDate).getTime();
-//           }
-//           if (customEndDate) {
-//             endDate = endOfDay(new Date(customEndDate)).getTime();
-//           }
-//           break;
-//       }
+  /* ---------------- FILTER LOGIC ---------------- */
 
-//       filtered = filtered.filter((t) => t.date >= startDate && t.date <= endDate);
-//     }
+  const applyFilters = () => {
+    let filtered = [...transactions];
 
-//     // Type filter
-//     if (selectedType !== "all") {
-//       filtered = filtered.filter((t) => t.type === selectedType);
-//     }
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((t) =>
+        t.description.toLowerCase().includes(q),
+      );
+    }
 
-//     // Category filter
-//     if (selectedCategory !== "all") {
-//       filtered = filtered.filter((t) => t.category === selectedCategory);
-//     }
+    // Date filter
+    if (datePreset !== "all") {
+      const now = Date.now();
+      let startDate = 0;
+      let endDate = now;
 
-//     // Account filter
-//     if (selectedAccount !== "all") {
-//       if (selectedAccount === "none") {
-//         filtered = filtered.filter((t) => !t.accountId);
-//       } else {
-//         filtered = filtered.filter((t) => t.accountId === selectedAccount);
-//       }
-//     }
+      switch (datePreset) {
+        case "today":
+          startDate = startOfDay(new Date()).getTime();
+          endDate = endOfDay(new Date()).getTime();
+          break;
+        case "week":
+          startDate = startOfWeek(new Date()).getTime();
+          break;
+        case "month":
+          startDate = startOfMonth(new Date()).getTime();
+          break;
+        case "30days":
+          startDate = subDays(new Date(), 30).getTime();
+          break;
+        case "custom":
+          if (customStartDate) {
+            startDate = new Date(customStartDate).getTime();
+          }
+          if (customEndDate) {
+            endDate = endOfDay(new Date(customEndDate)).getTime();
+          }
+          break;
+      }
 
-//     // Amount range filter
-//     if (minAmount) {
-//       const min = parseFloat(minAmount);
-//       if (!isNaN(min)) {
-//         filtered = filtered.filter((t) => t.amount >= min);
-//       }
-//     }
-//     if (maxAmount) {
-//       const max = parseFloat(maxAmount);
-//       if (!isNaN(max)) {
-//         filtered = filtered.filter((t) => t.amount <= max);
-//       }
-//     }
+      filtered = filtered.filter((t) => {
+        const txDate =
+          typeof t.date === "string" ? new Date(t.date).getTime() : t.date;
+        return txDate >= startDate && txDate <= endDate;
+      });
+    }
 
-//     onFilteredTransactionsChange(filtered);
-//   };
+    // Type
+    if (selectedType !== "all") {
+      filtered = filtered.filter((t) => t.type === selectedType);
+    }
 
-//   const clearFilters = () => {
-//     setSearchQuery("");
-//     setDatePreset("all");
-//     setCustomStartDate("");
-//     setCustomEndDate("");
-//     setSelectedType("all");
-//     setSelectedCategory("all");
-//     setSelectedAccount("all");
-//     setMinAmount("");
-//     setMaxAmount("");
-//     onFilteredTransactionsChange(transactions);
-//   };
+    // Category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((t) => t.category === selectedCategory);
+    }
 
-//   const hasActiveFilters =
-//     searchQuery ||
-//     datePreset !== "all" ||
-//     selectedType !== "all" ||
-//     selectedCategory !== "all" ||
-//     selectedAccount !== "all" ||
-//     minAmount ||
-//     maxAmount;
+    // Account
+    if (selectedAccount !== "all") {
+      if (selectedAccount === "none") {
+        filtered = filtered.filter((t) => !t.accountId);
+      } else {
+        filtered = filtered.filter(
+          (t) => t.accountId === selectedAccount,
+        );
+      }
+    }
 
-//   return (
-//     <Card className="glass-card mb-6">
-//       <CardHeader>
-//         <div className="flex items-center justify-between">
-//           <CardTitle className="flex items-center gap-2">
-//             <Filter className="h-5 w-5" />
-//             Filter Transactions
-//           </CardTitle>
-//           {hasActiveFilters && (
-//             <Button variant="outline" size="sm" onClick={clearFilters}>
-//               <X className="h-4 w-4 mr-1" />
-//               Clear Filters
-//             </Button>
-//           )}
-//         </div>
-//       </CardHeader>
-//       <CardContent className="space-y-4">
-//         {/* Search */}
-//         <div className="space-y-2">
-//           <Label htmlFor="search" className="flex items-center gap-2">
-//             <Search className="h-4 w-4" />
-//             Search Description
-//           </Label>
-//           <Input
-//             id="search"
-//             placeholder="Search transactions..."
-//             value={searchQuery}
-//             onChange={(e) => setSearchQuery(e.target.value)}
-//             className="glass"
-//           />
-//         </div>
+    // Amount range
+    if (minAmount) {
+      const min = Number(minAmount);
+      if (!Number.isNaN(min)) {
+        filtered = filtered.filter((t) => t.amount >= min);
+      }
+    }
 
-//         {/* Date Range */}
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//           <div className="space-y-2">
-//             <Label htmlFor="datePreset" className="flex items-center gap-2">
-//               <Calendar className="h-4 w-4" />
-//               Date Range
-//             </Label>
-//             <Select value={datePreset} onValueChange={(value) => setDatePreset(value as DatePreset)}>
-//               <SelectTrigger id="datePreset" className="glass">
-//                 <SelectValue />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 <SelectItem value="all">All Time</SelectItem>
-//                 <SelectItem value="today">Today</SelectItem>
-//                 <SelectItem value="week">This Week</SelectItem>
-//                 <SelectItem value="month">This Month</SelectItem>
-//                 <SelectItem value="30days">Last 30 Days</SelectItem>
-//                 <SelectItem value="custom">Custom Range</SelectItem>
-//               </SelectContent>
-//             </Select>
-//           </div>
+    if (maxAmount) {
+      const max = Number(maxAmount);
+      if (!Number.isNaN(max)) {
+        filtered = filtered.filter((t) => t.amount <= max);
+      }
+    }
 
-//           {datePreset === "custom" && (
-//             <>
-//               <div className="space-y-2">
-//                 <Label htmlFor="startDate">Start Date</Label>
-//                 <Input
-//                   id="startDate"
-//                   type="date"
-//                   value={customStartDate}
-//                   onChange={(e) => setCustomStartDate(e.target.value)}
-//                   className="glass"
-//                 />
-//               </div>
-//               <div className="space-y-2">
-//                 <Label htmlFor="endDate">End Date</Label>
-//                 <Input
-//                   id="endDate"
-//                   type="date"
-//                   value={customEndDate}
-//                   onChange={(e) => setCustomEndDate(e.target.value)}
-//                   className="glass"
-//                 />
-//               </div>
-//             </>
-//           )}
-//         </div>
+    onFilteredTransactionsChange(filtered);
+  };
 
-//         {/* Type, Category, Account */}
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//           <div className="space-y-2">
-//             <Label htmlFor="type">Type</Label>
-//             <Select value={selectedType} onValueChange={(value) => setSelectedType(value as typeof selectedType)}>
-//               <SelectTrigger id="type" className="glass">
-//                 <SelectValue />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 <SelectItem value="all">All Types</SelectItem>
-//                 <SelectItem value="income">Income</SelectItem>
-//                 <SelectItem value="expense">Expense</SelectItem>
-//               </SelectContent>
-//             </Select>
-//           </div>
+  /* ---------------- CLEAR ---------------- */
 
-//           <div className="space-y-2">
-//             <Label htmlFor="category" className="flex items-center gap-2">
-//               <Tag className="h-4 w-4" />
-//               Category
-//             </Label>
-//             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-//               <SelectTrigger id="category" className="glass">
-//                 <SelectValue />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 <SelectItem value="all">All Categories</SelectItem>
-//                 {categories.map((cat) => (
-//                   <SelectItem key={cat} value={cat}>
-//                     {cat}
-//                   </SelectItem>
-//                 ))}
-//               </SelectContent>
-//             </Select>
-//           </div>
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDatePreset("all");
+    setCustomStartDate("");
+    setCustomEndDate("");
+    setSelectedType("all");
+    setSelectedCategory("all");
+    setSelectedAccount("all");
+    setMinAmount("");
+    setMaxAmount("");
+    onFilteredTransactionsChange(transactions);
+  };
 
-//           <div className="space-y-2">
-//             <Label htmlFor="account">Account</Label>
-//             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-//               <SelectTrigger id="account" className="glass">
-//                 <SelectValue />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 <SelectItem value="all">All Accounts</SelectItem>
-//                 <SelectItem value="none">No Account</SelectItem>
-//                 {accounts.map((acc) => (
-//                   <SelectItem key={acc._id} value={acc._id}>
-//                     {acc.name}
-//                   </SelectItem>
-//                 ))}
-//               </SelectContent>
-//             </Select>
-//           </div>
-//         </div>
+  const hasActiveFilters =
+    searchQuery ||
+    datePreset !== "all" ||
+    selectedType !== "all" ||
+    selectedCategory !== "all" ||
+    selectedAccount !== "all" ||
+    minAmount ||
+    maxAmount;
 
-//         {/* Amount Range */}
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//           <div className="space-y-2">
-//             <Label htmlFor="minAmount" className="flex items-center gap-2">
-//               <DollarSign className="h-4 w-4" />
-//               Min Amount
-//             </Label>
-//             <Input
-//               id="minAmount"
-//               type="number"
-//               step="0.01"
-//               placeholder="0.00"
-//               value={minAmount}
-//               onChange={(e) => setMinAmount(e.target.value)}
-//               className="glass"
-//             />
-//           </div>
+  /* ---------------- UI ---------------- */
 
-//           <div className="space-y-2">
-//             <Label htmlFor="maxAmount">Max Amount</Label>
-//             <Input
-//               id="maxAmount"
-//               type="number"
-//               step="0.01"
-//               placeholder="999999.99"
-//               value={maxAmount}
-//               onChange={(e) => setMaxAmount(e.target.value)}
-//               className="glass"
-//             />
-//           </div>
-//         </div>
+  return (
+    <Card className="glass-card mb-6">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filter Transactions
+          </CardTitle>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </CardHeader>
 
-//         {/* Results info - removed Apply button since filters auto-apply */}
-//       </CardContent>
-//     </Card>
-//   );
-// }
+      <CardContent className="space-y-4">
+        {/* Search */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Search Description
+          </Label>
+          <Input
+            placeholder="Search transactions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="glass"
+          />
+        </div>
+
+        {/* Date */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Date Range
+            </Label>
+            <Select
+              value={datePreset}
+              onValueChange={(v) => setDatePreset(v as DatePreset)}
+            >
+              <SelectTrigger className="glass">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="30days">Last 30 Days</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {datePreset === "custom" && (
+            <>
+              <Input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="glass"
+              />
+              <Input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="glass"
+              />
+            </>
+          )}
+        </div>
+
+        {/* Type / Category / Account */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Select value={selectedType} onValueChange={(v) => setSelectedType(v as any)}>
+            <SelectTrigger className="glass">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="expense">Expense</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="glass">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+            <SelectTrigger className="glass">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
+              <SelectItem value="none">No Account</SelectItem>
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Amount */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            type="number"
+            placeholder="Min amount"
+            value={minAmount}
+            onChange={(e) => setMinAmount(e.target.value)}
+            className="glass"
+          />
+          <Input
+            type="number"
+            placeholder="Max amount"
+            value={maxAmount}
+            onChange={(e) => setMaxAmount(e.target.value)}
+            className="glass"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,333 +1,302 @@
-// import { useQuery, useMutation } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
-// import { Button } from "@/components/ui/button.tsx";
-// import {
-//   Card,
-//   CardContent,
-//   CardDescription,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card.tsx";
-// import {
-//   Empty,
-//   EmptyContent,
-//   EmptyDescription,
-//   EmptyHeader,
-//   EmptyMedia,
-//   EmptyTitle,
-// } from "@/components/ui/empty.tsx";
-// import { Badge } from "@/components/ui/badge.tsx";
-// import { Progress } from "@/components/ui/progress.tsx";
-// import { Skeleton } from "@/components/ui/skeleton.tsx";
-// import {
-//   TargetIcon,
-//   CalendarIcon,
-//   TrendingUpIcon,
-//   CheckCircle2Icon,
-//   XCircleIcon,
-//   PlusIcon,
-//   PencilIcon,
-//   Trash2Icon,
-// } from "lucide-react";
-// import { format, differenceInDays } from "date-fns";
-// import { useState } from "react";
-// import { GoalDialog } from "./GoalDialog.tsx";
-// import { GoalProgressDialog } from "./GoalProgressDialog.jsx";
-// import { toast } from "sonner";
-// import { ConvexError } from "convex/values";
+import { useState } from "react";
+import { apiFetch } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  TargetIcon,
+  CalendarIcon,
+  CheckCircle2Icon,
+  XCircleIcon,
+  PlusIcon,
+  PencilIcon,
+  Trash2Icon,
+} from "lucide-react";
+import { format, differenceInDays } from "date-fns";
+import { GoalProgressDialog } from "./GoalProgressDialog";
+import { toast } from "sonner";
+import type { Goal } from "@/types/goal";
+/* =========================
+   Types (REST)
+========================= */
 
-// interface GoalListProps {
-//   goals: Doc<"goals">[];
-//   onEdit: (id: Id<"goals">) => void;
-// }
+interface GoalListProps {
+  goals: Goal[] | undefined;
+  onEdit: (id: string) => void;
+  onRefresh: () => void;
+}
 
-// export function GoalList({ goals, onEdit }: GoalListProps) {
-//   const removeGoal = useMutation(api.goals.remove);
-//   const updateStatus = useMutation(api.goals.updateStatus);
-//   const [progressGoalId, setProgressGoalId] = useState<Id<"goals"> | null>(
-//     null
-//   );
+/* =========================
+   Component
+========================= */
 
-//   const handleDelete = async (id: Id<"goals">) => {
-//     try {
-//       await removeGoal({ id });
-//       toast.success("Goal deleted");
-//     } catch (error) {
-//       if (error instanceof ConvexError) {
-//         const { message } = error.data as { code: string; message: string };
-//         toast.error(`Error: ${message}`);
-//       } else {
-//         toast.error("Failed to delete goal");
-//       }
-//     }
-//   };
+export function GoalList({ goals, onEdit, onRefresh }: GoalListProps) {
+  const [progressGoalId, setProgressGoalId] = useState<string | null>(null);
 
-//   const handleMarkComplete = async (id: Id<"goals">) => {
-//     try {
-//       await updateStatus({ id, status: "completed" });
-//       toast.success("Goal marked as complete!");
-//     } catch (error) {
-//       if (error instanceof ConvexError) {
-//         const { message } = error.data as { code: string; message: string };
-//         toast.error(`Error: ${message}`);
-//       } else {
-//         toast.error("Failed to update goal");
-//       }
-//     }
-//   };
+  /* -------------------------
+     Actions
+  -------------------------- */
 
-//   const handleReactivate = async (id: Id<"goals">) => {
-//     try {
-//       await updateStatus({ id, status: "active" });
-//       toast.success("Goal reactivated");
-//     } catch (error) {
-//       if (error instanceof ConvexError) {
-//         const { message } = error.data as { code: string; message: string };
-//         toast.error(`Error: ${message}`);
-//       } else {
-//         toast.error("Failed to update goal");
-//       }
-//     }
-//   };
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this goal?")) return;
 
-//   if (goals === undefined) {
-//     return (
-//       <div className="space-y-4">
-//         {Array.from({ length: 3 }).map((_, i) => (
-//           <Skeleton key={i} className="h-48 w-full" />
-//         ))}
-//       </div>
-//     );
-//   }
+    try {
+      await apiFetch(`/api/goals/${id}`, { method: "DELETE" });
+      toast.success("Goal deleted");
+      onRefresh();
+    } catch {
+      toast.error("Failed to delete goal");
+    }
+  };
 
-//   if (goals.length === 0) {
-//     return (
-//       <Empty>
-//         <EmptyHeader>
-//           <EmptyMedia variant="icon">
-//             <TargetIcon />
-//           </EmptyMedia>
-//           <EmptyTitle>No financial goals yet</EmptyTitle>
-//           <EmptyDescription>
-//             Set savings goals and track your progress toward achieving them
-//           </EmptyDescription>
-//         </EmptyHeader>
-//       </Empty>
-//     );
-//   }
+  const updateStatus = async (
+    id: string,
+    status: "active" | "completed"
+  ) => {
+    try {
+      await apiFetch(`/api/goals/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      toast.success("Goal updated");
+      onRefresh();
+    } catch {
+      toast.error("Failed to update goal");
+    }
+  };
 
-//   const activeGoals = goals.filter((g) => g.status === "active");
-//   const completedGoals = goals.filter((g) => g.status === "completed");
-//   const cancelledGoals = goals.filter((g) => g.status === "cancelled");
+  /* -------------------------
+     Loading / Empty
+  -------------------------- */
 
-//   const getProgressPercentage = (goal: Doc<"goals">): number => {
-//     return Math.min(
-//       Math.round((goal.currentAmount / goal.targetAmount) * 100),
-//       100
-//     );
-//   };
+  if (!goals) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-48 w-full" />
+        ))}
+      </div>
+    );
+  }
 
-//   const getDaysRemaining = (deadline: number): number => {
-//     return differenceInDays(deadline, Date.now());
-//   };
+  if (goals.length === 0) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <TargetIcon />
+          </EmptyMedia>
+          <EmptyTitle>No financial goals yet</EmptyTitle>
+          <EmptyDescription>
+            Set savings goals and track your progress
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
 
-//   const getStatusColor = (goal: Doc<"goals">): string => {
-//     if (goal.status === "completed") return "text-accent";
-//     if (goal.status === "cancelled") return "text-muted-foreground";
-    
-//     const daysLeft = getDaysRemaining(goal.deadline);
-//     const progress = getProgressPercentage(goal);
-    
-//     if (daysLeft < 0) return "text-destructive";
-//     if (progress >= 75) return "text-accent";
-//     if (daysLeft < 30) return "text-orange-500";
-//     return "text-primary";
-//   };
+  /* -------------------------
+     Helpers
+  -------------------------- */
 
-//   const renderGoalCard = (goal: Doc<"goals">) => {
-//     const progress = getProgressPercentage(goal);
-//     const daysLeft = getDaysRemaining(goal.deadline);
-//     const isOverdue = daysLeft < 0 && goal.status === "active";
+  const progressPercent = (g: Goal) =>
+    Math.min(Math.round((g.currentAmount / g.targetAmount) * 100), 100);
 
-//     return (
-//       <Card key={goal._id} className="glass-card">
-//         <CardHeader className="pb-3">
-//           <div className="flex items-start justify-between gap-3">
-//             <div className="flex-1 min-w-0">
-//               <CardTitle className="text-lg flex items-center gap-2">
-//                 {goal.name}
-//                 {goal.status === "completed" && (
-//                   <CheckCircle2Icon className="h-5 w-5 text-accent flex-shrink-0" />
-//                 )}
-//                 {goal.status === "cancelled" && (
-//                   <XCircleIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-//                 )}
-//               </CardTitle>
-//               <CardDescription className="mt-1">
-//                 {goal.category}
-//               </CardDescription>
-//             </div>
-//             {goal.status === "active" && (
-//               <Badge
-//                 variant={isOverdue ? "destructive" : "secondary"}
-//                 className="flex-shrink-0"
-//               >
-//                 {isOverdue
-//                   ? `${Math.abs(daysLeft)} days overdue`
-//                   : `${daysLeft} days left`}
-//               </Badge>
-//             )}
-//           </div>
-//         </CardHeader>
-//         <CardContent className="space-y-4">
-//           {goal.description && (
-//             <p className="text-sm text-muted-foreground">{goal.description}</p>
-//           )}
+  const daysLeft = (deadline: number) =>
+    differenceInDays(deadline, Date.now());
 
-//           <div className="space-y-2">
-//             <div className="flex justify-between text-sm">
-//               <span className="text-muted-foreground">Progress</span>
-//               <span className={`font-semibold ${getStatusColor(goal)}`}>
-//                 {progress}%
-//               </span>
-//             </div>
-//             <Progress value={progress} className="h-2" />
-//             <div className="flex justify-between text-sm">
-//               <span className="font-medium">
-//                 KES {goal.currentAmount.toLocaleString()}
-//               </span>
-//               <span className="text-muted-foreground">
-//                 of KES {goal.targetAmount.toLocaleString()}
-//               </span>
-//             </div>
-//           </div>
+  const renderGoalCard = (goal: Goal) => {
+    const progress = progressPercent(goal);
+    const remainingDays = daysLeft(goal.deadline);
+    const overdue = remainingDays < 0 && goal.status === "active";
 
-//           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-//             <CalendarIcon className="h-4 w-4" />
-//             <span>Target: {format(goal.deadline, "PPP")}</span>
-//           </div>
+    return (
+      <Card key={goal.id} className="glass-card">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                {goal.name}
+                {goal.status === "completed" && (
+                  <CheckCircle2Icon className="h-5 w-5 text-accent" />
+                )}
+                {goal.status === "cancelled" && (
+                  <XCircleIcon className="h-5 w-5 text-muted-foreground" />
+                )}
+              </CardTitle>
+              <CardDescription>{goal.category}</CardDescription>
+            </div>
 
-//           <div className="flex gap-2 pt-2">
-//             {goal.status === "active" && (
-//               <>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => setProgressGoalId(goal._id)}
-//                   className="flex-1"
-//                 >
-//                   <PlusIcon className="mr-1 h-3 w-3" />
-//                   Add Progress
-//                 </Button>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => onEdit(goal._id)}
-//                 >
-//                   <PencilIcon className="h-3 w-3" />
-//                 </Button>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => handleMarkComplete(goal._id)}
-//                 >
-//                   <CheckCircle2Icon className="h-3 w-3" />
-//                 </Button>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => handleDelete(goal._id)}
-//                 >
-//                   <Trash2Icon className="h-3 w-3" />
-//                 </Button>
-//               </>
-//             )}
-//             {goal.status === "completed" && (
-//               <>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => handleReactivate(goal._id)}
-//                   className="flex-1"
-//                 >
-//                   Reactivate
-//                 </Button>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => handleDelete(goal._id)}
-//                 >
-//                   <Trash2Icon className="h-3 w-3" />
-//                 </Button>
-//               </>
-//             )}
-//             {goal.status === "cancelled" && (
-//               <>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => handleReactivate(goal._id)}
-//                   className="flex-1"
-//                 >
-//                   Reactivate
-//                 </Button>
-//                 <Button
-//                   size="sm"
-//                   variant="outline"
-//                   onClick={() => handleDelete(goal._id)}
-//                 >
-//                   <Trash2Icon className="h-3 w-3" />
-//                 </Button>
-//               </>
-//             )}
-//           </div>
-//         </CardContent>
-//       </Card>
-//     );
-//   };
+            {goal.status === "active" && (
+              <Badge variant={overdue ? "destructive" : "secondary"}>
+                {overdue
+                  ? `${Math.abs(remainingDays)} days overdue`
+                  : `${remainingDays} days left`}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
 
-//   return (
-//     <>
-//       <div className="space-y-6">
-//         {activeGoals.length > 0 && (
-//           <div>
-//             <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-//               Active Goals ({activeGoals.length})
-//             </h3>
-//             <div className="grid gap-4 sm:grid-cols-2">
-//               {activeGoals.map(renderGoalCard)}
-//             </div>
-//           </div>
-//         )}
+        <CardContent className="space-y-4">
+          {goal.description && (
+            <p className="text-sm text-muted-foreground">
+              {goal.description}
+            </p>
+          )}
 
-//         {completedGoals.length > 0 && (
-//           <div>
-//             <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-//               Completed Goals ({completedGoals.length})
-//             </h3>
-//             <div className="grid gap-4 sm:grid-cols-2 opacity-75">
-//               {completedGoals.map(renderGoalCard)}
-//             </div>
-//           </div>
-//         )}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Progress</span>
+              <span className="font-semibold">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            <div className="flex justify-between text-sm">
+              <span>
+                KES {goal.currentAmount.toLocaleString()}
+              </span>
+              <span className="text-muted-foreground">
+                of KES {goal.targetAmount.toLocaleString()}
+              </span>
+            </div>
+          </div>
 
-//         {cancelledGoals.length > 0 && (
-//           <div>
-//             <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-//               Cancelled Goals ({cancelledGoals.length})
-//             </h3>
-//             <div className="grid gap-4 sm:grid-cols-2 opacity-60">
-//               {cancelledGoals.map(renderGoalCard)}
-//             </div>
-//           </div>
-//         )}
-//       </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarIcon className="h-4 w-4" />
+            Target: {format(goal.deadline, "PPP")}
+          </div>
 
-//       <GoalProgressDialog
-//         goalId={progressGoalId}
-//         onOpenChange={() => setProgressGoalId(null)}
-//       />
-//     </>
-//   );
-// }
+          <div className="flex gap-2 pt-2">
+            {goal.status === "active" && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setProgressGoalId(goal.id)}
+                >
+                  <PlusIcon className="h-3 w-3 mr-1" />
+                  Add Progress
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onEdit(goal.id)}
+                >
+                  <PencilIcon className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    updateStatus(goal.id, "completed")
+                  }
+                >
+                  <CheckCircle2Icon className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDelete(goal.id)}
+                >
+                  <Trash2Icon className="h-3 w-3" />
+                </Button>
+              </>
+            )}
+
+            {goal.status !== "active" && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() =>
+                    updateStatus(goal.id, "active")
+                  }
+                >
+                  Reactivate
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDelete(goal.id)}
+                >
+                  <Trash2Icon className="h-3 w-3" />
+                </Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  /* =========================
+     UI
+  ========================= */
+
+  return (
+    <>
+      <div className="space-y-6">
+        {goals.filter(g => g.status === "active").length > 0 && (
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+              Active Goals
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {goals
+                .filter(g => g.status === "active")
+                .map(renderGoalCard)}
+            </div>
+          </div>
+        )}
+
+        {goals.filter(g => g.status === "completed").length > 0 && (
+          <div className="opacity-75">
+            <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+              Completed Goals
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {goals
+                .filter(g => g.status === "completed")
+                .map(renderGoalCard)}
+            </div>
+          </div>
+        )}
+
+        {goals.filter(g => g.status === "cancelled").length > 0 && (
+          <div className="opacity-60">
+            <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+              Cancelled Goals
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {goals
+                .filter(g => g.status === "cancelled")
+                .map(renderGoalCard)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <GoalProgressDialog
+        goalId={progressGoalId}
+        open={progressGoalId !== null}
+        onOpenChange={() => setProgressGoalId(null)}
+      />
+    </>
+  );
+}

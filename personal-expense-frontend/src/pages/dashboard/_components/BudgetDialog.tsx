@@ -1,358 +1,261 @@
-// import { useForm } from "react-hook-form";
-// import { zodResolver } from "@hookform/resolvers/zod";
-// import { z } from "zod";
-// import { useMutation, useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
-// import { Button } from "@/components/ui/button.tsx";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog.tsx";
-// import {
-//   Form,
-//   FormControl,
-//   FormDescription,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from "@/components/ui/form.tsx";
-// import { Input } from "@/components/ui/input.tsx";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select.tsx";
-// import { Textarea } from "@/components/ui/textarea.tsx";
-// import { toast } from "sonner";
-// import { format } from "date-fns";
-// import { Switch } from "@/components/ui/switch.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
+import type { Budget, UpdateBudgetInput } from "@/types/budget";
+/* =========================
+   Types
+========================= */
 
-// type Bill = Doc<"bills">;
-// type Account = Doc<"accounts">;
 
-// const billSchema = z.object({
-//   name: z.string().min(1, "Bill name is required"),
-//   category: z.string().min(1, "Category is required"),
-//   amount: z.string().min(1, "Amount is required"),
-//   dueDate: z.string().min(1, "Due date is required"),
-//   frequency: z.enum(["one-time", "weekly", "monthly", "quarterly", "yearly"]),
-//   accountId: z.string().optional(),
-//   reminderDays: z.string().min(0, "Reminder days must be 0 or more"),
-//   notes: z.string().optional(),
-//   autoPayEnabled: z.boolean(),
-// });
+interface BudgetDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editingId: string | null;
+  budgets: Budget[];
+}
 
-// type BillFormData = z.infer<typeof billSchema>;
+/* =========================
+   Constants
+========================= */
 
-// interface BillDialogProps {
-//   open: boolean;
-//   onClose: () => void;
-//   bill?: Bill | null;
-//   accounts: Account[];
-// }
+const EXPENSE_CATEGORIES = [
+  "Food & Dining",
+  "Transportation",
+  "Shopping",
+  "Entertainment",
+  "Bills & Utilities",
+  "Healthcare",
+  "Education",
+  "Travel",
+  "Other Expense",
+];
 
-// export default function BillDialog({
-//   open,
-//   onClose,
-//   bill,
-//   accounts,
-// }: BillDialogProps) {
-//   const createBill = useMutation(api.bills.create);
-//   const updateBill = useMutation(api.bills.update);
-//   const categories = useQuery(api.categories.listByType, { type: "expense" });
+/* =========================
+   Component
+========================= */
 
-//   const form = useForm<BillFormData>({
-//     resolver: zodResolver(billSchema),
-//     defaultValues: {
-//       name: bill?.name || "",
-//       category: bill?.category || "",
-//       amount: bill?.amount.toString() || "",
-//       dueDate: bill?.dueDate
-//         ? format(bill.dueDate, "yyyy-MM-dd")
-//         : format(Date.now(), "yyyy-MM-dd"),
-//       frequency: bill?.frequency || "monthly",
-//       accountId: bill?.accountId || "none",
-//       reminderDays: bill?.reminderDays.toString() || "7",
-//       notes: bill?.notes || "",
-//       autoPayEnabled: bill?.autoPayEnabled || false,
-//     },
-//   });
+export default function BudgetDialog({
+  open,
+  onOpenChange,
+  editingId,
+  budgets,
+}: BudgetDialogProps) {
+  const queryClient = useQueryClient();
 
-//   const onSubmit = async (data: BillFormData) => {
-//     try {
-//       const dueDate = new Date(data.dueDate).getTime();
+  const createBudget = useMutation({
+    mutationFn: (input: Budget) =>
+      apiFetch("/api/budgets", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    },
+  });
 
-//       if (bill) {
-//         await updateBill({
-//           id: bill._id,
-//           name: data.name,
-//           category: data.category,
-//           amount: parseFloat(data.amount),
-//           dueDate,
-//           frequency: data.frequency,
-//           accountId:
-//             data.accountId && data.accountId !== "none"
-//               ? (data.accountId as Id<"accounts">)
-//               : undefined,
-//           reminderDays: parseInt(data.reminderDays),
-//           notes: data.notes || undefined,
-//           autoPayEnabled: data.autoPayEnabled,
-//         });
-//         toast.success("Bill updated successfully");
-//       } else {
-//         await createBill({
-//           name: data.name,
-//           category: data.category,
-//           amount: parseFloat(data.amount),
-//           dueDate,
-//           frequency: data.frequency,
-//           accountId:
-//             data.accountId && data.accountId !== "none"
-//               ? (data.accountId as Id<"accounts">)
-//               : undefined,
-//           reminderDays: parseInt(data.reminderDays),
-//           notes: data.notes || undefined,
-//           autoPayEnabled: data.autoPayEnabled,
-//         });
-//         toast.success("Bill created successfully");
-//       }
+  const updateBudget = useMutation({
+    mutationFn: (data: UpdateBudgetInput) =>
+      apiFetch(`/api/budgets/${data.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    },
+  });
 
-//       form.reset();
-//       onClose();
-//     } catch (error) {
-//       toast.error("Failed to save bill");
-//     }
-//   };
+  const editingBudget =
+    editingId != null ? budgets.find((b) => b.id === editingId) ?? null : null;
 
-//   return (
-//     <Dialog open={open} onOpenChange={onClose}>
-//       <DialogContent className="glass max-h-[90vh] overflow-y-auto">
-//         <DialogHeader>
-//           <DialogTitle>{bill ? "Edit Bill" : "Create Bill"}</DialogTitle>
-//           <DialogDescription>
-//             {bill
-//               ? "Update bill details and payment schedule"
-//               : "Add a new bill to track payments"}
-//           </DialogDescription>
-//         </DialogHeader>
-//         <Form {...form}>
-//           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-//             <FormField
-//               control={form.control}
-//               name="name"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Bill Name</FormLabel>
-//                   <FormControl>
-//                     <Input placeholder="Electricity" {...field} />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+  const [category, setCategory] = useState("");
+  const [limit, setLimit] = useState("");
+  const [period, setPeriod] = useState<"weekly" | "monthly" | "yearly">(
+    "monthly",
+  );
+  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-//             <FormField
-//               control={form.control}
-//               name="category"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Category</FormLabel>
-//                   <Select
-//                     onValueChange={field.onChange}
-//                     defaultValue={field.value}
-//                   >
-//                     <FormControl>
-//                       <SelectTrigger>
-//                         <SelectValue placeholder="Select category" />
-//                       </SelectTrigger>
-//                     </FormControl>
-//                     <SelectContent className="glass">
-//                       {categories?.map((cat) => (
-//                         <SelectItem key={cat._id} value={cat.name}>
-//                           {cat.name}
-//                         </SelectItem>
-//                       ))}
-//                     </SelectContent>
-//                   </Select>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+  /* -------------------------
+     Sync form when editing
+  -------------------------- */
+  useEffect(() => {
+    if (editingBudget) {
+      setCategory(editingBudget.categoryIds[0] || "");
+      setLimit(editingBudget.limit.toString());
+      setPeriod(editingBudget.period);
+      setStartDate(format(editingBudget.startDate, "yyyy-MM-dd"));
+    } else {
+      setCategory("");
+      setLimit("");
+      setPeriod("monthly");
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
+    }
+  }, [editingBudget, open]);
 
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="amount"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Amount (KES)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         step="0.01"
-//                         placeholder="0.00"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
+  /* -------------------------
+     Submit
+  -------------------------- */
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-//               <FormField
-//                 control={form.control}
-//                 name="dueDate"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Due Date</FormLabel>
-//                     <FormControl>
-//                       <Input type="date" {...field} />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             </div>
+  if (!category || !limit) {
+    toast.error("Please fill in all fields");
+    return;
+  }
 
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="frequency"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Frequency</FormLabel>
-//                     <Select
-//                       onValueChange={field.onChange}
-//                       defaultValue={field.value}
-//                     >
-//                       <FormControl>
-//                         <SelectTrigger>
-//                           <SelectValue />
-//                         </SelectTrigger>
-//                       </FormControl>
-//                       <SelectContent className="glass">
-//                         <SelectItem value="one-time">One-time</SelectItem>
-//                         <SelectItem value="weekly">Weekly</SelectItem>
-//                         <SelectItem value="monthly">Monthly</SelectItem>
-//                         <SelectItem value="quarterly">Quarterly</SelectItem>
-//                         <SelectItem value="yearly">Yearly</SelectItem>
-//                       </SelectContent>
-//                     </Select>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
+  const limitNum = Number(limit);
+  if (isNaN(limitNum) || limitNum <= 0) {
+    toast.error("Please enter a valid budget limit");
+    return;
+  }
 
-//               <FormField
-//                 control={form.control}
-//                 name="reminderDays"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Reminder (days before)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         min="0"
-//                         placeholder="7"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             </div>
+  const startDateTs = new Date(startDate).getTime();
 
-//             <FormField
-//               control={form.control}
-//               name="accountId"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Account (Optional)</FormLabel>
-//                   <Select
-//                     onValueChange={field.onChange}
-//                     defaultValue={field.value}
-//                   >
-//                     <FormControl>
-//                       <SelectTrigger>
-//                         <SelectValue placeholder="Select account" />
-//                       </SelectTrigger>
-//                     </FormControl>
-//                     <SelectContent className="glass">
-//                       <SelectItem value="none">No account</SelectItem>
-//                       {accounts.map((account) => (
-//                         <SelectItem key={account._id} value={account._id}>
-//                           {account.name} ({account.type})
-//                         </SelectItem>
-//                       ))}
-//                     </SelectContent>
-//                   </Select>
-//                   <FormDescription>
-//                     Account to deduct payment from
-//                   </FormDescription>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+  const payload = {
+    categoryIds: [category], // ✅ FIX
+    limit: limitNum,
+    period,
+    startDate: startDateTs,
+  };
 
-//             <FormField
-//               control={form.control}
-//               name="autoPayEnabled"
-//               render={({ field }) => (
-//                 <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 p-4">
-//                   <div className="space-y-0.5">
-//                     <FormLabel className="text-base">Auto-pay</FormLabel>
-//                     <FormDescription>
-//                       Automatically create transaction on due date
-//                     </FormDescription>
-//                   </div>
-//                   <FormControl>
-//                     <Switch
-//                       checked={field.value}
-//                       onCheckedChange={field.onChange}
-//                     />
-//                   </FormControl>
-//                 </FormItem>
-//               )}
-//             />
+  try {
+    if (editingBudget) {
+      await updateBudget.mutateAsync({
+        id: editingBudget.id,
+        ...payload,
+      });
+      toast.success("Budget updated");
+    } else {
+      await createBudget.mutateAsync(payload);
+      toast.success("Budget created");
+    }
 
-//             <FormField
-//               control={form.control}
-//               name="notes"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Notes (Optional)</FormLabel>
-//                   <FormControl>
-//                     <Textarea
-//                       placeholder="Additional details..."
-//                       className="resize-none"
-//                       {...field}
-//                     />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+    onOpenChange(false);
+  } catch {
+    toast.error("Failed to save budget");
+  }
+};
 
-//             <DialogFooter>
-//               <Button type="button" variant="outline" onClick={onClose}>
-//                 Cancel
-//               </Button>
-//               <Button type="submit">
-//                 {bill ? "Update Bill" : "Create Bill"}
-//               </Button>
-//             </DialogFooter>
-//           </form>
-//         </Form>
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
+
+  /* =========================
+     UI
+  ========================= */
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>
+            {editingId ? "Edit Budget" : "Create Budget"}
+          </DialogTitle>
+          <DialogDescription>
+            {editingId
+              ? "Update the budget details"
+              : "Set a spending limit for a category"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Category */}
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select
+              value={category}
+              onValueChange={setCategory}
+              disabled={!!editingId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {editingId && (
+              <p className="text-xs text-muted-foreground">
+                Category cannot be changed after creation
+              </p>
+            )}
+          </div>
+
+          {/* Limit */}
+          <div className="space-y-2">
+            <Label>Budget Limit</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+            />
+          </div>
+
+          {/* Period */}
+          <div className="space-y-2">
+            <Label>Period</Label>
+            <Select
+              value={period}
+              onValueChange={(value) =>
+                setPeriod(value as "weekly" | "monthly" | "yearly")
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="yearly">Yearly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Start Date */}
+          <div className="space-y-2">
+            <Label>Start Date</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" className="flex-1">
+              {editingId ? "Update" : "Create"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

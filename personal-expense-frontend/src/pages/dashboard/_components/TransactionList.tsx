@@ -1,28 +1,40 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, Receipt } from "lucide-react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty.tsx";
-import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import { apiFetch } from "@/lib/api";
+import type { Transaction } from "@/types/transaction";
+import type { Account } from "@/types/account";
+/* ---------------- TYPES ---------------- */
 
 interface TransactionListProps {
-  transactions: Doc<"transactions">[];
-  onEdit: (id: Id<"transactions">) => void;
-  accounts: Doc<"accounts">[];
+  transactions: Transaction[];
+  onEdit: (id: string) => void;
+  accounts: Account[];
 }
 
-export function TransactionList({ transactions, onEdit, accounts }: TransactionListProps) {
-  const removeTransaction = useMutation(api.transactions.remove);
+/* ---------------- COMPONENT ---------------- */
 
-  const handleDelete = async (id: Id<"transactions">) => {
+export function TransactionList({
+  transactions,
+  onEdit,
+  accounts,
+}: TransactionListProps) {
+  const handleDelete = async (id: string) => {
     try {
-      await removeTransaction({ id });
+      await apiFetch(`/api/transactions/${id}`, { method: "DELETE" });
       toast.success("Transaction deleted");
     } catch (error) {
+      console.error(error);
       toast.error("Failed to delete transaction");
     }
   };
@@ -55,70 +67,90 @@ export function TransactionList({ transactions, onEdit, accounts }: TransactionL
           <Badge variant="secondary">{transactions.length} results</Badge>
         </div>
       </CardHeader>
+
       <CardContent>
         <div className="space-y-3">
           {transactions.map((transaction) => {
-            const account = transaction.accountId 
-              ? accounts.find((a) => a._id === transaction.accountId)
+            const account = transaction.accountId
+              ? accounts.find((a) => a.id === transaction.accountId)
               : null;
-            
+
+            const txDate =
+              typeof transaction.date === "string"
+                ? new Date(transaction.date)
+                : new Date(transaction.date);
+
             return (
-            <div
-              key={transaction._id}
-              className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-primary/50 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <Badge
-                    variant={transaction.type === "income" ? "default" : "destructive"}
-                    className="capitalize"
-                  >
-                    {transaction.type}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {transaction.category}
-                  </span>
-                  {account && (
-                    <Badge variant="outline" className="text-xs">
-                      {account.name}
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-primary/50 transition-colors"
+              >
+                {/* Left */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <Badge
+                      variant={
+                        transaction.type === "income"
+                          ? "default"
+                          : "destructive"
+                      }
+                      className="capitalize"
+                    >
+                      {transaction.type}
                     </Badge>
-                  )}
-                  <span className="text-sm text-muted-foreground">
-                    {format(transaction.date, "MMM dd, yyyy")}
+
+                    <span className="text-sm text-muted-foreground">
+                      {transaction.category}
+                    </span>
+
+                    {account && (
+                      <Badge variant="outline" className="text-xs">
+                        {account.name}
+                      </Badge>
+                    )}
+
+                    <span className="text-sm text-muted-foreground">
+                      {format(txDate, "MMM dd, yyyy")}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-foreground truncate">
+                    {transaction.description}
+                  </p>
+                </div>
+
+                {/* Right */}
+                <div className="flex items-center gap-4 ml-4">
+                  <span
+                    className={`text-lg font-bold ${
+                      transaction.type === "income"
+                        ? "text-accent"
+                        : "text-destructive"
+                    }`}
+                  >
+                    {transaction.type === "income" ? "+" : "-"}
+                    KES {transaction.amount.toFixed(2)}
                   </span>
-                </div>
-                <p className="text-sm text-foreground truncate">
-                  {transaction.description}
-                </p>
-              </div>
-              <div className="flex items-center gap-4 ml-4">
-                <span
-                  className={`text-lg font-bold ${
-                    transaction.type === "income"
-                      ? "text-accent"
-                      : "text-destructive"
-                  }`}
-                >
-                  {transaction.type === "income" ? "+" : "-"}KES {transaction.amount.toFixed(2)}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => onEdit(transaction._id)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleDelete(transaction._id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onEdit(transaction.id)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleDelete(transaction.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
             );
           })}
         </div>

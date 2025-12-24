@@ -1,410 +1,320 @@
-// import { useForm } from "react-hook-form";
-// import { zodResolver } from "@hookform/resolvers/zod";
-// import { z } from "zod";
-// import { useMutation } from "convex/react";
-// import { api } from "@/convex/_generated/api.js";
-// import type { Doc, Id } from "@/convex/_generated/dataModel.d.ts";
-// import { Button } from "@/components/ui/button.tsx";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog.tsx";
-// import {
-//   Form,
-//   FormControl,
-//   FormDescription,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from "@/components/ui/form.tsx";
-// import { Input } from "@/components/ui/input.tsx";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select.tsx";
-// import { Textarea } from "@/components/ui/textarea.tsx";
-// import { toast } from "sonner";
-// import { format } from "date-fns";
+import { format } from "date-fns";
+import {
+  CreditCardIcon,
+  AlertCircleIcon,
+  TrendingDownIcon,
+  MoreVerticalIcon,
+  Trash2Icon,
+  EditIcon,
+  DollarSignIcon,
+  CheckCircle2Icon,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
+import { Progress } from "@/components/ui/progress.tsx";
+import type { Debt } from "@/types/debt.ts";
+import type { Account } from "@/types/account.ts";
 
-// type Debt = Doc<"debts">;
-// type Account = Doc<"accounts">;
+interface DebtListProps {
+  debts: Debt[];
+  accounts: Account[];
+  summary: {
+    totalDebt: number;
+    totalMinimumPayment: number;
+    totalPaidOff: number;
+    numberOfDebts: number;
+    averageInterestRate: number;
+  };
+  onEdit: (debt: Debt) => void;
+  onDelete: (id: string) => void;
+  onMakePayment: (debt: Debt) => void;
+  onViewDetails: (debt: Debt) => void;
+}
 
-// const debtSchema = z.object({
-//   name: z.string().min(1, "Debt name is required"),
-//   type: z.enum([
-//     "Credit Card",
-//     "Personal Loan",
-//     "Mortgage",
-//     "Auto Loan",
-//     "Student Loan",
-//     "Medical Debt",
-//     "Other",
-//   ]),
-//   creditor: z.string().min(1, "Creditor is required"),
-//   originalAmount: z.string().min(1, "Original amount is required"),
-//   currentBalance: z.string().min(1, "Current balance is required"),
-//   interestRate: z.string().min(0, "Interest rate must be 0 or more"),
-//   minimumPayment: z.string().min(1, "Minimum payment is required"),
-//   dueDay: z.string().min(1, "Due day is required"),
-//   startDate: z.string().min(1, "Start date is required"),
-//   accountId: z.string().optional(),
-//   notes: z.string().optional(),
-// });
+export default function DebtList({
+  debts,
+  accounts,
+  summary,
+  onEdit,
+  onDelete,
+  onMakePayment,
+  onViewDetails,
+}: DebtListProps) {
+  if (debts.length === 0) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <CreditCardIcon />
+          </EmptyMedia>
+          <EmptyTitle>No debts tracked</EmptyTitle>
+          <EmptyDescription>
+            Add a debt to start tracking and planning your payoff strategy
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
 
-// type DebtFormData = z.infer<typeof debtSchema>;
+  const getAccount = (accountId?: string): Account | undefined => {
+    return accounts.find((a) => a.id === accountId);
+  };
 
-// interface DebtDialogProps {
-//   open: boolean;
-//   onClose: () => void;
-//   debt?: Debt | null;
-//   accounts: Account[];
-// }
+  const getStatusBadge = (debt: Debt) => {
+    if (debt.status === "paid-off") {
+      return (
+        <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-400">
+          <CheckCircle2Icon className="mr-1 h-3 w-3" />
+          Paid Off
+        </Badge>
+      );
+    }
+    if (debt.status === "defaulted") {
+      return (
+        <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-400">
+          <AlertCircleIcon className="mr-1 h-3 w-3" />
+          Defaulted
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400">
+        Active
+      </Badge>
+    );
+  };
 
-// export default function DebtDialog({
-//   open,
-//   onClose,
-//   debt,
-//   accounts,
-// }: DebtDialogProps) {
-//   const createDebt = useMutation(api.debts.create);
-//   const updateDebt = useMutation(api.debts.update);
+  const calculateProgress = (debt: Debt) => {
+    const paid = debt.originalAmount - debt.currentBalance;
+    return (paid / debt.originalAmount) * 100;
+  };
 
-//   const form = useForm<DebtFormData>({
-//     resolver: zodResolver(debtSchema),
-//     defaultValues: {
-//       name: debt?.name || "",
-//       type: debt?.type || "Credit Card",
-//       creditor: debt?.creditor || "",
-//       originalAmount: debt?.originalAmount.toString() || "",
-//       currentBalance: debt?.currentBalance.toString() || "",
-//       interestRate: debt?.interestRate.toString() || "0",
-//       minimumPayment: debt?.minimumPayment.toString() || "",
-//       dueDay: debt?.dueDay.toString() || "1",
-//       startDate: debt?.startDate
-//         ? format(debt.startDate, "yyyy-MM-dd")
-//         : format(Date.now(), "yyyy-MM-dd"),
-//       accountId: debt?.accountId || "none",
-//       notes: debt?.notes || "",
-//     },
-//   });
+  const activeDebts = debts.filter((d) => d.status === "active");
+  const paidOffDebts = debts.filter((d) => d.status === "paid-off");
 
-//   const onSubmit = async (data: DebtFormData) => {
-//     try {
-//       if (debt) {
-//         await updateDebt({
-//           id: debt._id,
-//           name: data.name,
-//           type: data.type,
-//           creditor: data.creditor,
-//           currentBalance: parseFloat(data.currentBalance),
-//           interestRate: parseFloat(data.interestRate),
-//           minimumPayment: parseFloat(data.minimumPayment),
-//           dueDay: parseInt(data.dueDay),
-//           accountId:
-//             data.accountId && data.accountId !== "none"
-//               ? (data.accountId as Id<"accounts">)
-//               : undefined,
-//           notes: data.notes || undefined,
-//         });
-//         toast.success("Debt updated successfully");
-//       } else {
-//         const startDate = new Date(data.startDate).getTime();
-//         await createDebt({
-//           name: data.name,
-//           type: data.type,
-//           creditor: data.creditor,
-//           originalAmount: parseFloat(data.originalAmount),
-//           currentBalance: parseFloat(data.currentBalance),
-//           interestRate: parseFloat(data.interestRate),
-//           minimumPayment: parseFloat(data.minimumPayment),
-//           dueDay: parseInt(data.dueDay),
-//           startDate,
-//           accountId:
-//             data.accountId && data.accountId !== "none"
-//               ? (data.accountId as Id<"accounts">)
-//               : undefined,
-//           notes: data.notes || undefined,
-//         });
-//         toast.success("Debt created successfully");
-//       }
+  const renderDebtCard = (debt: Debt) => {
+    const account = getAccount(debt.accountId);
+    const progress = calculateProgress(debt);
 
-//       form.reset();
-//       onClose();
-//     } catch (error) {
-//       toast.error("Failed to save debt");
-//     }
-//   };
+    return (
+      <Card
+        key={debt.id}
+        className="glass-card cursor-pointer hover:border-primary/40 transition-colors"
+        onClick={() => onViewDetails(debt)}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-lg">{debt.name}</CardTitle>
+              <CardDescription className="mt-1 flex items-center gap-2">
+                <span>{debt.type}</span>
+                <span>•</span>
+                <span>{debt.creditor}</span>
+                {account && (
+                  <>
+                    <span>•</span>
+                    <Badge
+                      variant="outline"
+                      className="text-xs"
+                      style={{
+                        borderColor: account.color || undefined,
+                        backgroundColor: account.color
+                          ? `${account.color}20`
+                          : undefined,
+                      }}
+                    >
+                      {account.name}
+                    </Badge>
+                  </>
+                )}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusBadge(debt)}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVerticalIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="glass">
+                  {debt.status === "active" && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMakePayment(debt);
+                      }}
+                    >
+                      <DollarSignIcon className="mr-2 h-4 w-4" />
+                      Make Payment
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(debt);
+                    }}
+                  >
+                    <EditIcon className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(debt.id);
+                    }}
+                    className="text-red-400"
+                  >
+                    <Trash2Icon className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-2xl font-bold">KES {debt.currentBalance.toFixed(2)}</div>
+              <div className="text-sm text-muted-foreground">
+                of KES {debt.originalAmount.toFixed(2)}
+              </div>
+            </div>
+            <div className="text-right space-y-1">
+              <div className="text-sm font-medium text-muted-foreground">
+                {debt.interestRate.toFixed(2)}% APR
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Min: KES {debt.minimumPayment.toFixed(2)}/mo
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Progress</span>
+              <span>{progress.toFixed(1)}% paid</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Due day: {debt.dueDay}</span>
+            {debt.notes && (
+              <>
+                <span>•</span>
+                <span className="truncate">{debt.notes}</span>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
-//   return (
-//     <Dialog open={open} onOpenChange={onClose}>
-//       <DialogContent className="glass max-h-[90vh] overflow-y-auto">
-//         <DialogHeader>
-//           <DialogTitle>{debt ? "Edit Debt" : "Add Debt"}</DialogTitle>
-//           <DialogDescription>
-//             {debt
-//               ? "Update debt details and payment information"
-//               : "Add a new debt to track and plan payoff"}
-//           </DialogDescription>
-//         </DialogHeader>
-//         <Form {...form}>
-//           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-//             <FormField
-//               control={form.control}
-//               name="name"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Debt Name</FormLabel>
-//                   <FormControl>
-//                     <Input placeholder="Chase Credit Card" {...field} />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="glass-card border-red-500/20">
+          <CardHeader className="pb-3">
+            <CardDescription className="flex items-center gap-2">
+              <AlertCircleIcon className="h-4 w-4" />
+              Total Debt
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-2xl font-bold text-red-400">
+              KES {summary.totalDebt.toFixed(2)}
+            </CardTitle>
+          </CardContent>
+        </Card>
 
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="type"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Debt Type</FormLabel>
-//                     <Select
-//                       onValueChange={field.onChange}
-//                       defaultValue={field.value}
-//                     >
-//                       <FormControl>
-//                         <SelectTrigger>
-//                           <SelectValue />
-//                         </SelectTrigger>
-//                       </FormControl>
-//                       <SelectContent className="glass">
-//                         <SelectItem value="Credit Card">Credit Card</SelectItem>
-//                         <SelectItem value="Personal Loan">Personal Loan</SelectItem>
-//                         <SelectItem value="Mortgage">Mortgage</SelectItem>
-//                         <SelectItem value="Auto Loan">Auto Loan</SelectItem>
-//                         <SelectItem value="Student Loan">Student Loan</SelectItem>
-//                         <SelectItem value="Medical Debt">Medical Debt</SelectItem>
-//                         <SelectItem value="Other">Other</SelectItem>
-//                       </SelectContent>
-//                     </Select>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
+        <Card className="glass-card border-blue-500/20">
+          <CardHeader className="pb-3">
+            <CardDescription className="flex items-center gap-2">
+              <CreditCardIcon className="h-4 w-4" />
+              Active Debts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-2xl font-bold text-blue-400">
+              {summary.numberOfDebts}
+            </CardTitle>
+          </CardContent>
+        </Card>
 
-//               <FormField
-//                 control={form.control}
-//                 name="creditor"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Creditor</FormLabel>
-//                     <FormControl>
-//                       <Input placeholder="Bank name" {...field} />
-//                     </FormControl>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             </div>
+        <Card className="glass-card border-yellow-500/20">
+          <CardHeader className="pb-3">
+            <CardDescription className="flex items-center gap-2">
+              <DollarSignIcon className="h-4 w-4" />
+              Min Payment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-2xl font-bold text-yellow-400">
+              KES {summary.totalMinimumPayment.toFixed(2)}
+            </CardTitle>
+          </CardContent>
+        </Card>
 
-//             {!debt && (
-//               <FormField
-//                 control={form.control}
-//                 name="originalAmount"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Original Amount (KES)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         step="0.01"
-//                         placeholder="0.00"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormDescription>
-//                       The total amount borrowed initially
-//                     </FormDescription>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             )}
+        <Card className="glass-card border-green-500/20">
+          <CardHeader className="pb-3">
+            <CardDescription className="flex items-center gap-2">
+              <TrendingDownIcon className="h-4 w-4" />
+              Paid Off
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-2xl font-bold text-green-400">
+              KES {summary.totalPaidOff.toFixed(2)}
+            </CardTitle>
+          </CardContent>
+        </Card>
+      </div>
 
-//             <FormField
-//               control={form.control}
-//               name="currentBalance"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Current Balance (KES)</FormLabel>
-//                   <FormControl>
-//                     <Input
-//                       type="number"
-//                       step="0.01"
-//                       placeholder="0.00"
-//                       {...field}
-//                     />
-//                   </FormControl>
-//                   <FormDescription>
-//                     The amount you currently owe
-//                   </FormDescription>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
+      {/* Active Debts */}
+      {activeDebts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Active Debts</h3>
+            <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400">
+              {activeDebts.length}
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {activeDebts.map(renderDebtCard)}
+          </div>
+        </div>
+      )}
 
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="interestRate"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Interest Rate (%)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         step="0.01"
-//                         placeholder="0.00"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormDescription>Annual percentage rate</FormDescription>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-
-//               <FormField
-//                 control={form.control}
-//                 name="minimumPayment"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Minimum Payment (KES)</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         step="0.01"
-//                         placeholder="0.00"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormDescription>Monthly minimum</FormDescription>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-//             </div>
-
-//             <div className="grid grid-cols-2 gap-4">
-//               <FormField
-//                 control={form.control}
-//                 name="dueDay"
-//                 render={({ field }) => (
-//                   <FormItem>
-//                     <FormLabel>Payment Due Day</FormLabel>
-//                     <FormControl>
-//                       <Input
-//                         type="number"
-//                         min="1"
-//                         max="31"
-//                         placeholder="15"
-//                         {...field}
-//                       />
-//                     </FormControl>
-//                     <FormDescription>Day of month (1-31)</FormDescription>
-//                     <FormMessage />
-//                   </FormItem>
-//                 )}
-//               />
-
-//               {!debt && (
-//                 <FormField
-//                   control={form.control}
-//                   name="startDate"
-//                   render={({ field }) => (
-//                     <FormItem>
-//                       <FormLabel>Start Date</FormLabel>
-//                       <FormControl>
-//                         <Input type="date" {...field} />
-//                       </FormControl>
-//                       <FormDescription>When debt started</FormDescription>
-//                       <FormMessage />
-//                     </FormItem>
-//                   )}
-//                 />
-//               )}
-//             </div>
-
-//             <FormField
-//               control={form.control}
-//               name="accountId"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Payment Account (Optional)</FormLabel>
-//                   <Select
-//                     onValueChange={field.onChange}
-//                     defaultValue={field.value}
-//                   >
-//                     <FormControl>
-//                       <SelectTrigger>
-//                         <SelectValue placeholder="Select account" />
-//                       </SelectTrigger>
-//                     </FormControl>
-//                     <SelectContent className="glass">
-//                       <SelectItem value="none">No account</SelectItem>
-//                       {accounts.map((account) => (
-//                         <SelectItem key={account._id} value={account._id}>
-//                           {account.name} ({account.type})
-//                         </SelectItem>
-//                       ))}
-//                     </SelectContent>
-//                   </Select>
-//                   <FormDescription>
-//                     Account to deduct payments from
-//                   </FormDescription>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
-
-//             <FormField
-//               control={form.control}
-//               name="notes"
-//               render={({ field }) => (
-//                 <FormItem>
-//                   <FormLabel>Notes (Optional)</FormLabel>
-//                   <FormControl>
-//                     <Textarea
-//                       placeholder="Additional details..."
-//                       className="resize-none"
-//                       {...field}
-//                     />
-//                   </FormControl>
-//                   <FormMessage />
-//                 </FormItem>
-//               )}
-//             />
-
-//             <DialogFooter>
-//               <Button type="button" variant="outline" onClick={onClose}>
-//                 Cancel
-//               </Button>
-//               <Button type="submit">
-//                 {debt ? "Update Debt" : "Add Debt"}
-//               </Button>
-//             </DialogFooter>
-//           </form>
-//         </Form>
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
+      {/* Paid Off Debts */}
+      {paidOffDebts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Paid Off</h3>
+            <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-400">
+              {paidOffDebts.length}
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paidOffDebts.map(renderDebtCard)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
