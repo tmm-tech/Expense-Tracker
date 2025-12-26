@@ -40,6 +40,7 @@ import { AIInsights } from "./AIInsights.tsx";
 import SettingsView from "./SettingsView.tsx";
 import AccountList from "./AccountList.tsx";
 import AccountDialog from "./AccountDialog.tsx";
+import CurrencyView from "../CurrencyView.tsx";
 import AccountDetailView from "./AccountDetailView.tsx";
 import TransactionFilters from "./TransactionFilters.tsx";
 import BillList from "./BillList.tsx";
@@ -66,12 +67,11 @@ import type { Category } from "@/types/category";
 import type { Investment } from "@/types/investment";
 import type { Transaction } from "@/types/transaction";
 
-
 export function DashboardContent() {
   const navigate = useNavigate();
 
   const queryClient = useQueryClient();
- 
+
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery<
     Transaction[]
   >({
@@ -134,36 +134,35 @@ export function DashboardContent() {
   });
 
   const debtSummary = debts.reduce(
-  (summary, debt) => {
-    summary.totalDebt += debt.originalAmount;
-    summary.totalPaidOff += debt.originalAmount - debt.currentBalance;
-    summary.totalMinimumPayment += debt.minimumPayment;
-    summary.numberOfDebts += 1;
-    summary.totalInterestRate += debt.interestRate;
+    (summary, debt) => {
+      summary.totalDebt += debt.originalAmount;
+      summary.totalPaidOff += debt.originalAmount - debt.currentBalance;
+      summary.totalMinimumPayment += debt.minimumPayment;
+      summary.numberOfDebts += 1;
+      summary.totalInterestRate += debt.interestRate;
 
-    return summary;
-  },
-  {
-    totalDebt: 0,
-    totalPaidOff: 0,
-    totalMinimumPayment: 0,
-    numberOfDebts: 0,
-    totalInterestRate: 0,
-  },
-);
+      return summary;
+    },
+    {
+      totalDebt: 0,
+      totalPaidOff: 0,
+      totalMinimumPayment: 0,
+      numberOfDebts: 0,
+      totalInterestRate: 0,
+    },
+  );
 
-// derive average interest rate safely
-const finalizedDebtSummary = {
-  totalDebt: debtSummary.totalDebt,
-  totalPaidOff: debtSummary.totalPaidOff,
-  totalMinimumPayment: debtSummary.totalMinimumPayment,
-  numberOfDebts: debtSummary.numberOfDebts,
-  averageInterestRate:
-    debtSummary.numberOfDebts > 0
-      ? debtSummary.totalInterestRate / debtSummary.numberOfDebts
-      : 0,
-};
-
+  // derive average interest rate safely
+  const finalizedDebtSummary = {
+    totalDebt: debtSummary.totalDebt,
+    totalPaidOff: debtSummary.totalPaidOff,
+    totalMinimumPayment: debtSummary.totalMinimumPayment,
+    numberOfDebts: debtSummary.numberOfDebts,
+    averageInterestRate:
+      debtSummary.numberOfDebts > 0
+        ? debtSummary.totalInterestRate / debtSummary.numberOfDebts
+        : 0,
+  };
 
   const runAllChecks = useMutation({
     mutationFn: () => apiFetch("/api/alerts/run-checks", { method: "POST" }),
@@ -626,6 +625,12 @@ const finalizedDebtSummary = {
                 Export
               </TabsTrigger>
               <TabsTrigger
+                value="currency"
+                className="text-xs sm:text-sm px-2 sm:px-3 py-2"
+              >
+                Currency
+              </TabsTrigger>
+              <TabsTrigger
                 value="settings"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
@@ -701,9 +706,13 @@ const finalizedDebtSummary = {
             <BudgetList budgets={budgets} onEdit={handleEditBudget} />
           </TabsContent>
           <TabsContent value="goals" className="mt-6">
-            <GoalList goals={goals} onEdit={handleEditGoal} onRefresh={function (): void {
-              throw new Error("Function not implemented.");
-            } } />
+            <GoalList
+              goals={goals}
+              onEdit={handleEditGoal}
+              onRefresh={function (): void {
+                throw new Error("Function not implemented.");
+              }}
+            />
           </TabsContent>
           <TabsContent value="challenges" className="mt-6">
             <SavingsChallengesView />
@@ -734,6 +743,9 @@ const finalizedDebtSummary = {
           </TabsContent>
           <TabsContent value="export" className="mt-6">
             <EnhancedExport />
+          </TabsContent>
+          <TabsContent value="currency" className="mt-6">
+            <CurrencyView />
           </TabsContent>
           <TabsContent value="settings" className="mt-6">
             <SettingsView />
@@ -777,9 +789,11 @@ const finalizedDebtSummary = {
         open={isGoalDialogOpen}
         onOpenChange={handleCloseGoalDialog}
         editingId={editingGoalId}
-        goals={goals} onSaved={function (): void {
+        goals={goals}
+        onSaved={function (): void {
           throw new Error("Function not implemented.");
-        } }      />
+        }}
+      />
 
       {/* Category Dialog */}
       <CategoryDialog
