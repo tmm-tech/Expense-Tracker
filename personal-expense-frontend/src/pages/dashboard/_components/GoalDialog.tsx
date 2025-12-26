@@ -123,13 +123,13 @@ export function GoalDialog({
       };
 
       if (editingGoal) {
-        await apiFetch(`/api/goals/${editingGoal.id}`, {
+        await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/goals/${editingGoal.id}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
         toast.success("Goal updated");
       } else {
-        await apiFetch("/api/goals", {
+        await apiFetch("https://expense-tracker-u6ge.onrender.com/api/goals", {
           method: "POST",
           body: JSON.stringify(payload),
         });

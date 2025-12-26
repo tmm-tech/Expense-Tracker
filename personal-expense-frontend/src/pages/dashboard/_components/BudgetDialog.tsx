@@ -62,7 +62,7 @@ export default function BudgetDialog({
 
   const createBudget = useMutation({
     mutationFn: (input: CreateBudgetInput) =>
-      apiFetch("/api/budgets", {
+      apiFetch("https://expense-tracker-u6ge.onrender.com/api/budgets", {
         method: "POST",
         body: JSON.stringify(input),
       }),

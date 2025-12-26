@@ -42,12 +42,12 @@ export function RecurringTransactionList() {
 
   const { data, isLoading } = useQuery<any[]>({
     queryKey: ["recurring-transactions"],
-    queryFn: () => apiFetch("/api/recurring-transactions"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/recurring-transactions"),
   });
 
   const toggleMutation = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/recurring-transactions/${id}/toggle`, {
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/recurring-transactions/${id}/toggle`, {
         method: "PATCH",
       }),
     onSuccess: () => {
@@ -58,7 +58,7 @@ export function RecurringTransactionList() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/recurring-transactions/${id}`, { method: "DELETE" }),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/recurring-transactions/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       toast.success("Recurring transaction deleted");
       qc.invalidateQueries({ queryKey: ["recurring-transactions"] });
@@ -67,7 +67,7 @@ export function RecurringTransactionList() {
 
   const processMutation = useMutation<ProcessRecurringResponse>({
   mutationFn: () =>
-    apiFetch("/api/recurring-transactions/process", {
+    apiFetch("https://expense-tracker-u6ge.onrender.com/api/recurring-transactions/process", {
       method: "POST",
     }),
   onSuccess: (res) => {

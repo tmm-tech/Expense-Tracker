@@ -41,7 +41,7 @@ export default function NotificationsSection() {
   const { data: settings, isLoading } = useQuery<NotificationSettings>({
     queryKey: ["notification-settings"],
     enabled: !!authUser,
-    queryFn: () => apiFetch("/api/users/me/notifications"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/users/me/notifications"),
   });
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function NotificationsSection() {
   // 💾 Save mutation
   const saveSettings = useMutation({
     mutationFn: (payload: NotificationSettings) =>
-      apiFetch("/api/users/me/notifications", {
+      apiFetch("https://expense-tracker-u6ge.onrender.com/api/users/me/notifications", {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

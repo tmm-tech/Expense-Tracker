@@ -39,7 +39,7 @@ export default function ProfileSection() {
   const { data: profile, isLoading } = useQuery<UserProfile | null>({
     queryKey: ["profile"],
     enabled: !!authUser,
-    queryFn: () => apiFetch("/api/users/me"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/users/me"),
   });
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function ProfileSection() {
 
   const updateProfile = useMutation({
     mutationFn: (payload: { name?: string }) =>
-      apiFetch("/api/users/me", {
+      apiFetch("https://expense-tracker-u6ge.onrender.com/api/users/me", {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

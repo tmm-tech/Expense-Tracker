@@ -73,7 +73,7 @@ export default function EnhancedExport() {
      Load data
   -------------------------- */
   useEffect(() => {
-    apiFetch<ExportResponse>("/api/backup")
+    apiFetch<ExportResponse>("https://expense-tracker-u6ge.onrender.com/api/backup")
       .then(setAllData)
       .catch(() => setAllData(null));
   }, []);

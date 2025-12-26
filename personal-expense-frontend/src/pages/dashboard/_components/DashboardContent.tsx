@@ -76,43 +76,43 @@ export function DashboardContent() {
     Transaction[]
   >({
     queryKey: ["transactions"],
-    queryFn: () => apiFetch<Transaction[]>("/api/transactions"),
+    queryFn: () => apiFetch<Transaction[]>("https://expense-tracker-u6ge.onrender.com/api/transactions"),
   });
 
   const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ["accounts"],
-    queryFn: () => apiFetch<Account[]>("/api/accounts"),
+    queryFn: () => apiFetch<Account[]>("https://expense-tracker-u6ge.onrender.com/api/accounts"),
   });
 
   const { data: bills = [] } = useQuery<Bill[]>({
     queryKey: ["bills"],
-    queryFn: () => apiFetch<Bill[]>("/api/bills"),
+    queryFn: () => apiFetch<Bill[]>("https://expense-tracker-u6ge.onrender.com/api/bills"),
   });
 
   const { data: debts = [] } = useQuery<Debt[]>({
     queryKey: ["debts"],
-    queryFn: () => apiFetch<Debt[]>("/api/debts"),
+    queryFn: () => apiFetch<Debt[]>("https://expense-tracker-u6ge.onrender.com/api/debts"),
   });
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["budgets"],
-    queryFn: () => apiFetch("/api/budgets"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/budgets"),
   });
   const { data: goals = [] } = useQuery<Goal[]>({
     queryKey: ["goals"],
-    queryFn: () => apiFetch<Goal[]>("/api/goals"),
+    queryFn: () => apiFetch<Goal[]>("https://expense-tracker-u6ge.onrender.com/api/goals"),
   });
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
-    queryFn: () => apiFetch<Category[]>("/api/categories"),
+    queryFn: () => apiFetch<Category[]>("https://expense-tracker-u6ge.onrender.com/api/categories"),
   });
   const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ["investments"],
-    queryFn: () => apiFetch<Investment[]>("/api/investments"),
+    queryFn: () => apiFetch<Investment[]>("https://expense-tracker-u6ge.onrender.com/api/investments"),
   });
 
   const deleteBill = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/bills/${id}`, { method: "DELETE" }),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
@@ -120,14 +120,14 @@ export function DashboardContent() {
 
   const markBillAsPaid = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/bills/${id}/pay`, { method: "POST" }),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/bills/${id}/pay`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
   });
   const deleteDebt = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/debts/${id}`, { method: "DELETE" }),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/debts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
     },
@@ -165,7 +165,7 @@ export function DashboardContent() {
   };
 
   const runAllChecks = useMutation({
-    mutationFn: () => apiFetch("/api/alerts/run-checks", { method: "POST" }),
+    mutationFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/alerts/run-checks", { method: "POST" }),
   });
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);

@@ -128,13 +128,13 @@ export function TransactionDialog({
       };
 
       if (editingId) {
-        await apiFetch(`/api/transactions/${editingId}`, {
+        await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/transactions/${editingId}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
         toast.success("Transaction updated");
       } else {
-        await apiFetch("/api/transactions", {
+        await apiFetch("https://expense-tracker-u6ge.onrender.com/api/transactions", {
           method: "POST",
           body: JSON.stringify(payload),
         });

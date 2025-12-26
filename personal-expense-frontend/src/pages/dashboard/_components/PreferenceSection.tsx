@@ -76,7 +76,7 @@ export default function PreferencesSection() {
   const { data: preferences, isLoading } = useQuery<Preferences>({
     queryKey: ["preferences"],
     enabled: !!authUser,
-    queryFn: () => apiFetch("/api/users/me/preferences"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/users/me/preferences"),
   });
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function PreferencesSection() {
 
   const updatePreferences = useMutation({
     mutationFn: (payload: Preferences) =>
-      apiFetch("/api/users/me/preferences", {
+      apiFetch("https://expense-tracker-u6ge.onrender.com/api/users/me/preferences", {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

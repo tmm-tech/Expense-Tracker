@@ -56,13 +56,13 @@ interface ChallengesSummary {
 const { data: challenges, isLoading: challengesLoading } =
   useQuery<SavingsChallenge[]>({
     queryKey: ["savings-challenges"],
-    queryFn: () => apiFetch("/api/savings-challenges"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/savings-challenges"),
   });
 
 const { data: summary, isLoading: summaryLoading } =
   useQuery<ChallengesSummary>({
     queryKey: ["savings-challenges-summary"],
-    queryFn: () => apiFetch("/api/savings-challenges/summary"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/savings-challenges/summary"),
   });
 
 const [createOpen, setCreateOpen] = useState(false);

@@ -123,12 +123,12 @@ export function ReportsView() {
 
   const budgetPerformance = useQuery({
     queryKey: ["budget-performance"],
-    queryFn: () => apiFetch("/api/reports/budget-performance"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/reports/budget-performance"),
   });
 
   const goalProgress = useQuery({
     queryKey: ["goal-progress"],
-    queryFn: () => apiFetch("/api/reports/goal-progress"),
+    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/reports/goal-progress"),
   });
 
   if (

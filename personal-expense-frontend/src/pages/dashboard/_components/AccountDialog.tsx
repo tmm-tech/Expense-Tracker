@@ -70,7 +70,7 @@ export default function AccountDialog({
 
   const createAccount = useMutation({
     mutationFn: (payload: Omit<Account, "id">) =>
-      apiFetch("/api/accounts", {
+      apiFetch("https://expense-tracker-u6ge.onrender.com/api/accounts", {
         method: "POST",
         body: JSON.stringify(payload),
       }),

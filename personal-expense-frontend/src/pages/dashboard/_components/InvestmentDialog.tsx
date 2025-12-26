@@ -114,13 +114,13 @@ export function InvestmentDialog({
 
     try {
       if (editingId) {
-        await apiFetch(`/api/investments/${editingId}`, {
+        await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/investments/${editingId}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
         toast.success("Investment updated");
       } else {
-        await apiFetch("/api/investments", {
+        await apiFetch("https://expense-tracker-u6ge.onrender.com/api/investments", {
           method: "POST",
           body: JSON.stringify(payload),
         });

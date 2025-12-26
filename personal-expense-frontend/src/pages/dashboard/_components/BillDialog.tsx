@@ -90,7 +90,7 @@ export default function BillDialog({
   /* -------- fetch categories -------- */
 
   useEffect(() => {
-    apiFetch<Category[]>("/api/categories?type=expense")
+    apiFetch<Category[]>("https://expense-tracker-u6ge.onrender.com/api/categories?type=expense")
       .then(setCategories)
       .catch(() => toast.error("Failed to load categories"));
   }, []);
@@ -115,13 +115,13 @@ export default function BillDialog({
       };
 
       if (bill) {
-        await apiFetch(`/api/bills/${bill.id}`, {
+        await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/bills/${bill.id}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
         toast.success("Bill updated successfully");
       } else {
-        await apiFetch("/api/bills", {
+        await apiFetch("https://expense-tracker-u6ge.onrender.com/api/bills", {
           method: "POST",
           body: JSON.stringify(payload),
         });

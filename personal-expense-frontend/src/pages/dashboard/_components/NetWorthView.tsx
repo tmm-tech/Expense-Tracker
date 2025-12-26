@@ -90,24 +90,24 @@ const qc = useQueryClient();
 
 const { data: currentNetWorth, isLoading: loadingCurrent } = useQuery<NetWorthCurrent>({
   queryKey: ["net-worth-current"],
-  queryFn: () => apiFetch("/api/net-worth/current"),
+  queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/net-worth/current"),
 });
 
 const { data: snapshots, isLoading: loadingSnapshots } = useQuery<NetWorthSnapshot[]>({
   queryKey: ["net-worth-snapshots"],
-  queryFn: () => apiFetch("/api/net-worth/snapshots"),
+  queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/net-worth/snapshots"),
 });
 
 const { data: trendData, isLoading: loadingTrend } = useQuery<NetWorthSnapshot[]>({
   queryKey: ["net-worth-trend", period],
   queryFn: () =>
-    apiFetch(`/api/net-worth/trend?period=${period}`),
+    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/net-worth/trend?period=${period}`),
 });
 
 
 const createSnapshot = useMutation({
   mutationFn: (data: { notes?: string }) =>
-    apiFetch("/api/net-worth/snapshots", {
+    apiFetch("https://expense-tracker-u6ge.onrender.com/api/net-worth/snapshots", {
       method: "POST",
       body: JSON.stringify(data),
     }),

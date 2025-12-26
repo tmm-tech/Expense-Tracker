@@ -41,12 +41,12 @@ export function AlertsBell() {
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["alerts-unread-count"],
-    queryFn: () => apiFetch<number>("/api/alerts/unread-count"),
+    queryFn: () => apiFetch<number>("https://expense-tracker-u6ge.onrender.com/api/alerts/unread-count"),
   });
 
   const { data: alerts = [] } = useQuery({
     queryKey: ["alerts-recent"],
-    queryFn: () => apiFetch<Alert[]>("/api/alerts?onlyUnread=true"),
+    queryFn: () => apiFetch<Alert[]>("https://expense-tracker-u6ge.onrender.com/api/alerts?onlyUnread=true"),
   });
 
   const displayAlerts = alerts.slice(0, 5);
