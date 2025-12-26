@@ -1,40 +1,72 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleAuth = async () => {
+    const finalizeAuth = async () => {
       const {
         data: { session },
         error,
       } = await supabase.auth.getSession();
 
       if (error) {
-        console.error("Auth error:", error);
+        console.error("Auth callback error:", error);
         return;
       }
 
-      if (session) {
-        navigate("/dashboard", { replace: true });
-      } else {
+      if (!session?.user) {
+        // No session → go home
         navigate("/", { replace: true });
+        return;
       }
+
+      // Optional: sync user profile
+      await updateUserProfile(session.user);
+
+      // Redirect home
+      navigate("/", { replace: true });
     };
 
-    handleAuth();
+    finalizeAuth();
   }, [navigate]);
 
   return (
     <div className="flex flex-col items-center justify-center h-svh gap-4">
       <Spinner className="size-8" />
-      <p className="text-sm text-muted-foreground">
-        Signing you in with Google…
-      </p>
+      <p className="text-sm text-muted-foreground">Signing you in…</p>
+    </div>
+  );
+}
+
+
+
+async function updateUserProfile(user: User) {
+  const { error } = await supabase.from("User").upsert({
+    id: user.id,
+    email: user.email,
+    name: user.user_metadata.full_name,
+    avatar_url: user.user_metadata.avatar_url,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("Failed to update user profile:", error);
+  }
+}
+export function AuthCallbackError({ message }: { message: string }) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-col items-center justify-center h-svh gap-4 px-4 text-center">
+      <p className="text-sm text-destructive">Error during sign-in: {message}</p>
+      <Button variant="outline" onClick={() => navigate("/", { replace: true })}>
+        Go back home
+      </Button>
     </div>
   );
 }
