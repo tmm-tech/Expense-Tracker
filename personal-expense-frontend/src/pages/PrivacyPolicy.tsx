@@ -8,7 +8,7 @@ export default function PrivacyPolicy() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="glass-strong border-b border-border/40 sticky top-0 z-50">
+      <header className="glass-strong border-b border-border/40 sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
           <Button
             variant="ghost"
