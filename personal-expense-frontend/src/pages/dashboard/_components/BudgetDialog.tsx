@@ -20,17 +20,16 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import type { Budget, UpdateBudgetInput } from "@/types/budget";
+import type { CreateBudgetInput, UpdateBudgetInput } from "@/types/budget";
 /* =========================
    Types
 ========================= */
-
 
 interface BudgetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingId: string | null;
-  budgets: Budget[];
+  budgets: UpdateBudgetInput[];
 }
 
 /* =========================
@@ -62,7 +61,7 @@ export default function BudgetDialog({
   const queryClient = useQueryClient();
 
   const createBudget = useMutation({
-    mutationFn: (input: Budget) =>
+    mutationFn: (input: CreateBudgetInput) =>
       apiFetch("/api/budgets", {
         method: "POST",
         body: JSON.stringify(input),
@@ -73,10 +72,10 @@ export default function BudgetDialog({
   });
 
   const updateBudget = useMutation({
-    mutationFn: (data: UpdateBudgetInput) =>
-      apiFetch(`/api/budgets/${data.id}`, {
+    mutationFn: ({ id, ...payload }: UpdateBudgetInput) =>
+      apiFetch(`/api/budgets/${id}`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
@@ -84,7 +83,9 @@ export default function BudgetDialog({
   });
 
   const editingBudget =
-    editingId != null ? budgets.find((b) => b.id === editingId) ?? null : null;
+    editingId != null
+      ? (budgets.find((b) => b.id === editingId) ?? null)
+      : null;
 
   const [category, setCategory] = useState("");
   const [limit, setLimit] = useState("");
@@ -98,10 +99,10 @@ export default function BudgetDialog({
   -------------------------- */
   useEffect(() => {
     if (editingBudget) {
-      setCategory(editingBudget.categoryIds[0] || "");
-      setLimit(editingBudget.limit.toString());
-      setPeriod(editingBudget.period);
-      setStartDate(format(editingBudget.startDate, "yyyy-MM-dd"));
+      setCategory(editingBudget.categoryIds?.[0] ?? "");
+      setLimit(editingBudget.limit?.toString() ?? "");
+      setPeriod(editingBudget.period ?? "monthly");
+      setStartDate(format(editingBudget.startDate ?? Date.now(), "yyyy-MM-dd"));
     } else {
       setCategory("");
       setLimit("");
@@ -113,47 +114,74 @@ export default function BudgetDialog({
   /* -------------------------
      Submit
   -------------------------- */
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (!category || !limit) {
-    toast.error("Please fill in all fields");
-    return;
-  }
-
-  const limitNum = Number(limit);
-  if (isNaN(limitNum) || limitNum <= 0) {
-    toast.error("Please enter a valid budget limit");
-    return;
-  }
-
-  const startDateTs = new Date(startDate).getTime();
-
-  const payload = {
-    categoryIds: [category], // ✅ FIX
-    limit: limitNum,
-    period,
-    startDate: startDateTs,
-  };
-
-  try {
-    if (editingBudget) {
-      await updateBudget.mutateAsync({
-        id: editingBudget.id,
-        ...payload,
-      });
-      toast.success("Budget updated");
-    } else {
-      await createBudget.mutateAsync(payload);
-      toast.success("Budget created");
+    if (!category || !limit) {
+      toast.error("Please fill in all fields");
+      return;
     }
 
-    onOpenChange(false);
-  } catch {
-    toast.error("Failed to save budget");
-  }
-};
+    const limitNum = Number(limit);
+    if (isNaN(limitNum) || limitNum <= 0) {
+      toast.error("Please enter a valid budget limit");
+      return;
+    }
 
+    const startDateTs = new Date(startDate).getTime();
+
+    const endDateTs =
+      period === "weekly"
+        ? startDateTs + 7 * 24 * 60 * 60 * 1000
+        : period === "monthly"
+          ? new Date(
+              new Date(startDateTs).setMonth(
+                new Date(startDateTs).getMonth() + 1,
+              ),
+            ).getTime()
+          : new Date(
+              new Date(startDateTs).setFullYear(
+                new Date(startDateTs).getFullYear() + 1,
+              ),
+            ).getTime();
+
+    const basePayload: CreateBudgetInput = {
+      name: `${category} Budget`,
+      amount: limitNum, // or total allowed amount
+      limit: limitNum,
+      categoryIds: [category],
+      period,
+      startDate: startDateTs,
+      endDate: endDateTs,
+    };
+
+    try {
+      try {
+        if (editingBudget) {
+          const updatePayload: UpdateBudgetInput = {
+            id: editingBudget.id,
+            ...basePayload,
+          };
+
+          await updateBudget.mutateAsync(updatePayload);
+          toast.success("Budget updated");
+        } else {
+          const createPayload: CreateBudgetInput = basePayload;
+
+          await createBudget.mutateAsync(createPayload);
+          toast.success("Budget created");
+        }
+
+        onOpenChange(false);
+      } catch {
+        toast.error("Failed to save budget");
+      }
+
+      onOpenChange(false);
+    } catch {
+      toast.error("Failed to save budget");
+    }
+  };
 
   /* =========================
      UI

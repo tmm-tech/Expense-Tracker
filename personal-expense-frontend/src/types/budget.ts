@@ -1,14 +1,26 @@
 export type BudgetPeriod = "weekly" | "monthly" | "yearly";
 
 export interface Budget {
-  categoryIds: string[];
-  limit: number;
-  period: BudgetPeriod;
-  startDate: number;
-}
-
-export interface UpdateBudgetInput extends Budget {
   id: string;
+  name: string;
+  amount: number;
+  startDate: number;
+  endDate: number;
+  categoryIds: string[];
+  period: BudgetPeriod;
+  limit: number;
 }
 
+export type CreateBudgetInput = {
+  name: string;
+  amount: number;
+  startDate: number;
+  endDate: number;
+  categoryIds: string[];
+  period: BudgetPeriod;
+  limit: number;
+};
 
+export type UpdateBudgetInput = {
+  id: string;
+} & Partial<CreateBudgetInput>;
