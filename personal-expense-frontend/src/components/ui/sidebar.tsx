@@ -6,7 +6,7 @@ import { PanelLeftIcon } from "lucide-react";
 import { cn } from "../../lib/utils.ts";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { Button } from "../../components/ui/button.tsx";
-import { Input } from "../../components/ui/input.jsx";
+import { Input } from "../../components/ui/input.tsx";
 import { Separator } from "../../components/ui/separator.tsx";
 import {
   Sheet,
