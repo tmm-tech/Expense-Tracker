@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const BudgetRoutes = require('./routes/BudgetRoutes');
 const DashboardRoutes = require('./routes/DashboardRoutes');
 const ImportRoutes = require('./routes/ImportRoutes');
+const UserRoutes = require('./routes/UserRoutes');
 const TransactionRoutes = require('./routes/TransactionRoutes');
  
 
@@ -40,6 +41,7 @@ app.use(addTokenToRequest);
 // app.use('/dashboard', DashboardRoutes);
 // app.use('/import', ImportRoutes);
 app.use('/transactions', TransactionRoutes);
+app.use('/api/users', UserRoutes);
 
 app.get('/', (req, res) => {
     res.json({ message: "Confirmed Connection to Aurex Expense Tracker" });

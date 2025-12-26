@@ -47,13 +47,13 @@ export default function AuthCallback() {
 
 
 async function updateUserProfile(user: User) {
-  const { error } = await supabase.from("User").upsert({
-    id: user.id,
-    email: user.email,
-    name: user.user_metadata.full_name,
-    avatar_url: user.user_metadata.avatar_url,
-    updated_at: new Date().toISOString(),
-  });
+  const { error } = await fetch("https://expense-tracker-u6ge.onrender.com/api/users/sync", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user }),
+  }).then((res) => res.json());
 
   if (error) {
     console.error("Failed to update user profile:", error);
