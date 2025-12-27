@@ -4,7 +4,6 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const BudgetRoutes = require('./routes/BudgetRoutes');
-const DashboardRoutes = require('./routes/DashboardRoutes');
 const BillRoutes = require('./routes/BillRoutes');
 const UserRoutes = require('./routes/UserRoutes');
 const TransactionRoutes = require('./routes/TransactionRoutes');
@@ -12,6 +11,7 @@ const AccountsRoutes = require('./routes/AccountRoutes');
 const CategoryRoutes = require('./routes/CategoryRoutes');
 const InvestmentRoutes = require('./routes/InvestmentRoutes');
 const GoalRoutes = require('./routes/GoalRoutes');
+const AlertRoutes = require('./routes/AlertRoutes');
 const app = express(); 
 app.use(cors());
 
@@ -39,14 +39,15 @@ app.use(addTokenToRequest);
 
 // // Route handling
 app.use('/api', BudgetRoutes);
-app.use('/api', DebtRoutes);
+app.use('/api/debts', DebtRoutes);
 app.use('/api', TransactionRoutes);
 app.use('/api', UserRoutes);
 app.use('/api', AccountsRoutes);
-app.use('/api/', BillRoutes);
+app.use('/api', BillRoutes);
 app.use('/api', CategoryRoutes);
-app.use('/api', GoalRoutes);
-app.use('/api', InvestmentRoutes)
+app.use('/api/goals', GoalRoutes);
+app.use('/api/investments', InvestmentRoutes)
+app.use('/api/alerts', AlertRoutes)
 app.get('/', (req, res) => {
     res.json({ message: "Confirmed Connection to Aurex Expense Tracker" });
 });

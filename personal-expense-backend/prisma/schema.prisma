@@ -162,3 +162,15 @@ enum BillFrequency {
   yearly
 }
 
+model Alert {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // bill_due | low_balance | budget_exceeded | goal_completed | debt_due
+  title     String
+  message   String
+  severity  String   // info | warning | critical
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

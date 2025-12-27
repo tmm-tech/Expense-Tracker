@@ -13,7 +13,7 @@ const {
 InvestmentRoutes.post('/create', createInvestment);
 
 // Get all investments
-InvestmentRoutes.get('/all', getInvestments);
+InvestmentRoutes.get('/', getInvestments);
 
 // Get investments by user ID
 InvestmentRoutes.get('/summary', getPortfolioSummary);
