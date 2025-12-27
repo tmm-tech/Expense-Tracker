@@ -97,7 +97,7 @@ model Goal {
   endDate       DateTime?
   createdAt     DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+   user     User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -117,8 +117,7 @@ model Debt {
 
   payments DebtPayment[]
 
-  user User @relation(fields: [userId], references: [id])
-
+   user     User     @relation(fields: [userId], references: [id])
   @@index([userId])
 }
 
@@ -144,8 +143,7 @@ model Bill {
   lastPaidAt    DateTime?
   createdAt     DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-
+   user     User     @relation(fields: [userId], references: [id])
   @@index([userId])
 }
 
