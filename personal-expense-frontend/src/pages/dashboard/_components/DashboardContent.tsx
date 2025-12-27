@@ -66,6 +66,9 @@ import type { Goal } from "@/types/goal";
 import type { Category } from "@/types/category";
 import type { Investment } from "@/types/investment";
 import type { Transaction } from "@/types/transaction";
+import { API_BASE_URL } from "@/lib/config";
+
+
 
 export function DashboardContent() {
   const navigate = useNavigate();
@@ -76,43 +79,43 @@ export function DashboardContent() {
     Transaction[]
   >({
     queryKey: ["transactions"],
-    queryFn: () => apiFetch<Transaction[]>("https://expense-tracker-u6ge.onrender.com/api/transactions"),
+    queryFn: () => apiFetch<Transaction[]>(`${API_BASE_URL}/transactions`),
   });
 
   const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ["accounts"],
-    queryFn: () => apiFetch<Account[]>("https://expense-tracker-u6ge.onrender.com/api/accounts"),
+    queryFn: () => apiFetch<Account[]>(`${API_BASE_URL}/accounts`),
   });
 
   const { data: bills = [] } = useQuery<Bill[]>({
     queryKey: ["bills"],
-    queryFn: () => apiFetch<Bill[]>("https://expense-tracker-u6ge.onrender.com/api/bills"),
+    queryFn: () => apiFetch<Bill[]>(`${API_BASE_URL}/bills`),
   });
 
   const { data: debts = [] } = useQuery<Debt[]>({
     queryKey: ["debts"],
-    queryFn: () => apiFetch<Debt[]>("https://expense-tracker-u6ge.onrender.com/api/debts"),
+    queryFn: () => apiFetch<Debt[]>(`${API_BASE_URL}/debts`),
   });
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["budgets"],
-    queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/budgets"),
+    queryFn: () => apiFetch(`${API_BASE_URL}/budgets`),
   });
   const { data: goals = [] } = useQuery<Goal[]>({
     queryKey: ["goals"],
-    queryFn: () => apiFetch<Goal[]>("https://expense-tracker-u6ge.onrender.com/api/goals"),
+    queryFn: () => apiFetch<Goal[]>(`${API_BASE_URL}/goals`),
   });
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
-    queryFn: () => apiFetch<Category[]>("https://expense-tracker-u6ge.onrender.com/api/categories"),
+    queryFn: () => apiFetch<Category[]>(`${API_BASE_URL}/categories`),
   });
   const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ["investments"],
-    queryFn: () => apiFetch<Investment[]>("https://expense-tracker-u6ge.onrender.com/api/investments"),
+    queryFn: () => apiFetch<Investment[]>(`${API_BASE_URL}/investments`),
   });
 
   const deleteBill = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/bills/${id}`, { method: "DELETE" }),
+      apiFetch(`${API_BASE_URL}/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
@@ -120,14 +123,14 @@ export function DashboardContent() {
 
   const markBillAsPaid = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/bills/${id}/pay`, { method: "POST" }),
+      apiFetch(`${API_BASE_URL}/bills/${id}/pay`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
   });
   const deleteDebt = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/debts/${id}`, { method: "DELETE" }),
+      apiFetch(`${API_BASE_URL}/debts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
     },
@@ -165,7 +168,7 @@ export function DashboardContent() {
   };
 
   const runAllChecks = useMutation({
-    mutationFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/alerts/run-checks", { method: "POST" }),
+    mutationFn: () => apiFetch(`${API_BASE_URL}/alerts/run-checks`, { method: "POST" }),
   });
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);

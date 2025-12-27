@@ -62,6 +62,10 @@ model Transaction {
   description String?
   date        DateTime
 
+   billId String?
+  debtId String?
+  goalId String?
+
   user     User     @relation(fields: [userId], references: [id])
   account  Account  @relation(fields: [accountId], references: [id])
   category Category @relation(fields: [categoryId], references: [id])
@@ -82,3 +86,73 @@ model Budget {
   user     User     @relation(fields: [userId], references: [id])
   category Category @relation(fields: [categoryId], references: [id])
 }
+
+model Goal {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  targetAmount  Float
+  currentAmount Float   @default(0)
+  startDate     DateTime
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Debt {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  creditor       String
+  originalAmount Float
+  currentBalance Float
+  interestRate   Float
+  minimumPayment Float
+  dueDay         Int
+  startDate      DateTime
+  createdAt      DateTime @default(now())
+
+  payments DebtPayment[]
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model DebtPayment {
+  id        String   @id @default(uuid())
+  debtId    String
+  amount    Float
+  paidAt    DateTime @default(now())
+
+  debt Debt @relation(fields: [debtId], references: [id])
+
+  @@index([debtId])
+}
+
+model Bill {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  amount        Float
+  dueDay        Int
+  frequency     BillFrequency
+  isPaid        Boolean  @default(false)
+  lastPaidAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+enum BillFrequency {
+  weekly
+  monthly
+  quarterly
+  yearly
+}
+
