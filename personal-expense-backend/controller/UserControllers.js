@@ -1,3 +1,5 @@
+import { update } from "idb-keyval";
+
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -10,8 +12,19 @@ const prisma = new PrismaClient();
 module.exports = {
 
 createSession: async (req, res) => {
-  const supabaseUser = req.user;
-
+  const supabaseUser = req.user!;
+  const supabaseId = supabaseUser.sub;
+  
+  const metadata = supabaseUser.user_metadata || {};
+  const payload = {
+    id: supabaseId,
+    email: supabaseUser.email,
+    full_name: metadata.full_name || metadata.name || null,
+    avatar_url: metadata.avatar_url || metadata.picture || null,
+    provider: supabaseUser.app_metadata?.provider || null,
+    updated_at: new Date(),
+  };
+ await 
   const {
     id,
     email,
