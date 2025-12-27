@@ -1,7 +1,7 @@
 const express = require("express");
 const BudgetRoutes = express.Router();
 
-const { requireAuth } = require("../middleware/auth");
+const {requireAuth} = require("../middleware/auth");
 const BudgetControllers = require("../controllers/BudgetControllers");
 
 // Protect all budget routes

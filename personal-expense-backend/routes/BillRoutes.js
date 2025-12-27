@@ -1,7 +1,7 @@
 const express = require("express");
 const BillRoutes = express.Router();
 
-const { requireAuth } = require("../middleware/auth");
+const {requireAuth} = require("../middleware/auth");
 const BillControllers = require("../controllers/BillControllers");
 
 // Protect all bill routes
