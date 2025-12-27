@@ -1,7 +1,7 @@
 const express = require('express');
 const   UserRoutes = express.Router();
 const { createSession } = require('../controller/UserControllers');
-import { requireAuth } from '../middleware/auth';
+const {requireAuth} = require("../middleware/auth");
 
 // Create and insert a new user session
 UserRoutes.post('/users/sync', requireAuth, createSession);

@@ -7,7 +7,7 @@ const {
     updateInvestment,
     deleteInvestment,
     getPortfolioSummary
-} = require('../controllers/InvestmentControllers');
+} = require('../controller/InvestmentControllers');
 
 // Create a new investment
 InvestmentRoutes.post('/create', createInvestment);

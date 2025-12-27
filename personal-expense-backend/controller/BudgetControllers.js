@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 module.exports = {
   // GET /api/budgets
-  async getBudgets(req, res) {
+ getBudgets: async (req, res) => {
     try {
       const userId = req.user.sub;
 
@@ -25,7 +25,7 @@ module.exports = {
   },
 
   // POST /api/budgets
-  async createBudget(req, res) {
+ createBudget: async(req, res) => {
     try {
       const userId = req.user.sub;
       const {
@@ -59,7 +59,7 @@ module.exports = {
   },
 
   // PUT /api/budgets/:id
-  async updateBudget(req, res) {
+  updateBudget: async(req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -81,7 +81,7 @@ module.exports = {
   },
 
   // DELETE /api/budgets/:id
-  async deleteBudget(req, res) {
+  deleteBudget: async (req, res) =>{
     try {
       const userId = req.user.sub;
       const { id } = req.params;

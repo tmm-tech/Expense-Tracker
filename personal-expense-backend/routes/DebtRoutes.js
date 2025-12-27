@@ -2,7 +2,7 @@ const express = require("express");
 const   DebtRoutes = express.Router();
 
 const { requireAuth } = require("../middleware/auth");
-const DebtControllers = require("../controllers/DebtControllers");
+const DebtControllers = require("../controller/DebtControllers");
 
 DebtRoutes.use(requireAuth);
 

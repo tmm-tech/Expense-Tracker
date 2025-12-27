@@ -1,7 +1,7 @@
 const AlertRoutes = require('express').Router();
 
 const {requireAuth} = require("../middleware/auth");
-const AlertControllers = require("../controllers/AlertControllers");
+const AlertControllers = require("../controller/AlertControllers");
 
 AlertRoutes.use(requireAuth);
 

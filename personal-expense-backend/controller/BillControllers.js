@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 module.exports = {
   // GET /api/bills
-  async getBills(req, res) {
+  getBills: async (req, res) => {
     try {
       const userId = req.user.sub;
 
@@ -26,7 +26,7 @@ module.exports = {
   },
 
   // POST /api/bills
-  async createBill(req, res) {
+  createBill: async (req, res) => {
     try {
       const userId = req.user.sub;
       const {
@@ -60,7 +60,7 @@ module.exports = {
   },
 
   // PUT /api/bills/:id
-  async updateBill(req, res) {
+  updateBill: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -82,7 +82,7 @@ module.exports = {
   },
 
   // DELETE /api/bills/:id
-  async deleteBill(req, res) {
+  deleteBill: async(req, res) =>{
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -103,7 +103,7 @@ module.exports = {
   },
 
   // POST /api/bills/:id/pay
-  async markBillPaid(req, res) {
+  markBillPaid: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;

@@ -2,7 +2,7 @@ const express = require("express");
 const GoalRoutes = express.Router();
 
 const { requireAuth } = require("../middleware/auth");
-const GoalControllers = require("../controllers/GoalControllers");
+const GoalControllers = require("../controller/GoalControllers");
 
 GoalRoutes.use(requireAuth);
 

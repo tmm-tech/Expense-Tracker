@@ -12,6 +12,7 @@ const CategoryRoutes = require('./routes/CategoryRoutes');
 const InvestmentRoutes = require('./routes/InvestmentRoutes');
 const GoalRoutes = require('./routes/GoalRoutes');
 const AlertRoutes = require('./routes/AlertRoutes');
+const DebtRoutes = require('./routes/DebtRoutes');
 const app = express(); 
 app.use(cors());
 
