@@ -1,72 +1,61 @@
-import { update } from "idb-keyval";
-
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
 /**
- * NOTE:
- * req.user.id is assumed to be set by auth middleware
+ * Sync Supabase user → local User table
+ * Called after successful authentication
  */
-
 module.exports = {
-
-createSession: async (req, res) => {
-  const supabaseUser = req.user!;
-  const supabaseId = supabaseUser.sub;
-  
-  const metadata = supabaseUser.user_metadata || {};
-  const payload = {
-    id: supabaseId,
-    email: supabaseUser.email,
-    full_name: metadata.full_name || metadata.name || null,
-    avatar_url: metadata.avatar_url || metadata.picture || null,
-    provider: supabaseUser.app_metadata?.provider || null,
-    updated_at: new Date(),
-  };
- await 
-  const {
-    id,
-    email,
-    app_metadata,
-    user_metadata,
-  } = supabaseUser;
-
-  const fullName =
-    user_metadata.full_name ||
-    user_metadata.name ||
-    null;
-
-  const avatarUrl =
-    user_metadata.avatar_url ||
-    user_metadata.picture ||
-    null;
-
-  const provider = app_metadata.provider;
-
-  const existingUser = await db.users.findOne({ id });
-
-  if (!existingUser) {
-    await db.users.insert({
-      id,
-      email,
-      full_name: fullName,
-      avatar_url: avatarUrl,
-      provider,
-    });
-  } else {
-    await db.users.update(
-      { id },
-      {
-        email,
-        full_name: fullName,
-        avatar_url: avatarUrl,
-        provider,
-        updated_at: new Date(),
+  createSession: async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
-    );
-  }
 
-  res.json({ success: true });
-},
+      const supabaseUser = req.user;
+
+      const id = supabaseUser.sub; // Supabase user ID (UUID)
+      const email = supabaseUser.email || null;
+
+      const userMetadata = supabaseUser.user_metadata || {};
+      const appMetadata = supabaseUser.app_metadata || {};
+
+      const fullName =
+        userMetadata.full_name ||
+        userMetadata.name ||
+        null;
+
+      const avatarUrl =
+        userMetadata.avatar_url ||
+        userMetadata.picture ||
+        null;
+
+      const provider = appMetadata.provider || null;
+
+      // 🔑 UPSERT user (safe for repeated logins)
+      await prisma.user.upsert({
+        where: { id },
+        update: {
+          email,
+          full_name: fullName,
+          avatar_url: avatarUrl,
+          provider,
+          updated_at: new Date(),
+        },
+        create: {
+          id,
+          email,
+          full_name: fullName,
+          avatar_url: avatarUrl,
+          provider,
+        },
+      });
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("createSession error:", error);
+      return res.status(500).json({ message: "Failed to sync user" });
+    }
+  },
 };
