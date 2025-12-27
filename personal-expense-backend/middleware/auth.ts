@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet, jwtVerify, JWTPayload } from "jose";
 import type { Request, Response, NextFunction } from "express";
 
 const SUPABASE_PROJECT_URL = process.env.SUPABASE_URL!;
@@ -25,7 +25,19 @@ export async function requireAuth(
       audience: "authenticated",
     });
 
-    req.user = payload;
+    // ✅ HARD CHECK (this is the key fix)
+    if (!payload.sub) {
+      return res.status(401).json({ message: "Invalid token payload" });
+    }
+
+    // ✅ Now TypeScript is satisfied
+    req.user = {
+      sub: payload.sub,
+      email: payload.email as string | undefined,
+      user_metadata: payload.user_metadata as Record<string, any> | undefined,
+      app_metadata: payload.app_metadata as Record<string, any> | undefined,
+    };
+
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token" });

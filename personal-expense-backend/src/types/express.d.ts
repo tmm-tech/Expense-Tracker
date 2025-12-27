@@ -1,9 +1,15 @@
-import type { JWTPayload } from "jose";
+import "express";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: JWTPayload;
+      user?: {
+        sub: string;
+        email?: string;
+        user_metadata?: Record<string, any>;
+        app_metadata?: Record<string, any>;
+        [key: string]: any;
+      };
     }
   }
 }
