@@ -1,13 +1,12 @@
 const AlertRoutes = require('express').Router();
 
 const {requireAuth} = require("../middleware/auth");
-const AlertControllers = require("../controller/AlertControllers");
-
+const { getAlerts, markAllAsRead, runChecks, markAsRead} = require('../controller/AlertControllers');
 AlertRoutes.use(requireAuth);
 
-AlertRoutes.get("/", AlertControllers.getAlerts);
-AlertRoutes.post("/:id/read", AlertControllers.markAsRead);
-AlertRoutes.post("/read-all", AlertControllers.markAllAsRead);
-AlertRoutes.post("/run-checks", AlertControllers.runChecks);
+AlertRoutes.get("/", getAlerts);
+AlertRoutes.post("/:id/read", markAsRead);
+AlertRoutes.post("/read-all", markAllAsRead);
+AlertRoutes.post("/run-checks", runChecks);
 
 module.exports = AlertRoutes;

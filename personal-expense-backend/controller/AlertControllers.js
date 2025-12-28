@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 module.exports = {
   // GET /api/alerts
-  async getAlerts(req, res) {
+  getAlerts: async (req, res) => {
     try {
       const userId = req.user.sub;
 
@@ -25,7 +25,7 @@ module.exports = {
   },
 
   // POST /api/alerts/:id/read
-  async markAsRead(req, res) {
+  markAsRead: async(req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -47,7 +47,7 @@ module.exports = {
   },
 
   // POST /api/alerts/read-all
-  async markAllAsRead(req, res) {
+  markAllAsRead: async(req, res) => {
     try {
       const userId = req.user.sub;
 
@@ -64,7 +64,7 @@ module.exports = {
   },
 
   // POST /api/alerts/run-checks
-  async runChecks(req, res) {
+  runChecks: async(req, res) => {
     try {
       const userId = req.user.sub;
       const now = new Date();
