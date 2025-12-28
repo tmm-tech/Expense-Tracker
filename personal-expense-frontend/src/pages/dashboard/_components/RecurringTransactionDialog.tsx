@@ -122,7 +122,7 @@ export function RecurringTransactionDialog({
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ...payload }: any) =>
-      apiFetch(`/api/recurring-transactions/${id}`, {
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/recurring-transactions/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

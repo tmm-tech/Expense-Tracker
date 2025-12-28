@@ -84,7 +84,7 @@ export default function AccountDialog({
 
   const updateAccount = useMutation({
     mutationFn: (payload: Account) =>
-      apiFetch(`/api/accounts/${payload.id}`, {
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/accounts/${payload.id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

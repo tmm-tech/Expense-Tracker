@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { Account } from "@/types/account.ts";
+import { API_BASE_URL } from "@/lib/config";
 
 interface AccountListProps {
   accounts: Account[];
@@ -57,7 +58,7 @@ export default function AccountList({
 
   const deleteAccount = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/accounts/${id}`, { method: "DELETE" }),
+      apiFetch(`${}/api/accounts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Account deleted successfully");

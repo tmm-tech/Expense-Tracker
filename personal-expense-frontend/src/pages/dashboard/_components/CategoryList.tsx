@@ -38,7 +38,7 @@ interface CategoryListProps {
 export function CategoryList({ categories, onEdit }: CategoryListProps) {
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch(`/api/categories/${id}`, { method: "DELETE" });
+      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/categories/${id}`, { method: "DELETE" });
       toast.success("Category deleted");
     } catch (error) {
       console.error(error);

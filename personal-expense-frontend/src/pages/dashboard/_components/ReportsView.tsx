@@ -94,14 +94,14 @@ export function ReportsView() {
   const summary = useQuery<ReportSummary>({
     queryKey: ["report-summary", startDate, endDate],
     queryFn: () =>
-      apiFetch(`/api/reports/summary?startDate=${startDate}&endDate=${endDate}`),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/reports/summary?startDate=${startDate}&endDate=${endDate}`),
   });
 
   const incomeTrends = useQuery({
     queryKey: ["income-trends", startDate, endDate],
     queryFn: () =>
       apiFetch(
-        `/api/reports/category-trends?type=income&startDate=${startDate}&endDate=${endDate}`
+        `https://expense-tracker-u6ge.onrender.com/api/reports/category-trends?type=income&startDate=${startDate}&endDate=${endDate}`
       ),
   });
 
@@ -109,7 +109,7 @@ export function ReportsView() {
     queryKey: ["expense-trends", startDate, endDate],
     queryFn: () =>
       apiFetch(
-        `/api/reports/category-trends?type=expense&startDate=${startDate}&endDate=${endDate}`
+        `https://expense-tracker-u6ge.onrender.com/api/reports/category-trends?type=expense&startDate=${startDate}&endDate=${endDate}`
       ),
   });
 
@@ -117,7 +117,7 @@ export function ReportsView() {
     queryKey: ["monthly-trends", startDate, endDate],
     queryFn: () =>
       apiFetch(
-        `/api/reports/monthly-trends?startDate=${startDate}&endDate=${endDate}`
+        `https://expense-tracker-u6ge.onrender.com/api/reports/monthly-trends?startDate=${startDate}&endDate=${endDate}`
       ),
   });
 

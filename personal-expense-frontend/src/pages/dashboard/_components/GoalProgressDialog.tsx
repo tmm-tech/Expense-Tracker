@@ -62,7 +62,7 @@ export function GoalProgressDialog({
   useEffect(() => {
     if (!goalId || !open) return;
 
-    apiFetch(`/api/goals/${goalId}`)
+    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/goals/${goalId}`)
       .then((res) => setGoal(res as Goal))
       .catch(() => {
         toast.error("Failed to load goal");
@@ -78,14 +78,14 @@ export function GoalProgressDialog({
 
     setIsSubmitting(true);
     try {
-      await apiFetch(`/api/goals/${goalId}/progress`, {
+      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/goals/${goalId}/progress`, {
         method: "POST",
         body: JSON.stringify({ amount: data.amount }),
       });
 
       toast.success("Progress added");
 
-      const updatedGoal = await apiFetch(`/api/goals/${goalId}`);
+      const updatedGoal = await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/goals/${goalId}`);
       setGoal(updatedGoal as Goal);
 
       form.reset();

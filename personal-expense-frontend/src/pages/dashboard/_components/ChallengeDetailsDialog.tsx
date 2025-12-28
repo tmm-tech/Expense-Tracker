@@ -88,8 +88,8 @@ export function ChallengeDetailDialog({
     if (!open) return;
 
     Promise.all([
-      apiFetch(`/api/savings-challenges/${challengeId}`),
-      apiFetch(`/api/savings-challenges/${challengeId}/contributions`),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}`),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}/contributions`),
     ])
       .then(([challengeRes, contributionsRes]) => {
         setChallenge(challengeRes as SavingsChallenge);
@@ -117,7 +117,7 @@ const handleAddContribution = async (e: React.FormEvent) => {
 
   try {
     await apiFetch(
-      `/api/savings-challenges/${challengeId}/contributions`,
+      `https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}/contributions`,
       {
         method: "POST",
         body: JSON.stringify({
@@ -136,10 +136,10 @@ const handleAddContribution = async (e: React.FormEvent) => {
     const [updatedChallenge, updatedContributions] =
       await Promise.all([
         apiFetch<SavingsChallenge>(
-          `/api/savings-challenges/${challengeId}`
+          `https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}`
         ),
         apiFetch<Contribution[]>(
-          `/api/savings-challenges/${challengeId}/contributions`
+          `https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}/contributions`
         ),
       ]);
 
@@ -155,7 +155,7 @@ const handleAddContribution = async (e: React.FormEvent) => {
 
   const handlePauseResume = async () => {
     try {
-      await apiFetch(`/api/savings-challenges/${challengeId}`, {
+      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}`, {
         method: "PATCH",
         body: JSON.stringify({
           status:
@@ -188,7 +188,7 @@ const handleAddContribution = async (e: React.FormEvent) => {
       return;
 
     try {
-      await apiFetch(`/api/savings-challenges/${challengeId}`, {
+      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/savings-challenges/${challengeId}`, {
         method: "DELETE",
       });
       toast.success("Challenge deleted");

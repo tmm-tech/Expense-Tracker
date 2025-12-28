@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/config";
 
 /* ---------------- TYPES ---------------- */
 
@@ -41,12 +42,12 @@ export function AlertsBell() {
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["alerts-unread-count"],
-    queryFn: () => apiFetch<number>("https://expense-tracker-u6ge.onrender.com/api/alerts/unread-count"),
+    queryFn: () => apiFetch<number>(`${API_BASE_URL}/alerts/unread-count`),
   });
 
   const { data: alerts = [] } = useQuery({
     queryKey: ["alerts-recent"],
-    queryFn: () => apiFetch<Alert[]>("https://expense-tracker-u6ge.onrender.com/api/alerts?onlyUnread=true"),
+    queryFn: () => apiFetch<Alert[]>(`${API_BASE_URL}/alerts?onlyUnread=true`),
   });
 
   const displayAlerts = alerts.slice(0, 5);

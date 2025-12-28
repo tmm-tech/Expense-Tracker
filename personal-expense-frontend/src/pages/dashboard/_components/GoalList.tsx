@@ -56,7 +56,7 @@ export function GoalList({ goals, onEdit, onRefresh }: GoalListProps) {
     if (!confirm("Delete this goal?")) return;
 
     try {
-      await apiFetch(`/api/goals/${id}`, { method: "DELETE" });
+      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/goals/${id}`, { method: "DELETE" });
       toast.success("Goal deleted");
       onRefresh();
     } catch {
@@ -69,7 +69,7 @@ export function GoalList({ goals, onEdit, onRefresh }: GoalListProps) {
     status: "active" | "completed"
   ) => {
     try {
-      await apiFetch(`/api/goals/${id}/status`, {
+      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/goals/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
       });

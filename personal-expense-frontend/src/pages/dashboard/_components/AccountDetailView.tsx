@@ -18,7 +18,6 @@ import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
 
-
 /* ---------------- ICON MAP ---------------- */
 
 const ACCOUNT_ICONS: Record<Account["type"], any> = {
@@ -50,7 +49,7 @@ export default function AccountDetailView({
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ["account-transactions", accountId],
     queryFn: () =>
-      apiFetch(`/api/accounts/${accountId}/transactions`),
+      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/accounts/${accountId}/transactions`),
   });
 
   const Icon = ACCOUNT_ICONS[account.type];

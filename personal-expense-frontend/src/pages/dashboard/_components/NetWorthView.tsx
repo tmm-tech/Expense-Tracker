@@ -123,7 +123,7 @@ const createSnapshot = useMutation({
 
 const deleteSnapshot = useMutation({
   mutationFn: (id: string) =>
-    apiFetch(`/api/net-worth/snapshots/${id}`, { method: "DELETE" }),
+    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/net-worth/snapshots/${id}`, { method: "DELETE" }),
   onSuccess: () => {
     toast.success("Snapshot deleted");
     qc.invalidateQueries({ queryKey: ["net-worth-snapshots"] });

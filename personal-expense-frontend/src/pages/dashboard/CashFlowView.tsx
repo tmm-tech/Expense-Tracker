@@ -64,7 +64,7 @@ export function CashFlowView() {
 
   const { data, isLoading } = useQuery<CashFlowForecastResponse>({
     queryKey: ["cash-flow-forecast", forecastMonths],
-    queryFn: () => apiFetch(`/api/cash-flow/forecast?months=${forecastMonths}`),
+    queryFn: () => apiFetch(`https://expense-tracker-u6ge.onrender.com/api/cash-flow/forecast?months=${forecastMonths}`),
   });
 
   if (isLoading || !data) {
