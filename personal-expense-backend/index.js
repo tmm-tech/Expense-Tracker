@@ -14,7 +14,33 @@ const GoalRoutes = require('./routes/GoalRoutes');
 const AlertRoutes = require('./routes/AlertRoutes');
 const DebtRoutes = require('./routes/DebtRoutes');
 const app = express(); 
-app.use(cors());
+
+
+
+// Middleware to parse cookies
+app.use(cookieParser());
+
+const allowedOrigins = [
+    'https://aurex-expense-tracker.vercel.app/',
+    'http://localhost:5173'
+];
+
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (allowedOrigins.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// CORS configuration
+app.use(cors(corsOptions));
 
 
 // Body parsing
