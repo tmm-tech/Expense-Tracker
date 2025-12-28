@@ -66,9 +66,8 @@ import type { Goal } from "@/types/goal";
 import type { Category } from "@/types/category";
 import type { Investment } from "@/types/investment";
 import type { Transaction } from "@/types/transaction";
+import { UserMenu } from "./UserMenu.tsx";
 import { API_BASE_URL } from "@/lib/config";
-
-
 
 export function DashboardContent() {
   const navigate = useNavigate();
@@ -168,7 +167,8 @@ export function DashboardContent() {
   };
 
   const runAllChecks = useMutation({
-    mutationFn: () => apiFetch(`${API_BASE_URL}/alerts/run-checks`, { method: "POST" }),
+    mutationFn: () =>
+      apiFetch(`${API_BASE_URL}/alerts/run-checks`, { method: "POST" }),
   });
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
@@ -462,6 +462,7 @@ export function DashboardContent() {
                 <span className="hidden xs:inline">Add</span> {addButtonText}
               </Button>
             )}
+            <UserMenu />
           </div>
         </div>
       </header>

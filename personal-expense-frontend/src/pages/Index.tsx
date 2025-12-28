@@ -76,7 +76,9 @@ export default function Index() {
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {session ? (
-              <Button onClick={() => navigate("/dashboard")}>Dashboard</Button>
+                <><Button onClick={() => navigate("/dashboard")} size="sm" className="text-xs sm:text-sm" variant="ghost">
+                Dashboard
+              </Button><SignInButton size="sm" className="text-xs sm:text-sm" /></>
             ) : (
               <SignInButton />
             )}
