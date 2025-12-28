@@ -58,7 +58,7 @@ export default function AccountList({
 
   const deleteAccount = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`${}/api/accounts/${id}`, { method: "DELETE" }),
+      apiFetch(`${API_BASE_URL}/api/accounts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Account deleted successfully");
