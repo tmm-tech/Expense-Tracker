@@ -21,15 +21,13 @@ export default function AuthCallback() {
       }
 
       try {
-        await fetch(
-          `${API_BASE_URL}/users/sync`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
+        await fetch(`${API_BASE_URL}/users/sync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
 
         navigate("/", { replace: true });
       } catch (err) {

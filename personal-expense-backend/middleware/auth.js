@@ -10,9 +10,9 @@ async function getJose() {
   return jose;
 }
 
-const SUPABASE_PROJECT_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL;
 
-if (!SUPABASE_PROJECT_URL) {
+if (!SUPABASE_URL) {
   throw new Error("SUPABASE_URL is not defined");
 }
 
@@ -22,7 +22,7 @@ async function getJWKS() {
   if (!JWKS) {
     const { createRemoteJWKSet } = await getJose();
     JWKS = createRemoteJWKSet(
-      new URL(`${SUPABASE_PROJECT_URL}/auth/v1/.well-known/jwks.json`)
+      new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
     );
   }
   return JWKS;
@@ -42,9 +42,10 @@ async function requireAuth(req, res, next) {
     const jwks = await getJWKS();
 
     const { payload } = await jwtVerify(token, jwks, {
-      issuer: `${SUPABASE_PROJECT_URL}/auth/v1`,
+      issuer: `${SUPABASE_URL}/auth/v1`,
       audience: "authenticated",
     });
+    console.log("Auth header:", req.headers.authorization);
 
     req.user = payload; // 👈 Supabase user available everywhere
     next();
