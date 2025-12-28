@@ -12,6 +12,7 @@ module.exports = {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      console.log("User payload:", req.user);
 
       const supabaseUser = req.user;
 
