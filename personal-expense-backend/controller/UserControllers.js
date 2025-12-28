@@ -16,25 +16,21 @@ module.exports = {
 
       const supabaseUser = req.user;
 
-      const id = supabaseUser.sub; // Supabase user ID (UUID)
-      const email = supabaseUser.email || null;
-
-      const userMetadata = supabaseUser.user_metadata || {};
-      const appMetadata = supabaseUser.app_metadata || {};
+      const id = supabaseUser.sub;
+      const email = supabaseUser.email;
 
       const fullName =
-        userMetadata.full_name ||
-        userMetadata.name ||
+        supabaseUser.user_metadata?.full_name ||
+        supabaseUser.user_metadata?.name ||
         null;
 
       const avatarUrl =
-        userMetadata.avatar_url ||
-        userMetadata.picture ||
+        supabaseUser.user_metadata?.avatar_url ||
+        supabaseUser.user_metadata?.picture ||
         null;
 
-      const provider = appMetadata.provider || null;
+      const provider = supabaseUser.app_metadata?.provider ?? null;
 
-      // 🔑 UPSERT user (safe for repeated logins)
       await prisma.user.upsert({
         where: { id },
         update: {
@@ -53,7 +49,7 @@ module.exports = {
         },
       });
 
-      return res.json({ success: true });
+      res.json({ success: true });
     } catch (error) {
       console.error("createSession error:", error);
       return res.status(500).json({ message: "Failed to sync user" });
