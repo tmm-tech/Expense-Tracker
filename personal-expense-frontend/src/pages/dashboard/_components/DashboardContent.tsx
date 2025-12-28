@@ -168,7 +168,7 @@ export function DashboardContent() {
 
   const runAllChecks = useMutation({
     mutationFn: () =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/alerts/run-checks`, { method: "POST" }),
+      apiFetch(`${API_BASE_URL}/alerts/run-checks`, { method: "POST" }),
   });
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
