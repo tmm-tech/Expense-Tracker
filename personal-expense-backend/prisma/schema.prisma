@@ -100,18 +100,30 @@ model Budget {
   category Category @relation(fields: [categoryId], references: [id])
 }
 
+enum GoalStatus {
+  active
+  completed
+  paused
+}
+
 model Goal {
   id            String   @id @default(uuid())
   userId        String
   name          String
   targetAmount  Float
   currentAmount Float   @default(0)
+  status        GoalStatus @default(active)
   startDate     DateTime
   endDate       DateTime?
   createdAt     DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
   user     User     @relation(fields: [userId], references: [id])
 }
+
+
+
+
 
 model Debt {
   id             String   @id @default(uuid())
