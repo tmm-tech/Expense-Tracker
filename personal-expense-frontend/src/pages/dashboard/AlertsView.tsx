@@ -48,7 +48,7 @@ const { data: alerts = [], isLoading } = useQuery<Alert[]>({
 
 const markAsRead = useMutation({
   mutationFn: (id: string) =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.com/alerts/mark-read/${id}`, { method: "POST" }),
+    apiFetch(`/alerts/mark-read/${id}`, { method: "POST" }),
   onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
 });
 
