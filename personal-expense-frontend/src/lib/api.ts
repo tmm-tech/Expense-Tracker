@@ -42,6 +42,11 @@ export async function apiFetch<T>(
 
     throw new Error(message);
   }
+    const json = await res.json();
+
+  if (json && typeof json === "object" && "data" in json) {
+    return json.data as T;
+  }
 
   return payload as T;
 }
