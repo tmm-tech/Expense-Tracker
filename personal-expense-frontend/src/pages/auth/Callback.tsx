@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabase";
-import { API_BASE_URL } from "@/lib/config";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -29,7 +28,8 @@ export default function AuthCallback() {
           },
         });
 
-        navigate("/", { replace: true });
+        navigate("/dashboard", { replace: true });
+        console.log("Successful Login")
       } catch (err) {
         console.error("User sync failed:", err);
         navigate("/", { replace: true });
