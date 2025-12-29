@@ -68,7 +68,7 @@ const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
   queryKey: ["calendar-events", monthStart.getTime(), monthEnd.getTime()],
   queryFn: () =>
     apiFetch<CalendarEvent[]>(
-      `https://expense-tracker-u6ge.onrender.com/api/calendar?startDate=${monthStart.getTime()}&endDate=${monthEnd.getTime()}`
+      `/calendar?startDate=${monthStart.getTime()}&endDate=${monthEnd.getTime()}`
     ),
 });
 

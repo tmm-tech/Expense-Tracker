@@ -105,7 +105,7 @@ export function CreateChallengeDialog({
         endDate = addMonths(startDate, durationNum).getTime();
       }
 
-      await apiFetch("https://expense-tracker-u6ge.onrender.com/api/savings-challenges", {
+      await apiFetch("/savings-challenges", {
         method: "POST",
         body: JSON.stringify({
           name: name || getChallengePresetName(type),

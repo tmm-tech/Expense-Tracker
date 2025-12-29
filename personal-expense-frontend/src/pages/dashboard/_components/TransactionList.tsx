@@ -31,7 +31,7 @@ export function TransactionList({
 }: TransactionListProps) {
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/transactions/${id}`, { method: "DELETE" });
+      await apiFetch(`/transactions/${id}`, { method: "DELETE" });
       toast.success("Transaction deleted");
     } catch (error) {
       console.error(error);

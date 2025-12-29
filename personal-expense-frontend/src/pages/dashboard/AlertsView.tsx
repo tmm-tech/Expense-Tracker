@@ -43,36 +43,36 @@ export function AlertsView() {
 const { data: alerts = [], isLoading } = useQuery<Alert[]>({
   queryKey: ["alerts", showArchived],
   queryFn: () =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/alerts?includeArchived=${showArchived}`),
+    apiFetch(`/alerts?includeArchived=${showArchived}`),
 });
 
 const markAsRead = useMutation({
   mutationFn: (id: string) =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.comhttps://expense-tracker-u6ge.onrender.com/api/alerts/mark-read/${id}`, { method: "POST" }),
+    apiFetch(`https://expense-tracker-u6ge.onrender.com/alerts/mark-read/${id}`, { method: "POST" }),
   onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
 });
 
 const markAllAsRead = useMutation({
   mutationFn: () =>
-    apiFetch("https://expense-tracker-u6ge.onrender.com/api/alerts/mark-all-read", { method: "POST" }),
+    apiFetch("/alerts/mark-all-read", { method: "POST" }),
   onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
 });
 
 const archiveAlert = useMutation({
   mutationFn: (id: string) =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/alerts/archive/${id}`, { method: "POST" }),
+    apiFetch(`/alerts/archive/${id}`, { method: "POST" }),
   onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
 });
 
 const deleteAlert = useMutation({
   mutationFn: (id: string) =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/alerts/${id}`, { method: "DELETE" }),
+    apiFetch(`/alerts/${id}`, { method: "DELETE" }),
   onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
 });
 
 const runAllChecks = useMutation({
   mutationFn: () =>
-    apiFetch("https://expense-tracker-u6ge.onrender.com/api/alerts/run-checks", { method: "POST" }),
+    apiFetch("/alerts/run-checks", { method: "POST" }),
   onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
 });
 

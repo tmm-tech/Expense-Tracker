@@ -39,7 +39,7 @@ export function AIInsights() {
     setIsGenerating(true);
     try {
       const result = await apiFetch<AIInsightsResponse>(
-        "https://expense-tracker-u6ge.onrender.com/api/ai/insights",
+        "/ai/insights",
         { method: "POST" }
       );
 

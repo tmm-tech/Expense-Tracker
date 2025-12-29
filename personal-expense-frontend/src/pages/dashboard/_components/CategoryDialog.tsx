@@ -117,13 +117,13 @@ export function CategoryDialog({
     setIsSubmitting(true);
     try {
       if (editingCategory) {
-        await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/categories/${editingCategory.id}`, {
+        await apiFetch(`/categories/${editingCategory.id}`, {
           method: "PUT",
           body: JSON.stringify(data),
         });
         toast.success("Category updated");
       } else {
-        await apiFetch("https://expense-tracker-u6ge.onrender.com/api/categories", {
+        await apiFetch("/categories", {
           method: "POST",
           body: JSON.stringify(data),
         });

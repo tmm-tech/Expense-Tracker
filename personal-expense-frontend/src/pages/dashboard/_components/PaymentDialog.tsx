@@ -59,7 +59,7 @@ export default function PaymentDialog({
 
   const makePaymentMutation = useMutation({
     mutationFn: (data: PaymentFormData) =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/debts/${debt!.id}/payments`, {
+      apiFetch(`/debts/${debt!.id}/payments`, {
         method: "POST",
         body: JSON.stringify({
           amount: data.amount,

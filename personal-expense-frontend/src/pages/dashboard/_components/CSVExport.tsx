@@ -10,7 +10,7 @@ export function CSVExport() {
   const transactions = useQuery({
     queryKey: ["transactions"],
     queryFn: async () => {
-      const response = await fetch("https://expense-tracker-u6ge.onrender.com/api/transactions");
+      const response = await fetch("/transactions");
         if (!response.ok) {
             throw new Error("Failed to fetch transactions");
         }
@@ -20,7 +20,7 @@ export function CSVExport() {
   const budgets = useQuery({
     queryKey: ["budgets"],
     queryFn: async () => {
-      const response = await fetch("https://expense-tracker-u6ge.onrender.com/api/budgets");
+      const response = await fetch("/budgets");
         if (!response.ok) {
             throw new Error("Failed to fetch budgets");
         }
@@ -30,7 +30,7 @@ export function CSVExport() {
   const investments = useQuery({
     queryKey: ["investments"],
     queryFn: async () => {
-      const response = await fetch("https://expense-tracker-u6ge.onrender.com/api/investments");
+      const response = await fetch("/investments");
         if (!response.ok) {
             throw new Error("Failed to fetch investments");
         }

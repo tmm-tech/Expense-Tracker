@@ -90,24 +90,24 @@ const qc = useQueryClient();
 
 const { data: currentNetWorth, isLoading: loadingCurrent } = useQuery<NetWorthCurrent>({
   queryKey: ["net-worth-current"],
-  queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/net-worth/current"),
+  queryFn: () => apiFetch("/net-worth/current"),
 });
 
 const { data: snapshots, isLoading: loadingSnapshots } = useQuery<NetWorthSnapshot[]>({
   queryKey: ["net-worth-snapshots"],
-  queryFn: () => apiFetch("https://expense-tracker-u6ge.onrender.com/api/net-worth/snapshots"),
+  queryFn: () => apiFetch("/net-worth/snapshots"),
 });
 
 const { data: trendData, isLoading: loadingTrend } = useQuery<NetWorthSnapshot[]>({
   queryKey: ["net-worth-trend", period],
   queryFn: () =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/net-worth/trend?period=${period}`),
+    apiFetch(`/net-worth/trend?period=${period}`),
 });
 
 
 const createSnapshot = useMutation({
   mutationFn: (data: { notes?: string }) =>
-    apiFetch("https://expense-tracker-u6ge.onrender.com/api/net-worth/snapshots", {
+    apiFetch("/net-worth/snapshots", {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -123,7 +123,7 @@ const createSnapshot = useMutation({
 
 const deleteSnapshot = useMutation({
   mutationFn: (id: string) =>
-    apiFetch(`https://expense-tracker-u6ge.onrender.com/api/net-worth/snapshots/${id}`, { method: "DELETE" }),
+    apiFetch(`/net-worth/snapshots/${id}`, { method: "DELETE" }),
   onSuccess: () => {
     toast.success("Snapshot deleted");
     qc.invalidateQueries({ queryKey: ["net-worth-snapshots"] });

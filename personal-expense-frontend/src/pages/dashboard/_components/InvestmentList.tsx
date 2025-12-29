@@ -31,7 +31,7 @@ interface InvestmentListProps {
 export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
   const removeInvestment = useMutation({
   mutationFn: async (id: string) => {
-    return apiFetch(`https://expense-tracker-u6ge.onrender.com/api/investments/${id}`, {
+    return apiFetch(`/investments/${id}`, {
       method: "DELETE",
     });
   },

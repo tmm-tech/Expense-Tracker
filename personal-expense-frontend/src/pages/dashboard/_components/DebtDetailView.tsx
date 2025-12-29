@@ -68,7 +68,7 @@ export default function DebtDetailView({ debt, onBack }: DebtDetailViewProps) {
   } = useQuery<DebtPayment[]>({
     queryKey: ["debtPayments", debt.id],
     queryFn: async () => {
-      const res = await fetch(`https://expense-tracker-u6ge.onrender.com/api/debts/${debt.id}/payments`);
+      const res = await fetch(`/debts/${debt.id}/payments`);
       if (!res.ok) throw new Error("Failed to fetch payments");
       return res.json();
     },

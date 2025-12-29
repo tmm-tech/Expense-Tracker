@@ -62,7 +62,7 @@ export default function BudgetDialog({
 
   const createBudget = useMutation({
     mutationFn: (input: CreateBudgetInput) =>
-      apiFetch("https://expense-tracker-u6ge.onrender.com/api/budgets", {
+      apiFetch("/budgets", {
         method: "POST",
         body: JSON.stringify(input),
       }),
@@ -73,7 +73,7 @@ export default function BudgetDialog({
 
   const updateBudget = useMutation({
     mutationFn: ({ id, ...payload }: UpdateBudgetInput) =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/budgets/${id}`, {
+      apiFetch(`/budgets/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

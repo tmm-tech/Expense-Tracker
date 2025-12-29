@@ -74,7 +74,7 @@ export default function DebtDialog({
 }: DebtDialogProps) {
   const createDebt = useMutation({
     mutationFn: async (newDebt: Omit<Debt, "id">) => {
-      const response = await fetch("https://expense-tracker-u6ge.onrender.com/api/debts", {
+      const response = await fetch("/debts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -89,7 +89,7 @@ export default function DebtDialog({
   });
   const updateDebt = useMutation({
     mutationFn: async (updatedDebt: Debt) => {
-      const response = await fetch(`https://expense-tracker-u6ge.onrender.com/api/debts/${updatedDebt.id}`, {
+      const response = await fetch(`/debts/${updatedDebt.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -147,13 +147,13 @@ const onSubmit = async (data: DebtFormData) => {
       };
 
       if (debt) {
-        await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/debts/${debt.id}`, {
+        await apiFetch(`/debts/${debt.id}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
         toast.success("Debt updated successfully");
       } else {
-        await apiFetch("https://expense-tracker-u6ge.onrender.com/api/debts", {
+        await apiFetch("/debts", {
           method: "POST",
           body: JSON.stringify(payload),
         });

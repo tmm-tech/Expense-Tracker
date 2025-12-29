@@ -36,7 +36,7 @@ interface BudgetListProps {
 export function BudgetList({ budgets, onEdit }: BudgetListProps) {
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch(`https://expense-tracker-u6ge.onrender.com/api/budgets/${id}`, { method: "DELETE" });
+      await apiFetch(`/budgets/${id}`, { method: "DELETE" });
       toast.success("Budget deleted");
     } catch (error) {
       console.error(error);
@@ -96,7 +96,7 @@ function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
     const loadSpending = async () => {
       try {
         const data = await apiFetch<BudgetSpending>(
-          `https://expense-tracker-u6ge.onrender.com/api/budgets/${budget.id}/spending`
+          `/budgets/${budget.id}/spending`
         );
         setSpending(data);
       } catch (error) {

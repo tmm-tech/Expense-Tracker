@@ -106,7 +106,7 @@ export function RecurringTransactionDialog({
 
   const createMutation = useMutation({
     mutationFn: (payload: any) =>
-      apiFetch("https://expense-tracker-u6ge.onrender.com/api/recurring-transactions", {
+      apiFetch("/recurring-transactions", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
@@ -122,7 +122,7 @@ export function RecurringTransactionDialog({
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ...payload }: any) =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/recurring-transactions/${id}`, {
+      apiFetch(`/recurring-transactions/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),

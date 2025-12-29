@@ -41,7 +41,7 @@ export default function CurrencyView() {
   >({
     queryKey: ["currencies"],
     queryFn: async () => {
-      const res = await fetch("https://expense-tracker-u6ge.onrender.com/api/currencies");
+      const res = await fetch("/currencies");
       if (!res.ok) throw new Error("Failed to fetch currencies");
       return res.json();
     },
@@ -50,7 +50,7 @@ export default function CurrencyView() {
   const { data: currentUser, isLoading: userLoading } = useQuery({
     queryKey: ["currentUser"],
     queryFn: async () => {
-      const res = await fetch("https://expense-tracker-u6ge.onrender.com/api/users/current");
+      const res = await fetch("/users/current");
       if (!res.ok) throw new Error("Failed to fetch user");
       return res.json();
     },
@@ -58,7 +58,7 @@ export default function CurrencyView() {
 
   const updateSettings = useMutation({
     mutationFn: async (settings: { currency: string }) => {
-      const res = await fetch("https://expense-tracker-u6ge.onrender.com/api/users/settings", {
+      const res = await fetch("/users/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
@@ -77,7 +77,7 @@ export default function CurrencyView() {
     queryKey: ["exchangeRate", fromCurrency, toCurrency],
     queryFn: async () => {
       const res = await fetch(
-        `https://expense-tracker-u6ge.onrender.com/api/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`,
+        `/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`,
       );
       return res.json();
     },
@@ -88,7 +88,7 @@ export default function CurrencyView() {
     queryKey: ["convert", amount, fromCurrency, toCurrency],
     queryFn: async () => {
       const res = await fetch(
-        `https://expense-tracker-u6ge.onrender.com/api/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`,
+        `/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`,
       );
       return res.json();
     },

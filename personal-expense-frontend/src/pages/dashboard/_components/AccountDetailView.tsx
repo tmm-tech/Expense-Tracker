@@ -49,7 +49,7 @@ export default function AccountDetailView({
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ["account-transactions", accountId],
     queryFn: () =>
-      apiFetch(`https://expense-tracker-u6ge.onrender.com/api/accounts/${accountId}/transactions`),
+      apiFetch(`/accounts/${accountId}/transactions`),
   });
 
   const Icon = ACCOUNT_ICONS[account.type];

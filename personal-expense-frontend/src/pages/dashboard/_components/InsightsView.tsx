@@ -47,17 +47,17 @@ const COLORS = {
 export function InsightsView() {
   const { data: transactions = [], isLoading: txLoading } = useQuery({
     queryKey: ["transactions"],
-    queryFn: () => apiFetch<Transaction[]>("https://expense-tracker-u6ge.onrender.com/api/transactions"),
+    queryFn: () => apiFetch<Transaction[]>("/transactions"),
   });
 
   const { data: budgets = [] } = useQuery({
     queryKey: ["budgets"],
-    queryFn: () => apiFetch<Budget[]>("https://expense-tracker-u6ge.onrender.com/api/budgets"),
+    queryFn: () => apiFetch<Budget[]>("/budgets"),
   });
 
   const { data: investments = [] } = useQuery({
     queryKey: ["investments"],
-    queryFn: () => apiFetch<Investment[]>("https://expense-tracker-u6ge.onrender.com/api/investments"),
+    queryFn: () => apiFetch<Investment[]>("/investments"),
   });
 
   /* ---------- Loading ---------- */

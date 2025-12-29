@@ -61,7 +61,7 @@ export function CSVImport() {
       const csvContent = await file.text();
 
       const importResult = await apiFetch<ImportResult>(
-        `https://expense-tracker-u6ge.onrender.com/api/import/${type}`,
+        `/import/${type}`,
         {
           method: "POST",
           body: JSON.stringify({ csvContent }),
