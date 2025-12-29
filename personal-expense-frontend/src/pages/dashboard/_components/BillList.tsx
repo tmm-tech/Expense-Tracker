@@ -64,7 +64,7 @@ export default function BillList({
 
   const getStatusBadge = (bill: Bill) => {
     const now = Date.now();
-    const daysUntilDue = Math.ceil((bill.dueDate - now) / (1000 * 60 * 60 * 24));
+    const daysUntilDue = Math.ceil((bill.dueDay - now) / (1000 * 60 * 60 * 24));
 
     if (bill.status === "paid") {
       return (
@@ -75,7 +75,7 @@ export default function BillList({
       );
     }
 
-    if (bill.status === "overdue" || (bill.status === "pending" && bill.dueDate < now)) {
+    if (bill.status === "overdue" || (bill.status === "pending" && bill.dueDay < now)) {
       return (
         <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-400">
           <AlertCircleIcon className="mr-1 h-3 w-3" />
@@ -113,10 +113,10 @@ export default function BillList({
 
   // Group bills by status
   const upcomingBills = bills.filter(
-    (b) => b.status === "pending" && b.dueDate >= Date.now()
+    (b) => b.status === "pending" && b.dueDay >= Date.now()
   );
   const overdueBills = bills.filter(
-    (b) => b.status === "overdue" || (b.status === "pending" && b.dueDate < Date.now())
+    (b) => b.status === "overdue" || (b.status === "pending" && b.dueDay < Date.now())
   );
   const paidBills = bills.filter((b) => b.status === "paid");
 
@@ -189,7 +189,7 @@ export default function BillList({
               <div className="text-2xl font-bold">KES {bill.amount.toFixed(2)}</div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarIcon className="h-4 w-4" />
-                <span>Due: {format(bill.dueDate, "MMM dd, yyyy")}</span>
+                <span>Due: {format(bill.dueDay, "MMM dd, yyyy")}</span>
               </div>
               {bill.reminderDays > 0 && (
                 <div className="text-xs text-muted-foreground">

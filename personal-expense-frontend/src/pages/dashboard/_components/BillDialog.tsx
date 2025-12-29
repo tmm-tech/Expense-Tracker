@@ -42,7 +42,7 @@ const billSchema = z.object({
   name: z.string().min(1, "Bill name is required"),
   category: z.string().min(1, "Category is required"),
   amount: z.string().min(1, "Amount is required"),
-  dueDate: z.string().min(1, "Due date is required"),
+  dueDay: z.string().min(1, "Due date is required"),
   frequency: z.enum(["one-time", "weekly", "monthly", "quarterly", "yearly"]),
   accountId: z.string().optional(),
   reminderDays: z.string(),
@@ -76,8 +76,8 @@ export default function BillDialog({
       name: bill?.name ?? "",
       category: bill?.category ?? "",
       amount: bill ? bill.amount.toString() : "",
-      dueDate: bill
-        ? format(bill.dueDate, "yyyy-MM-dd")
+      dueDay: bill
+        ? format(bill.dueDay, "yyyy-MM-dd")
         : format(Date.now(), "yyyy-MM-dd"),
       frequency: bill?.frequency ?? "monthly",
       accountId: bill?.accountId ?? "none",
@@ -103,7 +103,7 @@ export default function BillDialog({
         name: data.name,
         category: data.category,
         amount: parseFloat(data.amount),
-        dueDate: new Date(data.dueDate).getTime(),
+        dueDay: new Date(data.dueDay).getTime(),
         frequency: data.frequency,
         accountId:
           data.accountId && data.accountId !== "none"
@@ -208,7 +208,7 @@ export default function BillDialog({
 
               <FormField
                 control={form.control}
-                name="dueDate"
+                name="dueDay"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Due Date</FormLabel>

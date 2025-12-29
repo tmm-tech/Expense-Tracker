@@ -68,16 +68,17 @@ module.exports = {
     try {
       const userId = req.user.sub;
       const now = new Date();
-
       const alertsToCreate = [];
+      const today = new Date();
+      const todayDay = today.getDate(); // 1–31
 
       /* ---------------- Bills Due ---------------- */
       const bills = await prisma.bill.findMany({
         where: {
           userId,
           isPaid: false,
-          dueDate: {
-            lte: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+          dueDay: {
+            lte: todayDay,
           },
         },
       });

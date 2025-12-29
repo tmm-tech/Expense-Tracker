@@ -3,7 +3,7 @@
     name: string;
     category: string;
     amount: number;
-    dueDate: number;
+    dueDay: number;
     frequency: "one-time" | "weekly" | "monthly" | "quarterly" | "yearly";
     reminderDays: number;
     status: "pending" | "paid" | "overdue";
