@@ -20,10 +20,21 @@ import {
   Shield,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function Index() {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) return;
+
+    // If user just signed in and is NOT already on callback
+    if (session && location.pathname !== "/auth/callback") {
+      navigate("/auth/callback", { replace: true });
+    }
+  }, [session, loading, navigate, location.pathname]);
+
   const features = [
     {
       icon: Wallet,
