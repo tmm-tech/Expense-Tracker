@@ -23,6 +23,7 @@ model User {
   goals        Goal[]
   bills        Bill[]
   debt         Debt[]
+  investment   Investment[]
 }
 
 
@@ -172,7 +173,7 @@ model Alert {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@index([userId])
+  user     User     @relation(fields: [userId], references: [id])
 }
 
 model Investment {
@@ -183,5 +184,7 @@ model Investment {
   type      String
   createdAt DateTime @default(now())
 
+  user     User     @relation(fields: [userId], references: [id])
   @@map("investments")
+  
 }
