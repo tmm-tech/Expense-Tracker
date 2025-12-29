@@ -29,15 +29,12 @@ module.exports = {
         supabaseUser.user_metadata?.picture ||
         null;
 
-      const provider = supabaseUser.app_metadata?.provider ?? null;
-
       await prisma.user.upsert({
         where: { id },
         update: {
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          provider,
           updated_at: new Date(),
         },
         create: {
@@ -45,7 +42,6 @@ module.exports = {
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          provider,
         },
       });
 

@@ -13,7 +13,6 @@ model User {
   email      String   @unique
   full_name  String?
   avatar_url String?
-  provider   String?
   createdAt  DateTime @default(now())
   updated_at DateTime @updatedAt
 
