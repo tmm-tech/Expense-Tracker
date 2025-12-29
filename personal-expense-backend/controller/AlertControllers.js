@@ -25,7 +25,7 @@ module.exports = {
   },
 
   // POST /api/alerts/:id/read
-  markAsRead: async(req, res) => {
+  markAsRead: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -47,7 +47,7 @@ module.exports = {
   },
 
   // POST /api/alerts/read-all
-  markAllAsRead: async(req, res) => {
+  markAllAsRead: async (req, res) => {
     try {
       const userId = req.user.sub;
 
@@ -64,7 +64,7 @@ module.exports = {
   },
 
   // POST /api/alerts/run-checks
-  runChecks: async(req, res) => {
+  runChecks: async (req, res) => {
     try {
       const userId = req.user.sub;
       const now = new Date();
@@ -166,6 +166,26 @@ module.exports = {
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Alert checks failed" });
+    }
+  },
+  getUnreadCount: async (req, res) => {
+    try {
+      const userId = req.user.sub;
+
+      const count = await prisma.alert.count({
+        where: {
+          userId,
+          read: false,
+        },
+      });
+
+      res.json({ count });
+    } catch (err) {
+      console.error("Unread alerts error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch unread alerts",
+      });
     }
   },
 };
