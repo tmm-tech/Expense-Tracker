@@ -32,22 +32,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware to add token to the request
-const addTokenToRequest = async (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7); // Remove 'Bearer ' from the beginning
-        try {
-            const decodedToken = await jwt.verify(token, process.env.SECRET);
-            req.token = decodedToken;
-        } catch (error) {
-            return res.status(401).json({ error: 'Invalid token.' });
-        }
-    }
-    next();
-};
-
-app.use(addTokenToRequest);
 
 // // Route handling
 app.use('/api', BudgetRoutes);
