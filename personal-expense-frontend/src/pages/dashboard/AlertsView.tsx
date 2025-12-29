@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
 import {
   Bell,
   AlertTriangle,
@@ -40,60 +46,56 @@ export function AlertsView() {
   const qc = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
 
-const { data: alerts = [], isLoading } = useQuery<Alert[]>({
-  queryKey: ["alerts", showArchived],
-  queryFn: () =>
-    apiFetch(`/alerts?includeArchived=${showArchived}`),
-});
+  const { data: alerts = [], isLoading } = useQuery<Alert[]>({
+    queryKey: ["alerts", showArchived],
+    queryFn: () => apiFetch(`/alerts?includeArchived=${showArchived}`),
+  });
 
-const markAsRead = useMutation({
-  mutationFn: (id: string) =>
-    apiFetch(`/alerts/mark-read/${id}`, { method: "POST" }),
-  onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
-});
+  const markAsRead = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/alerts/mark-read/${id}`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
 
-const markAllAsRead = useMutation({
-  mutationFn: () =>
-    apiFetch("/alerts/mark-all-read", { method: "POST" }),
-  onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
-});
+  const markAllAsRead = useMutation({
+    mutationFn: () => apiFetch("/alerts/mark-all-read", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
 
-const archiveAlert = useMutation({
-  mutationFn: (id: string) =>
-    apiFetch(`/alerts/archive/${id}`, { method: "POST" }),
-  onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
-});
+  const archiveAlert = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/alerts/archive/${id}`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
 
-const deleteAlert = useMutation({
-  mutationFn: (id: string) =>
-    apiFetch(`/alerts/${id}`, { method: "DELETE" }),
-  onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
-});
+  const deleteAlert = useMutation({
+    mutationFn: (id: string) => apiFetch(`/alerts/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
 
-const runAllChecks = useMutation({
-  mutationFn: () =>
-    apiFetch("/alerts/run-checks", { method: "POST" }),
-  onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
-});
+  const runAllChecks = useMutation({
+    mutationFn: () => apiFetch("/alerts/run-checks", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+  });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
- const handleAlertClick = async (alert: Alert) => {
-  if (!alert.isRead) {
-    await markAsRead.mutateAsync(alert.id);
-  }
-  if (alert.actionUrl) {
-    const url = new URL(alert.actionUrl, window.location.origin);
-    navigate(url.pathname + url.search);
-  }
-};
+  const handleAlertClick = async (alert: Alert) => {
+    if (!alert.isRead) {
+      await markAsRead.mutateAsync(alert.id);
+    }
+    if (alert.actionUrl) {
+      const url = new URL(alert.actionUrl, window.location.origin);
+      navigate(url.pathname + url.search);
+    }
+  };
 
-const handleRefreshAlerts = async () => {
-  await runAllChecks.mutateAsync();
-};
-const handleMarkAllRead = async () => {
-  await markAllAsRead.mutateAsync();
-};
+  const handleRefreshAlerts = async () => {
+    await runAllChecks.mutateAsync();
+  };
+  const handleMarkAllRead = async () => {
+    await markAllAsRead.mutateAsync();
+  };
 
   if (!alerts) {
     return <div>Loading...</div>;
@@ -102,14 +104,18 @@ const handleMarkAllRead = async () => {
   const activeAlerts = alerts.filter((a) => !a.isArchived);
   const archivedAlerts = alerts.filter((a) => a.isArchived);
   const displayAlerts = showArchived ? archivedAlerts : activeAlerts;
-  const unreadCount = activeAlerts.filter((a) => !a.isRead).length;
+  const alertsArray = Array.isArray(activeAlerts) ? activeAlerts : [];
+
+  const unreadCount = alertsArray.filter((a) => !a.isRead).length;
 
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold">Alerts & Notifications</h2>
+          <h2 className="text-xl md:text-2xl font-bold">
+            Alerts & Notifications
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Stay informed about your financial activities
           </p>
@@ -126,7 +132,12 @@ const handleMarkAllRead = async () => {
             Refresh
           </Button>
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAllRead} className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMarkAllRead}
+              className="gap-2"
+            >
               <CheckCheck className="w-4 h-4" />
               Mark All Read
             </Button>
@@ -140,8 +151,12 @@ const handleMarkAllRead = async () => {
           <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Total Active</p>
-                <p className="text-xl md:text-2xl font-bold">{activeAlerts.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Total Active
+                </p>
+                <p className="text-xl md:text-2xl font-bold">
+                  {activeAlerts.length}
+                </p>
               </div>
               <Bell className="w-5 h-5 text-muted-foreground" />
             </div>
@@ -152,8 +167,12 @@ const handleMarkAllRead = async () => {
           <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Unread</p>
-                <p className="text-xl md:text-2xl font-bold text-blue-500">{unreadCount}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Unread
+                </p>
+                <p className="text-xl md:text-2xl font-bold text-blue-500">
+                  {unreadCount}
+                </p>
               </div>
               <Eye className="w-5 h-5 text-blue-500" />
             </div>
@@ -164,7 +183,9 @@ const handleMarkAllRead = async () => {
           <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Critical</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Critical
+                </p>
                 <p className="text-xl md:text-2xl font-bold text-yellow-500">
                   {activeAlerts.filter((a) => a.severity === "critical").length}
                 </p>
@@ -178,8 +199,12 @@ const handleMarkAllRead = async () => {
           <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Archived</p>
-                <p className="text-xl md:text-2xl font-bold">{archivedAlerts.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Archived
+                </p>
+                <p className="text-xl md:text-2xl font-bold">
+                  {archivedAlerts.length}
+                </p>
               </div>
               <Archive className="w-5 h-5 text-muted-foreground" />
             </div>
@@ -232,7 +257,7 @@ const handleMarkAllRead = async () => {
                 !alert.isRead && "border-l-4 border-l-primary",
                 alert.severity === "critical" && "border-l-red-500",
                 alert.severity === "warning" && "border-l-yellow-500",
-                alert.severity === "success" && "border-l-green-500"
+                alert.severity === "success" && "border-l-green-500",
               )}
               onClick={() => handleAlertClick(alert)}
             >
@@ -245,7 +270,7 @@ const handleMarkAllRead = async () => {
                       alert.severity === "critical" && "bg-red-500/10",
                       alert.severity === "warning" && "bg-yellow-500/10",
                       alert.severity === "success" && "bg-green-500/10",
-                      alert.severity === "info" && "bg-blue-500/10"
+                      alert.severity === "info" && "bg-blue-500/10",
                     )}
                   >
                     {alert.severity === "critical" && (
@@ -257,7 +282,9 @@ const handleMarkAllRead = async () => {
                     {alert.severity === "success" && (
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
                     )}
-                    {alert.severity === "info" && <Info className="w-4 h-4 text-blue-500" />}
+                    {alert.severity === "info" && (
+                      <Info className="w-4 h-4 text-blue-500" />
+                    )}
                   </div>
 
                   {/* Content */}
@@ -270,10 +297,14 @@ const handleMarkAllRead = async () => {
                         variant="outline"
                         className={cn(
                           "shrink-0 text-xs",
-                          alert.severity === "critical" && "border-red-500/20 bg-red-500/10",
-                          alert.severity === "warning" && "border-yellow-500/20 bg-yellow-500/10",
-                          alert.severity === "success" && "border-green-500/20 bg-green-500/10",
-                          alert.severity === "info" && "border-blue-500/20 bg-blue-500/10"
+                          alert.severity === "critical" &&
+                            "border-red-500/20 bg-red-500/10",
+                          alert.severity === "warning" &&
+                            "border-yellow-500/20 bg-yellow-500/10",
+                          alert.severity === "success" &&
+                            "border-green-500/20 bg-green-500/10",
+                          alert.severity === "info" &&
+                            "border-blue-500/20 bg-blue-500/10",
                         )}
                       >
                         {alert.type.replace(/_/g, " ")}
@@ -317,7 +348,9 @@ const handleMarkAllRead = async () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm("Are you sure you want to delete this alert?")) {
+                        if (
+                          confirm("Are you sure you want to delete this alert?")
+                        ) {
                           deleteAlert.mutate(alert._id);
                         }
                       }}
