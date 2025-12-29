@@ -168,7 +168,7 @@ export function DashboardContent() {
 
   const runAllChecks = useMutation({
     mutationFn: () =>
-      apiFetch(`${API_BASE_URL}/alerts/run-checks`, { method: "POST" }),
+      apiFetch(`/alerts/run-checks`, { method: "POST" }),
   });
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
