@@ -1,6 +1,4 @@
-const express = require('express');
 require('dotenv').config();
-const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const BudgetRoutes = require('./routes/BudgetRoutes');
@@ -13,38 +11,25 @@ const InvestmentRoutes = require('./routes/InvestmentRoutes');
 const GoalRoutes = require('./routes/GoalRoutes');
 const AlertRoutes = require('./routes/AlertRoutes');
 const DebtRoutes = require('./routes/DebtRoutes');
-const app = express(); 
-
-
-
 // Middleware to parse cookies
 app.use(cookieParser());
 
-const allowedOrigins = [
-    'https://aurex-expense-tracker.vercel.app/',
-    'http://localhost:5173'
-];
+const express = require("express");
+const cors = require("cors");
 
+const app = express();
 
-const corsOptions = {
-    origin: function (origin, callback) {
-        if (allowedOrigins.includes(origin) || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-};
+app.use(cors({
+  origin: [
+    "https://aurex-expense-tracker.vercel.app",
+    "http://localhost:5173"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+}));
 
-// CORS configuration
-app.use(cors(corsOptions));
-
-
-// Body parsing
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware to add token to the request
