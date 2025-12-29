@@ -175,7 +175,7 @@ module.exports = {
       const count = await prisma.alert.count({
         where: {
           userId,
-          read: false,
+          isRead: false,
         },
       });
 
