@@ -45,7 +45,6 @@ async function requireAuth(req, res, next) {
       issuer: `${SUPABASE_URL}/auth/v1`,
       audience: "authenticated",
     });
-    console.log("Auth header:", req.headers.authorization);
 
     req.user = payload; // 👈 Supabase user available everywhere
     next();

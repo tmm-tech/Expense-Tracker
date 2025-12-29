@@ -20,7 +20,7 @@ export default function AuthCallback() {
       }
 
       try {
-        await fetch(`/users/sync`, {
+        await fetch(`https://expense-tracker-u6ge.onrender.com/api/users/sync`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
