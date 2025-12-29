@@ -174,3 +174,14 @@ model Alert {
 
   @@index([userId])
 }
+
+model Investment {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  amount    Float
+  type      String
+  createdAt DateTime @default(now())
+
+  @@map("investments")
+}
