@@ -24,6 +24,7 @@ model User {
   bills        Bill[]
   debt         Debt[]
   investment   Investment[]
+  alert        Alert[]
 }
 
 
