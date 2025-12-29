@@ -78,43 +78,43 @@ export function DashboardContent() {
     Transaction[]
   >({
     queryKey: ["transactions"],
-    queryFn: () => apiFetch<Transaction[]>(`${API_BASE_URL}/transactions`),
+    queryFn: () => apiFetch<Transaction[]>(`/transactions`),
   });
 
   const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ["accounts"],
-    queryFn: () => apiFetch<Account[]>(`${API_BASE_URL}/accounts`),
+    queryFn: () => apiFetch<Account[]>(`/accounts`),
   });
 
   const { data: bills = [] } = useQuery<Bill[]>({
     queryKey: ["bills"],
-    queryFn: () => apiFetch<Bill[]>(`${API_BASE_URL}/bills`),
+    queryFn: () => apiFetch<Bill[]>(`/bills`),
   });
 
   const { data: debts = [] } = useQuery<Debt[]>({
     queryKey: ["debts"],
-    queryFn: () => apiFetch<Debt[]>(`${API_BASE_URL}/debts`),
+    queryFn: () => apiFetch<Debt[]>(`/debts`),
   });
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["budgets"],
-    queryFn: () => apiFetch(`${API_BASE_URL}/budgets`),
+    queryFn: () => apiFetch(`/budgets`),
   });
   const { data: goals = [] } = useQuery<Goal[]>({
     queryKey: ["goals"],
-    queryFn: () => apiFetch<Goal[]>(`${API_BASE_URL}/goals`),
+    queryFn: () => apiFetch<Goal[]>(`/goals`),
   });
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
-    queryFn: () => apiFetch<Category[]>(`${API_BASE_URL}/categories`),
+    queryFn: () => apiFetch<Category[]>(`/categories`),
   });
   const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ["investments"],
-    queryFn: () => apiFetch<Investment[]>(`${API_BASE_URL}/investments`),
+    queryFn: () => apiFetch<Investment[]>(`/investments`),
   });
 
   const deleteBill = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`${API_BASE_URL}/bills/${id}`, { method: "DELETE" }),
+      apiFetch(`/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
@@ -122,14 +122,14 @@ export function DashboardContent() {
 
   const markBillAsPaid = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`${API_BASE_URL}/bills/${id}/pay`, { method: "POST" }),
+      apiFetch(`/bills/${id}/pay`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
   });
   const deleteDebt = useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`${API_BASE_URL}/debts/${id}`, { method: "DELETE" }),
+      apiFetch(`/debts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
     },

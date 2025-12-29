@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { API_BASE_URL } from "./config";
 
 export async function apiFetch<T>(
   path: string,
@@ -18,8 +19,7 @@ export async function apiFetch<T>(
     headers["Authorization"] = `Bearer ${session.access_token}`;
   }
 
-  const res = await fetch(
-    `${import.meta.env.VITE_API_BASE_URL}${path}`,
+  const res = await fetch(`${API_BASE_URL}${path}`,
     {
       ...options,
       headers,

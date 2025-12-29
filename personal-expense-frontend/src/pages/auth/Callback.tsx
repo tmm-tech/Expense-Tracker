@@ -21,7 +21,7 @@ export default function AuthCallback() {
       }
 
       try {
-        await fetch(`${API_BASE_URL}/users/sync`, {
+        await fetch(`/users/sync`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

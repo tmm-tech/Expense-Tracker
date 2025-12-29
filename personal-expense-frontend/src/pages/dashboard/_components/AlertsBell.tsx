@@ -42,12 +42,12 @@ export function AlertsBell() {
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["alerts-unread-count"],
-    queryFn: () => apiFetch<number>(`${API_BASE_URL}/alerts/unread-count`),
+    queryFn: () => apiFetch<number>(`/alerts/unread-count`),
   });
 
   const { data: alerts = [] } = useQuery({
     queryKey: ["alerts-recent"],
-    queryFn: () => apiFetch<Alert[]>(`${API_BASE_URL}/alerts?onlyUnread=true`),
+    queryFn: () => apiFetch<Alert[]>(`/alerts?onlyUnread=true`),
   });
 
   const displayAlerts = alerts.slice(0, 5);
