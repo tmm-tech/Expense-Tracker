@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+import { prisma } from "../src/lib/prism";
 
 /**
  * All debt operations are user-scoped

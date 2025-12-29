@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+import { prisma } from "../src/lib/prism";
 
 /**
  * Alerts are system-generated notifications per user

@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+import { prisma } from "../src/lib/prism";
 
 /**
  * Assumes auth middleware sets req.user.id
