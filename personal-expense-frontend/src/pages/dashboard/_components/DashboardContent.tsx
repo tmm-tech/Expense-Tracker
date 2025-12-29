@@ -208,18 +208,17 @@ export function DashboardContent() {
     Transaction[] | null
   >(null);
 
-  // Run alert checks on mount and periodically
-   useEffect(() => {
-    runAllChecks.mutate();
-    const interval = setInterval(
-      () => {
-        runAllChecks.mutate();
-      },
-      15 * 60 * 1000,
-    );
+  useEffect(() => {
+  runAllChecks.mutate();
 
-    return () => clearInterval(interval);
-  }, [runAllChecks]);
+  const interval = setInterval(() => {
+    runAllChecks.mutate();
+  }, 15 * 60 * 1000);
+
+  return () => clearInterval(interval);
+ 
+}, []);
+
 
   if (transactionsLoading) {
     return (

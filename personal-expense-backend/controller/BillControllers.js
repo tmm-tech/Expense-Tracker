@@ -1,4 +1,4 @@
-import { prisma } from "../src/lib/prism";
+const { prisma } = require("../lib/prism");
 
 /**
  * All controllers assume:
