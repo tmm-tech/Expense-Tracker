@@ -209,17 +209,17 @@ export function DashboardContent() {
   >(null);
 
   // Run alert checks on mount and periodically
-  // useEffect(() => {
-  //   runAllChecks.mutate();
-  //   const interval = setInterval(
-  //     () => {
-  //       runAllChecks.mutate();
-  //     },
-  //     15 * 60 * 1000,
-  //   );
+   useEffect(() => {
+    runAllChecks.mutate();
+    const interval = setInterval(
+      () => {
+        runAllChecks.mutate();
+      },
+      15 * 60 * 1000,
+    );
 
-  //   return () => clearInterval(interval);
-  // }, [runAllChecks]);
+    return () => clearInterval(interval);
+  }, [runAllChecks]);
 
   if (transactionsLoading) {
     return (
