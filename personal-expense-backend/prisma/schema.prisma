@@ -9,12 +9,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id        // Supabase auth.user.id (UUID)
-  email     String   @unique
-  name      String?
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id         String   @id
+  email      String   @unique
+  full_name  String?
+  avatar_url String?
+  createdAt  DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+
 
   accounts     Account[]
   categories   Category[]
