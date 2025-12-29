@@ -1,5 +1,4 @@
-const { prisma } = require("../lib/prism");
-
+const { prisma } = require("../src/lib/prism");
 /**
  * All controllers assume:
  * req.user.sub = Supabase user id (UUID)

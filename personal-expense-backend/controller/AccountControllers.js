@@ -1,4 +1,4 @@
-const { prisma } = require("../lib/prism");
+const { prisma } = require("../src/lib/prism");
 
 
 /**
