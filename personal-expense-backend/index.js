@@ -11,13 +11,13 @@ const InvestmentRoutes = require('./routes/InvestmentRoutes');
 const GoalRoutes = require('./routes/GoalRoutes');
 const AlertRoutes = require('./routes/AlertRoutes');
 const DebtRoutes = require('./routes/DebtRoutes');
-// Middleware to parse cookies
-app.use(cookieParser());
+
 
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
+// Middleware to parse cookies
+app.use(cookieParser());
 
 app.use(cors({
   origin: [
