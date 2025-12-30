@@ -71,14 +71,12 @@ import { useAuth } from "../../../hooks/use-auth.ts";
 
 export function DashboardContent() {
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading } = useAuth();
 
   const queryClient = useQueryClient();
 
   const {
     data: transactions = [],
-    isLoading: transactionsLoading,
-    isError: transactionsError,
   } = useQuery<Transaction[]>({
     queryKey: ["transactions"],
     enabled: !!session,
@@ -247,21 +245,21 @@ export function DashboardContent() {
     runAllChecks.mutate();
   }, [session]);
 
-  // if (transactionsLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-background p-6">
-  //       <div className="max-w-7xl mx-auto space-y-6">
-  //         <div className="h-12 w-64 bg-muted animate-pulse rounded" />
-  //         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  //           {[1, 2, 3].map((i) => (
-  //             <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
-  //           ))}
-  //         </div>
-  //         <div className="h-96 bg-muted animate-pulse rounded-lg" />
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="h-12 w-64 bg-muted animate-pulse rounded" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+          <div className="h-96 bg-muted animate-pulse rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -601,12 +599,6 @@ export function DashboardContent() {
                 Goals
               </TabsTrigger>
               <TabsTrigger
-                value="challenges"
-                className="text-xs sm:text-sm px-2 sm:px-3 py-2"
-              >
-                Challenges
-              </TabsTrigger>
-              <TabsTrigger
                 value="investments"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden md:inline-flex"
               >
@@ -662,7 +654,7 @@ export function DashboardContent() {
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
+                className="text-xs sm:text-sm px-2 sm:px-3 py-2"
               >
                 Settings
               </TabsTrigger>
@@ -682,27 +674,6 @@ export function DashboardContent() {
                 account={accounts.find((a) => a.id === selectedAccountId)!}
                 onBack={handleBackFromAccount}
               />
-            ) : accounts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4 text-center glass-card border border-border/40 rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Wallet className="w-6 h-6 text-muted-foreground" />
-                </div>
-
-                <h3 className="text-lg font-semibold">No accounts yet</h3>
-
-                <p className="text-sm text-muted-foreground max-w-md mt-2">
-                  You haven’t added any accounts. Create one to start tracking
-                  balances, transactions, and insights.
-                </p>
-
-                <Button
-                  className="mt-6 gap-2"
-                  onClick={() => setIsAccountDialogOpen(true)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Account
-                </Button>
-              </div>
             ) : (
               <AccountList
                 accounts={accounts}
@@ -718,30 +689,18 @@ export function DashboardContent() {
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
             />
-
-            {transactions.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                No transactions yet. Click <b>Add Transaction</b> to get
-                started.
-              </div>
-            ) : (
               <TransactionList
                 transactions={filteredTransactions || transactions}
                 onEdit={handleEditTransaction}
                 accounts={accounts}
               />
-            )}
+
           </TabsContent>
 
           <TabsContent value="recurring" className="mt-6">
             <RecurringTransactionList />
           </TabsContent>
           <TabsContent value="bills" className="mt-6">
-            {bills.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                No Bills yet. Click <b>Add Bill</b> to get started.
-              </div>
-            ) : (
               <BillList
                 bills={bills}
                 accounts={accounts}
@@ -749,7 +708,6 @@ export function DashboardContent() {
                 onDelete={handleDeleteBill}
                 onMarkPaid={handleMarkBillPaid}
               />
-            )}
           </TabsContent>
           <TabsContent value="debts" className="mt-6">
             {selectedDebtId && debts.find((d) => d.id === selectedDebtId) ? (
@@ -757,10 +715,6 @@ export function DashboardContent() {
                 debt={debts.find((d) => d.id === selectedDebtId)!}
                 onBack={handleBackFromDebt}
               />
-            ) : debts.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                No Debt yet. Click <b>Add Debt</b> to get started.
-              </div>
             ) : (
               <DebtList
                 debts={debts}
@@ -784,9 +738,6 @@ export function DashboardContent() {
                 throw new Error("Function not implemented.");
               }}
             />
-          </TabsContent>
-          <TabsContent value="challenges" className="mt-6">
-            <SavingsChallengesView />
           </TabsContent>
           <TabsContent value="investments" className="mt-6">
             <InvestmentList
