@@ -26,7 +26,7 @@ module.exports = {
         supabaseUser.user_metadata?.picture ||
         null;
 
-      await prisma.user.upsert({
+      await prisma.User.upsert({
         where: { id },
         update: {
           email,

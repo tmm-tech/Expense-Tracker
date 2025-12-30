@@ -242,25 +242,10 @@ export function DashboardContent() {
     Transaction[] | null
   >(null);
 
-  // useEffect(() => {
-  //   if (!transactions.length) return;
-
-  //   runAllChecks.mutate();
-
-  //   const interval = setInterval(
-  //     () => {
-  //       runAllChecks.mutate();
-  //     },
-  //     15 * 60 * 1000,
-  //   );
-
-  //   return () => clearInterval(interval);
-  // }, [transactions.length]);
   useEffect(() => {
-    if (bills.length === 0 && debts.length === 0 && goals.length === 0) return;
-
+    if (!session) return;
     runAllChecks.mutate();
-  }, [bills.length, debts.length, goals.length]);
+  }, [session]);
 
   if (transactionsLoading) {
     return (

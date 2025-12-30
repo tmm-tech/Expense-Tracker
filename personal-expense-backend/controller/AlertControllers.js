@@ -4,8 +4,12 @@ const { prisma } = require("../src/lib/prism");
  * Alerts are system-generated notifications per user
  * req.user.sub comes from Supabase JWT
  */
+    // POST /api/alerts/run-checks
+let lastRunAt = 0;
+const MIN_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 module.exports = {
+
   // GET /api/alerts
   getAlerts: async (req, res) => {
     try {
@@ -62,24 +66,28 @@ module.exports = {
     }
   },
 
-  // POST /api/alerts/run-checks
   runChecks: async (req, res) => {
     try {
       const userId = req.user.sub;
-      const now = new Date();
+      const now = Date.now();
+
+      // 🛑 throttle to protect DB
+      if (now - lastRunAt < MIN_INTERVAL) {
+        return res.json({ success: true, skipped: true });
+      }
+      lastRunAt = now;
+
       const alertsToCreate = [];
-      const today = new Date();
-      const todayDay = today.getDate(); // 1–31
+      const todayDay = new Date().getDate();
 
       /* ---------------- Bills Due ---------------- */
       const bills = await prisma.bill.findMany({
         where: {
           userId,
           isPaid: false,
-          dueDay: {
-            lte: todayDay,
-          },
+          dueDay: { lte: todayDay },
         },
+        select: { id: true, name: true },
       });
 
       for (const bill of bills) {
@@ -95,79 +103,104 @@ module.exports = {
       /* ---------------- Budgets Exceeded ---------------- */
       const budgets = await prisma.budget.findMany({
         where: { userId },
+        select: {
+          id: true,
+          name: true,
+          limit: true,
+          startDate: true,
+          categoryIds: true,
+        },
       });
 
-      for (const budget of budgets) {
-        const spent = await prisma.transaction.aggregate({
+      if (budgets.length) {
+        const transactions = await prisma.transaction.findMany({
           where: {
             userId,
             type: "expense",
-            categoryId: { in: budget.categoryIds },
-            date: { gte: new Date(budget.startDate) },
+            date: {
+              gte: new Date(Math.min(...budgets.map((b) => +b.startDate))),
+            },
           },
-          _sum: { amount: true },
+          select: {
+            amount: true,
+            categoryId: true,
+          },
         });
 
-        if ((spent._sum.amount || 0) > budget.limit) {
-          alertsToCreate.push({
-            userId,
-            type: "budget_exceeded",
-            severity: "critical",
-            title: "Budget Exceeded",
-            message: `You exceeded your ${budget.name} budget`,
-          });
+        for (const budget of budgets) {
+          const spent = transactions
+            .filter((t) => budget.categoryIds.includes(t.categoryId))
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          if (spent > budget.limit) {
+            alertsToCreate.push({
+              userId,
+              type: "budget_exceeded",
+              severity: "critical",
+              title: "Budget Exceeded",
+              message: `You exceeded your ${budget.name} budget`,
+            });
+          }
         }
       }
 
       /* ---------------- Low Account Balance ---------------- */
       const accounts = await prisma.account.findMany({
-        where: { userId },
+        where: { userId, balance: { lt: 0 } },
+        select: { name: true },
       });
 
       for (const acc of accounts) {
-        if (acc.balance < 0) {
-          alertsToCreate.push({
-            userId,
-            type: "low_balance",
-            severity: "critical",
-            title: "Negative Balance",
-            message: `${acc.name} has a negative balance`,
-          });
-        }
+        alertsToCreate.push({
+          userId,
+          type: "low_balance",
+          severity: "critical",
+          title: "Negative Balance",
+          message: `${acc.name} has a negative balance`,
+        });
       }
 
-      /* ---------------- Goal Completed ---------------- */
-      const completedGoals = await prisma.goal.findMany({
-        where: {
-          userId,
-          status: "completed",
+      /* ---------------- Goals Completed ---------------- */
+      const goals = await prisma.goal.findMany({
+        where: { userId },
+        select: {
+          name: true,
+          targetAmount: true,
+          currentAmount: true,
         },
       });
 
-      for (const goal of completedGoals) {
-        alertsToCreate.push({
-          userId,
-          type: "goal_completed",
-          severity: "info",
-          title: "Goal Completed 🎉",
-          message: `You completed the goal: ${goal.name}`,
-        });
+      for (const goal of goals) {
+        if (goal.currentAmount >= goal.targetAmount) {
+          alertsToCreate.push({
+            userId,
+            type: "goal_completed",
+            severity: "info",
+            title: "Goal Completed 🎉",
+            message: `You completed the goal: ${goal.name}`,
+          });
+        }
       }
 
       /* ---------------- Save Alerts ---------------- */
       if (alertsToCreate.length) {
         await prisma.alert.createMany({
           data: alertsToCreate,
-          skipDuplicates: true,
         });
       }
 
-      res.json({ success: true, created: alertsToCreate.length });
+      res.json({
+        success: true,
+        created: alertsToCreate.length,
+      });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Alert checks failed" });
+      console.error("Alert checks failed:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Alert checks failed" });
+      }
     }
   },
+
   getUnreadCount: async (req, res) => {
     try {
       const userId = req.user.sub;
