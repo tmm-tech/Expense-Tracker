@@ -4,12 +4,11 @@ const { prisma } = require("../src/lib/prism");
  * Alerts are system-generated notifications per user
  * req.user.sub comes from Supabase JWT
  */
-    // POST /api/alerts/run-checks
+// POST /api/alerts/run-checks
 let lastRunAt = 0;
 const MIN_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 module.exports = {
-
   // GET /api/alerts
   getAlerts: async (req, res) => {
     try {
@@ -105,7 +104,6 @@ module.exports = {
         where: { userId },
         select: {
           id: true,
-          name: true,
           limit: true,
           startDate: true,
           categoryIds: true,
@@ -138,7 +136,7 @@ module.exports = {
               type: "budget_exceeded",
               severity: "critical",
               title: "Budget Exceeded",
-              message: `You exceeded your ${budget.name} budget`,
+              message: `One of your budgets has been exceeded`,
             });
           }
         }
