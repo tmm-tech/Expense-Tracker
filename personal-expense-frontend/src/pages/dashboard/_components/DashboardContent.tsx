@@ -683,6 +683,27 @@ export function DashboardContent() {
                 account={accounts.find((a) => a.id === selectedAccountId)!}
                 onBack={handleBackFromAccount}
               />
+            ) : accounts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center glass-card border border-border/40 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Wallet className="w-6 h-6 text-muted-foreground" />
+                </div>
+
+                <h3 className="text-lg font-semibold">No accounts yet</h3>
+
+                <p className="text-sm text-muted-foreground max-w-md mt-2">
+                  You haven’t added any accounts. Create one to start tracking
+                  balances, transactions, and insights.
+                </p>
+
+                <Button
+                  className="mt-6 gap-2"
+                  onClick={() => setIsAccountDialogOpen(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Account
+                </Button>
+              </div>
             ) : (
               <AccountList
                 accounts={accounts}
@@ -691,6 +712,7 @@ export function DashboardContent() {
               />
             )}
           </TabsContent>
+
           <TabsContent value="transactions" className="mt-6">
             <TransactionFilters
               transactions={transactions}
@@ -718,7 +740,7 @@ export function DashboardContent() {
           <TabsContent value="bills" className="mt-6">
             {bills.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
-                No transactions yet. Click <b>Add Bill</b> to get started.
+                No Bills yet. Click <b>Add Bill</b> to get started.
               </div>
             ) : (
               <BillList
@@ -736,6 +758,10 @@ export function DashboardContent() {
                 debt={debts.find((d) => d.id === selectedDebtId)!}
                 onBack={handleBackFromDebt}
               />
+            ) : debts.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                No Debt yet. Click <b>Add Debt</b> to get started.
+              </div>
             ) : (
               <DebtList
                 debts={debts}
