@@ -50,8 +50,10 @@ module.exports = {
     try {
       const { page = 1, limit = 20, category, type, from, to } = req.query;
 
+      const where = {
+        userId: req.user.id,
+      };
       const userId = req.user.sub;
-
       if (category) where.category = category;
 
       if (type === "income") where.amount = { gt: 0 };
