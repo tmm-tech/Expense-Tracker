@@ -67,10 +67,11 @@ import type { Category } from "@/types/category";
 import type { Investment } from "@/types/investment";
 import type { Transaction } from "@/types/transaction";
 import { UserMenu } from "./UserMenu.tsx";
-import { API_BASE_URL } from "@/lib/config";
+import { useAuth } from "../../../hooks/use-auth.ts";
 
 export function DashboardContent() {
   const navigate = useNavigate();
+  const { session, loading: authLoading } = useAuth();
 
   const queryClient = useQueryClient();
 
@@ -80,6 +81,7 @@ export function DashboardContent() {
     isError: transactionsError,
   } = useQuery<Transaction[]>({
     queryKey: ["transactions"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
       return res.data ?? [];
@@ -89,6 +91,7 @@ export function DashboardContent() {
 
   const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ["accounts"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Account>>(`/accounts`);
       return res.data ?? [];
@@ -97,6 +100,7 @@ export function DashboardContent() {
 
   const { data: bills = [] } = useQuery<Bill[]>({
     queryKey: ["bills"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Bill>>(`/bills`);
       return res.data ?? [];
@@ -105,6 +109,7 @@ export function DashboardContent() {
 
   const { data: debts = [] } = useQuery<Debt[]>({
     queryKey: ["debts"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Debt>>(`/debts`);
       return res.data ?? [];
@@ -113,6 +118,7 @@ export function DashboardContent() {
 
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["budgets"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Budget>>(`/budgets`);
       return res.data ?? [];
@@ -120,6 +126,7 @@ export function DashboardContent() {
   });
   const { data: goals = [] } = useQuery<Goal[]>({
     queryKey: ["goals"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Goal>>(`/goals`);
       return res.data ?? [];
@@ -127,6 +134,7 @@ export function DashboardContent() {
   });
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Category>>(`/categories`);
       return res.data ?? [];
@@ -134,6 +142,7 @@ export function DashboardContent() {
   });
   const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ["investments"],
+    enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Investment>>(`/investments`);
       return res.data ?? [];
@@ -233,20 +242,25 @@ export function DashboardContent() {
     Transaction[] | null
   >(null);
 
+  // useEffect(() => {
+  //   if (!transactions.length) return;
+
+  //   runAllChecks.mutate();
+
+  //   const interval = setInterval(
+  //     () => {
+  //       runAllChecks.mutate();
+  //     },
+  //     15 * 60 * 1000,
+  //   );
+
+  //   return () => clearInterval(interval);
+  // }, [transactions.length]);
   useEffect(() => {
-    if (!transactions.length) return;
+    if (bills.length === 0 && debts.length === 0 && goals.length === 0) return;
 
     runAllChecks.mutate();
-
-    const interval = setInterval(
-      () => {
-        runAllChecks.mutate();
-      },
-      15 * 60 * 1000,
-    );
-
-    return () => clearInterval(interval);
-  }, [transactions.length]);
+  }, [bills.length, debts.length, goals.length]);
 
   if (transactionsLoading) {
     return (
