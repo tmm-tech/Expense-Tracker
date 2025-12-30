@@ -39,7 +39,6 @@ export default function AuthCallback() {
         }
       );
 
-      console.log("✅ Successful login");
       navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("User sync failed:", err);

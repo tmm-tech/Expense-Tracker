@@ -10,7 +10,6 @@ module.exports = {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      console.log("User payload:", req.user);
 
       const supabaseUser = req.user;
 
@@ -33,7 +32,8 @@ module.exports = {
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          updated_at: new Date(),
+          createdAt: new Date(date).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" }),
+          updated_at: new Date(date).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" }),
         },
         create: {
           id,
