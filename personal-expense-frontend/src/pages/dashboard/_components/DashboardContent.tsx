@@ -74,75 +74,74 @@ export function DashboardContent() {
 
   const queryClient = useQueryClient();
 
-const {
-  data: transactions = [],
-  isLoading: transactionsLoading,
-  isError: transactionsError,
-} = useQuery<Transaction[]>({
-  queryKey: ["transactions"],
-  queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
-    return res.data ?? [];
-  },
-  retry: false,
-});
+  const {
+    data: transactions = [],
+    isLoading: transactionsLoading,
+    isError: transactionsError,
+  } = useQuery<Transaction[]>({
+    queryKey: ["transactions"],
+    queryFn: async () => {
+      const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
+      return res.data ?? [];
+    },
+    retry: false,
+  });
 
-const { data: accounts = [] } = useQuery<Account[]>({
-  queryKey: ["accounts"],
-  queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Account>>(`/accounts`);
-    return res.data ?? [];
-  },
-});
+  const { data: accounts = [] } = useQuery<Account[]>({
+    queryKey: ["accounts"],
+    queryFn: async () => {
+      const res = await apiFetch<ApiResponse<Account>>(`/accounts`);
+      return res.data ?? [];
+    },
+  });
 
   const { data: bills = [] } = useQuery<Bill[]>({
-  queryKey: ["bills"],
-  queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Bill>>(`/bills`);
-    return res.data ?? [];
-  },
-});
+    queryKey: ["bills"],
+    queryFn: async () => {
+      const res = await apiFetch<ApiResponse<Bill>>(`/bills`);
+      return res.data ?? [];
+    },
+  });
 
-const { data: debts = [] } = useQuery<Debt[]>({
-  queryKey: ["debts"],
-  queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Debt>>(`/debts`);
-    return res.data ?? [];
-  },
-});
+  const { data: debts = [] } = useQuery<Debt[]>({
+    queryKey: ["debts"],
+    queryFn: async () => {
+      const res = await apiFetch<ApiResponse<Debt>>(`/debts`);
+      return res.data ?? [];
+    },
+  });
 
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["budgets"],
     queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Budget>>(`/budgets`);
-    return res.data ?? [];
-  },
+      const res = await apiFetch<ApiResponse<Budget>>(`/budgets`);
+      return res.data ?? [];
+    },
   });
   const { data: goals = [] } = useQuery<Goal[]>({
     queryKey: ["goals"],
     queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Goal>>(`/goals`);
-    return res.data ?? [];
-  },
+      const res = await apiFetch<ApiResponse<Goal>>(`/goals`);
+      return res.data ?? [];
+    },
   });
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Category>>(`/categories`);
-    return res.data ?? [];
-  },
+      const res = await apiFetch<ApiResponse<Category>>(`/categories`);
+      return res.data ?? [];
+    },
   });
   const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ["investments"],
     queryFn: async () => {
-    const res = await apiFetch<ApiResponse<Investment>>(`/investments`);
-    return res.data ?? [];
-  },
+      const res = await apiFetch<ApiResponse<Investment>>(`/investments`);
+      return res.data ?? [];
+    },
   });
 
   const deleteBill = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch(`/bills/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
     },
@@ -156,8 +155,7 @@ const { data: debts = [] } = useQuery<Debt[]>({
     },
   });
   const deleteDebt = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch(`/debts/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => apiFetch(`/debts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
     },
@@ -195,8 +193,7 @@ const { data: debts = [] } = useQuery<Debt[]>({
   };
 
   const runAllChecks = useMutation({
-    mutationFn: () =>
-      apiFetch(`/alerts/run-checks`, { method: "POST" }),
+    mutationFn: () => apiFetch(`/alerts/run-checks`, { method: "POST" }),
   });
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
@@ -236,33 +233,32 @@ const { data: debts = [] } = useQuery<Debt[]>({
     Transaction[] | null
   >(null);
 
-//   useEffect(() => {
-//   runAllChecks.mutate();
+  //   useEffect(() => {
+  //   runAllChecks.mutate();
 
-//   const interval = setInterval(() => {
-//     runAllChecks.mutate();
-//   }, 15 * 60 * 1000);
+  //   const interval = setInterval(() => {
+  //     runAllChecks.mutate();
+  //   }, 15 * 60 * 1000);
 
-//   return () => clearInterval(interval);
- 
-// }, []);
+  //   return () => clearInterval(interval);
 
+  // }, []);
 
-  // if (transactionsLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-background p-6">
-  //       <div className="max-w-7xl mx-auto space-y-6">
-  //         <div className="h-12 w-64 bg-muted animate-pulse rounded" />
-  //         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  //           {[1, 2, 3].map((i) => (
-  //             <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
-  //           ))}
-  //         </div>
-  //         <div className="h-96 bg-muted animate-pulse rounded-lg" />
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (transactionsLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="h-12 w-64 bg-muted animate-pulse rounded" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+          <div className="h-96 bg-muted animate-pulse rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -697,16 +693,31 @@ const { data: debts = [] } = useQuery<Debt[]>({
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
             />
-            <TransactionList
-              transactions={filteredTransactions || transactions}
-              onEdit={handleEditTransaction}
-              accounts={accounts}
-            />
+
+            {transactions.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                No transactions yet. Click <b>Add Transaction</b> to get
+                started.
+              </div>
+            ) : (
+              <TransactionList
+                transactions={filteredTransactions || transactions}
+                onEdit={handleEditTransaction}
+                accounts={accounts}
+              />
+            )}
           </TabsContent>
+
           <TabsContent value="recurring" className="mt-6">
             <RecurringTransactionList />
           </TabsContent>
           <TabsContent value="bills" className="mt-6">
+             {bills.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                No transactions yet. Click <b>Add Bill</b> to get
+                started.
+              </div>
+            ) : (
             <BillList
               bills={bills}
               accounts={accounts}
@@ -714,6 +725,7 @@ const { data: debts = [] } = useQuery<Debt[]>({
               onDelete={handleDeleteBill}
               onMarkPaid={handleMarkBillPaid}
             />
+            )}
           </TabsContent>
           <TabsContent value="debts" className="mt-6">
             {selectedDebtId && debts.find((d) => d.id === selectedDebtId) ? (
