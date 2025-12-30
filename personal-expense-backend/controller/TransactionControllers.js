@@ -50,9 +50,7 @@ module.exports = {
     try {
       const { page = 1, limit = 20, category, type, from, to } = req.query;
 
-      const where = {
-        userId: req.user.id,
-      };
+      const userId = req.user.sub;
 
       if (category) where.category = category;
 
@@ -74,7 +72,9 @@ module.exports = {
         }),
         prisma.transaction.count({ where }),
       ]);
-      const transactionCount = await prisma.transaction.count({ where: { userId } });
+      const transactionCount = await prisma.transaction.count({
+        where: { userId },
+      });
 
       if (transactionCount === 0) {
         return res.json({ success: true, message: "No transactions to check" });

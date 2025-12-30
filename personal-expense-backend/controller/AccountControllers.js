@@ -43,6 +43,7 @@ module.exports = {
           .status(401)
           .json({ success: false, message: "Unauthorized" });
       }
+       const userId = req.user.sub;
 
       // 1️⃣ Parse pagination params safely
       const page = Math.max(parseInt(req.query.page) || 1, 1);
