@@ -60,16 +60,16 @@ module.exports = {
   createBudget: async (req, res) => {
     try {
       const userId = req.user.sub;
-      const { categoryIds, limit, period, startDate, endDate } = req.body;
+      const { categoryId, limit, period, startDate, endDate } = req.body;
 
-      if (!categoryIds?.length || !limit || !period || !startDate) {
+      if (!categoryId?.length || !limit || !period || !startDate) {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
       const budget = await prisma.budget.create({
         data: {
           userId,
-          categoryIds,
+          categoryId,
           limit,
           period,
           startDate,

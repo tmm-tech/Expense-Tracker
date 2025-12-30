@@ -106,7 +106,7 @@ module.exports = {
           id: true,
           limit: true,
           startDate: true,
-          categoryIds: true,
+          categoryId: true,
         },
       });
 
@@ -127,7 +127,7 @@ module.exports = {
 
         for (const budget of budgets) {
           const spent = transactions
-            .filter((t) => budget.categoryIds.includes(t.categoryId))
+            .filter((t) => budget.categoryId.includes(t.categoryId))
             .reduce((sum, t) => sum + t.amount, 0);
 
           if (spent > budget.limit) {

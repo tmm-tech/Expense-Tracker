@@ -154,13 +154,13 @@ const budgetUtilization = budgets.map((b) => {
     .filter(
       (t) =>
         t.type === "expense" &&
-        b.categoryIds.includes(t.category) &&
+        b.categoryId.includes(t.category) &&
         t.date >= b.startDate
     )
     .reduce((s, t) => s + t.amount, 0);
 
   return {
-    categoryIds: b.categoryIds,
+    categoryId: b.categoryId,
     used: spent,
     limit: b.limit,
   };

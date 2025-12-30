@@ -6,7 +6,7 @@ export interface Budget {
   amount: number;
   startDate: number;
   endDate: number;
-  categoryIds: string[];
+  categoryId: string;
   period: BudgetPeriod;
   limit: number;
 }
@@ -16,7 +16,7 @@ export type CreateBudgetInput = {
   amount: number;
   startDate: number;
   endDate: number;
-  categoryIds: string[];
+  categoryId: string;
   period: BudgetPeriod;
   limit: number;
 };

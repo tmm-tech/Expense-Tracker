@@ -99,7 +99,7 @@ export default function BudgetDialog({
   -------------------------- */
   useEffect(() => {
     if (editingBudget) {
-      setCategory(editingBudget.categoryIds?.[0] ?? "");
+      setCategory(editingBudget.categoryId?.toString()?? "");
       setLimit(editingBudget.limit?.toString() ?? "");
       setPeriod(editingBudget.period ?? "monthly");
       setStartDate(format(editingBudget.startDate ?? Date.now(), "yyyy-MM-dd"));
@@ -149,7 +149,7 @@ export default function BudgetDialog({
       name: `${category} Budget`,
       amount: limitNum, // or total allowed amount
       limit: limitNum,
-      categoryIds: [category],
+      categoryId: category,
       period,
       startDate: startDateTs,
       endDate: endDateTs,

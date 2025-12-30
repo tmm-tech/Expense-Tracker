@@ -136,7 +136,7 @@ function BudgetCard({ budget, onEdit, onDelete }: BudgetCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">{budget.categoryIds}</CardTitle>
+            <CardTitle className="text-lg">{budget.categoryId}</CardTitle>
             <CardDescription className="capitalize">
               {budget.period} Budget
             </CardDescription>
