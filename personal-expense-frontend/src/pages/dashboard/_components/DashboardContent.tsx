@@ -233,16 +233,20 @@ export function DashboardContent() {
     Transaction[] | null
   >(null);
 
-  //   useEffect(() => {
-  //   runAllChecks.mutate();
+  useEffect(() => {
+    if (!transactions.length) return;
 
-  //   const interval = setInterval(() => {
-  //     runAllChecks.mutate();
-  //   }, 15 * 60 * 1000);
+    runAllChecks.mutate();
 
-  //   return () => clearInterval(interval);
+    const interval = setInterval(
+      () => {
+        runAllChecks.mutate();
+      },
+      15 * 60 * 1000,
+    );
 
-  // }, []);
+    return () => clearInterval(interval);
+  }, [transactions.length]);
 
   if (transactionsLoading) {
     return (
@@ -712,19 +716,18 @@ export function DashboardContent() {
             <RecurringTransactionList />
           </TabsContent>
           <TabsContent value="bills" className="mt-6">
-             {bills.length === 0 ? (
+            {bills.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
-                No transactions yet. Click <b>Add Bill</b> to get
-                started.
+                No transactions yet. Click <b>Add Bill</b> to get started.
               </div>
             ) : (
-            <BillList
-              bills={bills}
-              accounts={accounts}
-              onEdit={handleEditBill}
-              onDelete={handleDeleteBill}
-              onMarkPaid={handleMarkBillPaid}
-            />
+              <BillList
+                bills={bills}
+                accounts={accounts}
+                onEdit={handleEditBill}
+                onDelete={handleDeleteBill}
+                onMarkPaid={handleMarkBillPaid}
+              />
             )}
           </TabsContent>
           <TabsContent value="debts" className="mt-6">
