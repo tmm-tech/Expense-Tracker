@@ -61,6 +61,11 @@ module.exports = {
           where: { userId: req.user.id },
         }),
       ]);
+      const accountCount = await prisma.account.count({ where: { userId } });
+
+      if (accountCount === 0) {
+        return res.json({ success: true, message: "No accounts to check" });
+      }
 
       // 3️⃣ Send ApiResponse-compliant payload
       res.json({

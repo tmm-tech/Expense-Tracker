@@ -77,6 +77,13 @@ module.exports = {
           where,
         }),
       ]);
+      const investmentCount = await prisma.investment.count({
+        where: { userId },
+      });
+
+      if (investmentCount === 0) {
+        return res.json({ success: true, message: "No investments to check" });
+      }
 
       // 4️⃣ Standard ApiResponse
       res.json({

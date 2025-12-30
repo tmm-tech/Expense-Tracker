@@ -180,6 +180,10 @@ module.exports = {
       });
 
       res.json({ count });
+
+      if (count === 0) {
+        return res.json({ success: true, message: "No alerts to check" });
+      }
     } catch (err) {
       console.error("Unread alerts error:", err);
       res.status(500).json({

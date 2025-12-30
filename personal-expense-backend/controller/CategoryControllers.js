@@ -35,6 +35,11 @@ module.exports = {
           where: { userId },
         }),
       ]);
+      const categoriesCount = await prisma.category.count({ where: { userId } });
+
+      if (categoriesCount === 0) {
+        return res.json({ success: true, message: "No category to check" });
+      }
 
       // 3️⃣ Standard ApiResponse
       res.json({

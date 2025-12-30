@@ -35,6 +35,11 @@ module.exports = {
           where: { userId },
         }),
       ]);
+      const budgetsCount = await prisma.budget.count({ where: { userId } });
+
+      if (budgetsCount === 0) {
+        return res.json({ success: true, message: "No budget to check" });
+      }
 
       // 3️⃣ Standard ApiResponse
       res.json({

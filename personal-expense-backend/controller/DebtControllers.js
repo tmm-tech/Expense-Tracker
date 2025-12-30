@@ -6,58 +6,63 @@ const { prisma } = require("../src/lib/prism");
  */
 
 module.exports = {
-// GET /api/debts
-getDebts: async (req, res) => {
-  try {
-    if (!req.user?.sub) {
-      return res.status(401).json({
+  // GET /api/debts
+  getDebts: async (req, res) => {
+    try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const userId = req.user.sub;
+
+      // 1️⃣ Pagination params
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+      const skip = (page - 1) * limit;
+
+      // 2️⃣ Fetch debts + total count
+      const [debts, total] = await Promise.all([
+        prisma.debt.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.debt.count({
+          where: { userId },
+        }),
+      ]);
+      const debtCount = await prisma.debt.count({ where: { userId } });
+
+      if (debtCount === 0) {
+        return res.json({ success: true, message: "No debt to check" });
+      }
+
+      // 3️⃣ Standard ApiResponse
+      res.json({
+        success: true,
+        data: debts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (err) {
+      console.error("Get debts error:", err);
+      res.status(500).json({
         success: false,
-        message: "Unauthorized",
+        message: "Failed to fetch debts",
       });
     }
-
-    const userId = req.user.sub;
-
-    // 1️⃣ Pagination params
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-    const skip = (page - 1) * limit;
-
-    // 2️⃣ Fetch debts + total count
-    const [debts, total] = await Promise.all([
-      prisma.debt.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.debt.count({
-        where: { userId },
-      }),
-    ]);
-
-    // 3️⃣ Standard ApiResponse
-    res.json({
-      success: true,
-      data: debts,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (err) {
-    console.error("Get debts error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch debts",
-    });
-  }
-},
+  },
 
   // POST /api/debts
-  createDebt: async(req, res) =>{
+  createDebt: async (req, res) => {
     try {
       const userId = req.user.sub;
       const {
@@ -109,7 +114,7 @@ getDebts: async (req, res) => {
   },
 
   // PUT /api/debts/:id
-  updateDebt: async(req, res) =>{
+  updateDebt: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -131,7 +136,7 @@ getDebts: async (req, res) => {
   },
 
   // DELETE /api/debts/:id
-  deleteDebt: async(req, res) =>{
+  deleteDebt: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -152,7 +157,7 @@ getDebts: async (req, res) => {
   },
 
   // POST /api/debts/:id/payment
-makePayment: async(req, res)=>{
+  makePayment: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -188,7 +193,7 @@ makePayment: async(req, res)=>{
   },
 
   // GET /api/debts/summary
-  getDebtSummary: async(req, res) =>{
+  getDebtSummary: async (req, res) => {
     try {
       const userId = req.user.sub;
 

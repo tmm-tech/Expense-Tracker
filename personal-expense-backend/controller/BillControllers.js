@@ -34,6 +34,11 @@ module.exports = {
           where: { userId },
         }),
       ]);
+      const billsCount = await prisma.bill.count({ where: { userId } });
+
+      if (billsCount === 0) {
+        return res.json({ success: true, message: "No bills to check" });
+      }
 
       // 3️⃣ Return ApiResponse format
       res.json({
