@@ -6,10 +6,10 @@ const {getDebts, createDebt, updateDebt, deleteDebt, makePayment, getDebtSummary
 
 DebtRoutes.use(requireAuth);
 
-DebtRoutes.get("/debts", getDebts);
-DebtRoutes.post("/debts",createDebt);
-DebtRoutes.put("/ebts/:id", updateDebt);
-DebtRoutes.delete("/debts/:id",deleteDebt);
+DebtRoutes.get("/", getDebts);
+DebtRoutes.post("/",createDebt);
+DebtRoutes.put("/:id", updateDebt);
+DebtRoutes.delete("/:id",deleteDebt);
 
 DebtRoutes.post("/:id/payment",makePayment);
 DebtRoutes.get("/summary", getDebtSummary);
