@@ -7,33 +7,60 @@ const { prisma } = require("../src/lib/prism");
 
 module.exports = {
   // GET /api/budgets
- getBudgets: async (req, res) => {
+  getBudgets: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
       const userId = req.user.sub;
 
-      const budgets = await prisma.budget.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-      });
+      // 1️⃣ Pagination params
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+      const skip = (page - 1) * limit;
 
-      res.json(budgets);
+      // 2️⃣ Fetch budgets + total count
+      const [budgets, total] = await Promise.all([
+        prisma.budget.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.budget.count({
+          where: { userId },
+        }),
+      ]);
+
+      // 3️⃣ Standard ApiResponse
+      res.json({
+        success: true,
+        data: budgets,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch budgets" });
+      console.error("Get budgets error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch budgets",
+      });
     }
   },
 
   // POST /api/budgets
- createBudget: async(req, res) => {
+  createBudget: async (req, res) => {
     try {
       const userId = req.user.sub;
-      const {
-        categoryIds,
-        limit,
-        period,
-        startDate,
-        endDate,
-      } = req.body;
+      const { categoryIds, limit, period, startDate, endDate } = req.body;
 
       if (!categoryIds?.length || !limit || !period || !startDate) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -58,7 +85,7 @@ module.exports = {
   },
 
   // PUT /api/budgets/:id
-  updateBudget: async(req, res) => {
+  updateBudget: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -80,7 +107,7 @@ module.exports = {
   },
 
   // DELETE /api/budgets/:id
-  deleteBudget: async (req, res) =>{
+  deleteBudget: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;

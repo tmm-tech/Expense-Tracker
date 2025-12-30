@@ -8,17 +8,50 @@ module.exports = {
   // GET /api/bills
   getBills: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
       const userId = req.user.sub;
 
-      const bills = await prisma.bill.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-      });
+      // 1️⃣ Pagination params
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+      const skip = (page - 1) * limit;
 
-      res.json(bills);
+      // 2️⃣ Query bills + total count in parallel
+      const [bills, total] = await Promise.all([
+        prisma.bill.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.bill.count({
+          where: { userId },
+        }),
+      ]);
+
+      // 3️⃣ Return ApiResponse format
+      res.json({
+        success: true,
+        data: bills,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch bills" });
+      console.error("Get bills error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch bills",
+      });
     }
   },
 
@@ -79,7 +112,7 @@ module.exports = {
   },
 
   // DELETE /api/bills/:id
-  deleteBill: async(req, res) =>{
+  deleteBill: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;

@@ -2,15 +2,15 @@ const express = require("express");
 const GoalRoutes = express.Router();
 
 const { requireAuth } = require("../middleware/auth");
-const GoalControllers = require("../controller/GoalControllers");
+const {getGoals, createGoal, updateGoal, deleteGoal, contributeToGoal} = require("../controller/GoalControllers");
 
 GoalRoutes.use(requireAuth);
 
-GoalRoutes.get("/", GoalControllers.getGoals);
-GoalRoutes.post("/", GoalControllers.createGoal);
-GoalRoutes.put("/:id", GoalControllers.updateGoal);
-GoalRoutes.delete("/:id", GoalControllers.deleteGoal);
+GoalRoutes.get("/",getGoals);
+GoalRoutes.post("/", createGoal);
+GoalRoutes.put("/:id", updateGoal);
+GoalRoutes.delete("/:id", deleteGoal);
 
-GoalRoutes.post("/:id/contribute", GoalControllers.contributeToGoal);
+GoalRoutes.post("/:id/contribute", contributeToGoal);
 
 module.exports = GoalRoutes;

@@ -2,16 +2,16 @@ const express = require("express");
 const   DebtRoutes = express.Router();
 
 const { requireAuth } = require("../middleware/auth");
-const DebtControllers = require("../controller/DebtControllers");
+const {getDebts, createDebt, updateDebt, deleteDebt, makePayment, getDebtSummary} = require("../controller/DebtControllers");
 
 DebtRoutes.use(requireAuth);
 
-DebtRoutes.get("/", DebtControllers.getDebts);
-DebtRoutes.post("/", DebtControllers.createDebt);
-DebtRoutes.put("/:id", DebtControllers.updateDebt);
-DebtRoutes.delete("/:id", DebtControllers.deleteDebt);
+DebtRoutes.get("/debts", getDebts);
+DebtRoutes.post("/debts",createDebt);
+DebtRoutes.put("/ebts/:id", updateDebt);
+DebtRoutes.delete("/debts/:id",deleteDebt);
 
-DebtRoutes.post("/:id/payment", DebtControllers.makePayment);
-DebtRoutes.get("/summary", DebtControllers.getDebtSummary);
+DebtRoutes.post("/:id/payment",makePayment);
+DebtRoutes.get("/summary", getDebtSummary);
 
 module.exports = DebtRoutes;

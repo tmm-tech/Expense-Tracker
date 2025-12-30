@@ -40,24 +40,60 @@ module.exports = {
   /* ===========================
      GET ALL INVESTMENTS
   ============================ */
+  // GET /api/investments
   getInvestments: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const userId = req.user.sub;
+
+      // 1️⃣ Pagination
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+      const skip = (page - 1) * limit;
+
+      // 2️⃣ Optional filter
       const { type } = req.query;
 
-      const where = { userId: req.user.id };
-      if (type) where.type = type;
+      const where = { userId };
+      if (type) {
+        where.type = type;
+      }
 
-      const investments = await prisma.investment.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
+      // 3️⃣ Fetch investments + total count
+      const [investments, total] = await Promise.all([
+        prisma.investment.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.investment.count({
+          where,
+        }),
+      ]);
+
+      // 4️⃣ Standard ApiResponse
+      res.json({
+        success: true,
+        data: investments,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       });
-
-      res.json({ success: true, data: investments });
     } catch (error) {
       console.error("Get investments error:", error);
       res.status(500).json({
         success: false,
-        message: `Get Investments Error: ${error.message}`,
+        message: "Failed to fetch investments",
       });
     }
   },
@@ -103,10 +139,8 @@ module.exports = {
           userId: req.user.id,
         },
         data: {
-          quantity:
-            quantity !== undefined ? Number(quantity) : undefined,
-          buyPrice:
-            buyPrice !== undefined ? Number(buyPrice) : undefined,
+          quantity: quantity !== undefined ? Number(quantity) : undefined,
+          buyPrice: buyPrice !== undefined ? Number(buyPrice) : undefined,
         },
       });
 

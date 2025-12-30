@@ -7,24 +7,57 @@ const { prisma } = require("../src/lib/prism");
 
 module.exports = {
   // GET /api/goals
-  async getGoals(req, res) {
+  getGoals: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
       const userId = req.user.sub;
 
-      const goals = await prisma.goal.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-      });
+      // 1️⃣ Pagination params
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+      const skip = (page - 1) * limit;
 
-      res.json(goals);
+      // 2️⃣ Fetch goals + total count
+      const [goals, total] = await Promise.all([
+        prisma.goal.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.goal.count({
+          where: { userId },
+        }),
+      ]);
+
+      // 3️⃣ Standard ApiResponse
+      res.json({
+        success: true,
+        data: goals,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch goals" });
+      console.error("Get goals error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch goals",
+      });
     }
   },
 
   // POST /api/goals
-  async createGoal(req, res) {
+  createGoal: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { name, targetAmount, deadline } = req.body;
@@ -52,7 +85,7 @@ module.exports = {
   },
 
   // PUT /api/goals/:id
-  async updateGoal(req, res) {
+  updateGoal: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -74,7 +107,7 @@ module.exports = {
   },
 
   // DELETE /api/goals/:id
-  async deleteGoal(req, res) {
+  deleteGoal: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -95,7 +128,7 @@ module.exports = {
   },
 
   // POST /api/goals/:id/contribute
-  async contributeToGoal(req, res) {
+  contributeToGoal: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;

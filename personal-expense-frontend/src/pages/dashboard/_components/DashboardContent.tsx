@@ -74,42 +74,70 @@ export function DashboardContent() {
 
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading: transactionsLoading } = useQuery<
-    Transaction[]
-  >({
-    queryKey: ["transactions"],
-    queryFn: () => apiFetch<Transaction[]>(`/transactions`),
-  });
+const {
+  data: transactions = [],
+  isLoading: transactionsLoading,
+  isError: transactionsError,
+} = useQuery<Transaction[]>({
+  queryKey: ["transactions"],
+  queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
+    return res.data ?? [];
+  },
+  retry: false,
+});
 
-  const { data: accounts = [] } = useQuery<Account[]>({
-    queryKey: ["accounts"],
-    queryFn: () => apiFetch<Account[]>(`/accounts`),
-  });
+const { data: accounts = [] } = useQuery<Account[]>({
+  queryKey: ["accounts"],
+  queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Account>>(`/accounts`);
+    return res.data ?? [];
+  },
+});
 
   const { data: bills = [] } = useQuery<Bill[]>({
-    queryKey: ["bills"],
-    queryFn: () => apiFetch<Bill[]>(`/bills`),
-  });
+  queryKey: ["bills"],
+  queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Bill>>(`/bills`);
+    return res.data ?? [];
+  },
+});
 
-  const { data: debts = [] } = useQuery<Debt[]>({
-    queryKey: ["debts"],
-    queryFn: () => apiFetch<Debt[]>(`/debts`),
-  });
+const { data: debts = [] } = useQuery<Debt[]>({
+  queryKey: ["debts"],
+  queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Debt>>(`/debts`);
+    return res.data ?? [];
+  },
+});
+
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["budgets"],
-    queryFn: () => apiFetch(`/budgets`),
+    queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Budget>>(`/budgets`);
+    return res.data ?? [];
+  },
   });
   const { data: goals = [] } = useQuery<Goal[]>({
     queryKey: ["goals"],
-    queryFn: () => apiFetch<Goal[]>(`/goals`),
+    queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Goal>>(`/goals`);
+    return res.data ?? [];
+  },
   });
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
-    queryFn: () => apiFetch<Category[]>(`/categories`),
+    queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Category>>(`/categories`);
+    return res.data ?? [];
+  },
   });
   const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ["investments"],
-    queryFn: () => apiFetch<Investment[]>(`/investments`),
+    queryFn: async () => {
+    const res = await apiFetch<ApiResponse<Investment>>(`/investments`);
+    return res.data ?? [];
+  },
   });
 
   const deleteBill = useMutation({
@@ -208,16 +236,16 @@ export function DashboardContent() {
     Transaction[] | null
   >(null);
 
-  useEffect(() => {
-  runAllChecks.mutate();
+//   useEffect(() => {
+//   runAllChecks.mutate();
 
-  const interval = setInterval(() => {
-    runAllChecks.mutate();
-  }, 15 * 60 * 1000);
+//   const interval = setInterval(() => {
+//     runAllChecks.mutate();
+//   }, 15 * 60 * 1000);
 
-  return () => clearInterval(interval);
+//   return () => clearInterval(interval);
  
-}, []);
+// }, []);
 
 
   if (transactionsLoading) {
@@ -838,4 +866,15 @@ export function DashboardContent() {
       />
     </div>
   );
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }

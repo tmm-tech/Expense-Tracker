@@ -7,24 +7,57 @@ const { prisma } = require("../src/lib/prism");
 
 module.exports = {
   // GET /api/categories
-  async getCategories(req, res) {
+  getCategories: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
       const userId = req.user.sub;
 
-      const categories = await prisma.category.findMany({
-        where: { userId },
-        orderBy: { name: "asc" },
-      });
+      // 1️⃣ Pagination params
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 50, 100); // categories usually fewer
+      const skip = (page - 1) * limit;
 
-      res.json(categories);
+      // 2️⃣ Fetch categories + count
+      const [categories, total] = await Promise.all([
+        prisma.category.findMany({
+          where: { userId },
+          orderBy: { name: "asc" },
+          skip,
+          take: limit,
+        }),
+        prisma.category.count({
+          where: { userId },
+        }),
+      ]);
+
+      // 3️⃣ Standard ApiResponse
+      res.json({
+        success: true,
+        data: categories,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch categories" });
+      console.error("Get categories error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch categories",
+      });
     }
   },
 
   // POST /api/categories
-  async createCategory(req, res) {
+  createCategory: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { name, type, color, icon } = req.body;
@@ -44,9 +77,7 @@ module.exports = {
       });
 
       if (exists) {
-        return res
-          .status(409)
-          .json({ message: "Category already exists" });
+        return res.status(409).json({ message: "Category already exists" });
       }
 
       const category = await prisma.category.create({
@@ -67,7 +98,7 @@ module.exports = {
   },
 
   // PUT /api/categories/:id
-  async updateCategory(req, res) {
+  updateCategory: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -94,7 +125,7 @@ module.exports = {
   },
 
   // DELETE /api/categories/:id
-  async deleteCategory(req, res) {
+  deleteCategory: async (req, res) => {
     try {
       const userId = req.user.sub;
       const { id } = req.params;

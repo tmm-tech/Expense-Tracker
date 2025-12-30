@@ -6,25 +6,58 @@ const { prisma } = require("../src/lib/prism");
  */
 
 module.exports = {
-  // GET /api/debts
-  async getDebts(req, res) {
-    try {
-      const userId = req.user.sub;
+// GET /api/debts
+getDebts: async (req, res) => {
+  try {
+    if (!req.user?.sub) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
 
-      const debts = await prisma.debt.findMany({
+    const userId = req.user.sub;
+
+    // 1️⃣ Pagination params
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+
+    // 2️⃣ Fetch debts + total count
+    const [debts, total] = await Promise.all([
+      prisma.debt.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
-      });
+        skip,
+        take: limit,
+      }),
+      prisma.debt.count({
+        where: { userId },
+      }),
+    ]);
 
-      res.json(debts);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch debts" });
-    }
-  },
+    // 3️⃣ Standard ApiResponse
+    res.json({
+      success: true,
+      data: debts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("Get debts error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch debts",
+    });
+  }
+},
 
   // POST /api/debts
-  async createDebt(req, res) {
+  createDebt: async(req, res) =>{
     try {
       const userId = req.user.sub;
       const {
@@ -76,7 +109,7 @@ module.exports = {
   },
 
   // PUT /api/debts/:id
-  async updateDebt(req, res) {
+  updateDebt: async(req, res) =>{
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -98,7 +131,7 @@ module.exports = {
   },
 
   // DELETE /api/debts/:id
-  async deleteDebt(req, res) {
+  deleteDebt: async(req, res) =>{
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -119,7 +152,7 @@ module.exports = {
   },
 
   // POST /api/debts/:id/payment
-  async makePayment(req, res) {
+makePayment: async(req, res)=>{
     try {
       const userId = req.user.sub;
       const { id } = req.params;
@@ -155,7 +188,7 @@ module.exports = {
   },
 
   // GET /api/debts/summary
-  async getDebtSummary(req, res) {
+  getDebtSummary: async(req, res) =>{
     try {
       const userId = req.user.sub;
 
