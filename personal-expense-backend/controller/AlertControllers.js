@@ -179,14 +179,16 @@ module.exports = {
         },
       });
 
-      res.json({ count });
+      return res.json({
+        success: true,
+        count,
+      });
+    } catch (error) {
+      console.error("Unread alerts error:", error);
 
-      if (count === 0) {
-        return res.json({ success: true, message: "No alerts to check" });
-      }
-    } catch (err) {
-      console.error("Unread alerts error:", err);
-      res.status(500).json({
+      if (res.headersSent) return;
+
+      return res.status(500).json({
         success: false,
         message: "Failed to fetch unread alerts",
       });

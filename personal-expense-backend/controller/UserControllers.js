@@ -32,21 +32,24 @@ module.exports = {
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          createdAt: new Date(date).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" }),
-          updated_at: new Date(date).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" }),
+          updated_at: new Date(), // ✅ FIX
         },
         create: {
           id,
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
+          createdAt: new Date(), // optional but recommended
         },
       });
 
-      res.json({ success: true });
+      return res.json({ success: true });
     } catch (error) {
       console.error("createSession error:", error);
-      return res.status(500).json({ message: "Failed to sync user" });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to create session",
+      });
     }
   },
 };
