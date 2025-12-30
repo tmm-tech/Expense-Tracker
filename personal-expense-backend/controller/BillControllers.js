@@ -22,18 +22,12 @@ module.exports = {
       const limit = Math.min(parseInt(req.query.limit) || 20, 100);
       const skip = (page - 1) * limit;
 
-      // 2️⃣ Query bills + total count in parallel
-      const [bills, total] = await Promise.all([
-        prisma.bill.findMany({
+      const bills = await prisma.bill.findMany({
           where: { userId },
           orderBy: { createdAt: "desc" },
           skip,
           take: limit,
-        }),
-        prisma.bill.count({
-          where: { userId },
-        }),
-      ]);
+        })
       const billsCount = await prisma.bill.count({ where: { userId } });
 
       if (billsCount === 0) {

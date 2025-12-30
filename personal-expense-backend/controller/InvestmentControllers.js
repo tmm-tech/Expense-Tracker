@@ -66,17 +66,12 @@ module.exports = {
       }
 
       // 3️⃣ Fetch investments + total count
-      const [investments, total] = await Promise.all([
-        prisma.investment.findMany({
+      const investments = await prisma.investment.findMany({
           where,
           orderBy: { createdAt: "desc" },
           skip,
           take: limit,
-        }),
-        prisma.investment.count({
-          where,
-        }),
-      ]);
+        });
       const investmentCount = await prisma.investment.count({
         where: { userId },
       });

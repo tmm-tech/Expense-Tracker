@@ -24,17 +24,12 @@ module.exports = {
       const skip = (page - 1) * limit;
 
       // 2️⃣ Fetch budgets + total count
-      const [budgets, total] = await Promise.all([
-        prisma.budget.findMany({
+       const budgets = await prisma.budget.findMany({
           where: { userId },
           orderBy: { createdAt: "desc" },
           skip,
           take: limit,
-        }),
-        prisma.budget.count({
-          where: { userId },
-        }),
-      ]);
+        });
       const budgetsCount = await prisma.budget.count({ where: { userId } });
 
       if (budgetsCount === 0) {

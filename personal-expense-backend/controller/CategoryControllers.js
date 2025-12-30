@@ -24,17 +24,12 @@ module.exports = {
       const skip = (page - 1) * limit;
 
       // 2️⃣ Fetch categories + count
-      const [categories, total] = await Promise.all([
-        prisma.category.findMany({
+      const categories = await prisma.category.findMany({
           where: { userId },
           orderBy: { name: "asc" },
           skip,
           take: limit,
-        }),
-        prisma.category.count({
-          where: { userId },
-        }),
-      ]);
+        });
       const categoriesCount = await prisma.category.count({ where: { userId } });
 
       if (categoriesCount === 0) {

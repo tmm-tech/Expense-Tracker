@@ -47,18 +47,13 @@ module.exports = {
       const limit = Math.min(parseInt(req.query.limit) || 20, 100);
       const skip = (page - 1) * limit;
 
-      // 2️⃣ Fetch data + count in parallel (VERY IMPORTANT)
-      const [accounts, total] = await Promise.all([
-        prisma.account.findMany({
-          where: { userId: req.user.id },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.account.count({
-          where: { userId: req.user.id },
-        }),
-      ]);
+      const accounts = await prisma.account.findMany({
+        where: { userId: req.user.id },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      });
+
       const accountCount = await prisma.account.count({ where: { userId } });
 
       if (accountCount === 0) {

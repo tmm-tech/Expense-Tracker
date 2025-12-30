@@ -65,15 +65,12 @@ module.exports = {
         if (to) where.date.lte = new Date(to);
       }
 
-      const [transactions, total] = await Promise.all([
-        prisma.transaction.findMany({
+      const transactions = await prisma.transaction.findMany({
           where,
           orderBy: { date: "desc" },
           skip: (page - 1) * limit,
           take: Number(limit),
-        }),
-        prisma.transaction.count({ where }),
-      ]);
+        });
       const transactionCount = await prisma.transaction.count({
         where: { userId },
       });
