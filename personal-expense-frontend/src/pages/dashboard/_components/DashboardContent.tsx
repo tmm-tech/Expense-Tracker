@@ -75,9 +75,7 @@ export function DashboardContent() {
 
   const queryClient = useQueryClient();
 
-  const {
-    data: transactions = [],
-  } = useQuery<Transaction[]>({
+  const { data: transactions = [] } = useQuery<Transaction[]>({
     queryKey: ["transactions"],
     enabled: !!session,
     queryFn: async () => {
@@ -215,9 +213,7 @@ export function DashboardContent() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const [editingTransactionId, setEditingTransactionId] = useState<
-    string | null
-  >(null);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [editingInvestmentId, setEditingInvestmentId] = useState<string | null>(
     null,
@@ -229,16 +225,13 @@ export function DashboardContent() {
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [editingDebtId, setEditingDebtId] = useState<string | null>(null);
-
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
     null,
   );
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
   const [selectedDebtForPayment, setSelectedDebtForPayment] =
     useState<Debt | null>(null);
-  const [filteredTransactions, setFilteredTransactions] = useState<
-    Transaction[] | null
-  >(null);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[] | null>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -689,25 +682,24 @@ export function DashboardContent() {
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
             />
-              <TransactionList
-                transactions={filteredTransactions || transactions}
-                onEdit={handleEditTransaction}
-                accounts={accounts}
-              />
-
+            <TransactionList
+              transactions={filteredTransactions || transactions}
+              onEdit={handleEditTransaction}
+              accounts={accounts}
+            />
           </TabsContent>
 
           <TabsContent value="recurring" className="mt-6">
             <RecurringTransactionList />
           </TabsContent>
           <TabsContent value="bills" className="mt-6">
-              <BillList
-                bills={bills}
-                accounts={accounts}
-                onEdit={handleEditBill}
-                onDelete={handleDeleteBill}
-                onMarkPaid={handleMarkBillPaid}
-              />
+            <BillList
+              bills={bills}
+              accounts={accounts}
+              onEdit={handleEditBill}
+              onDelete={handleDeleteBill}
+              onMarkPaid={handleMarkBillPaid}
+            />
           </TabsContent>
           <TabsContent value="debts" className="mt-6">
             {selectedDebtId && debts.find((d) => d.id === selectedDebtId) ? (
