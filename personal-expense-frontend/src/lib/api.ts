@@ -5,18 +5,18 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
+  const session = data?.session;
+
+  if (error || !session?.access_token) {
+    throw new Error("No valid session found");
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
+    Authorization: `Bearer ${session.access_token}`,
   };
-
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
-  }
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -24,24 +24,22 @@ export async function apiFetch<T>(
     credentials: "include",
   });
 
-  // ✅ READ BODY ONCE
   let json: any = null;
   try {
     json = await res.json();
   } catch {
-    // empty response body (204 etc.)
+    // empty response body
   }
 
-  // ❌ Handle error responses
   if (!res.ok) {
+    console.error("API error response:", json);
     throw new Error(json?.message || "API request failed");
   }
 
-  // ✅ Support `{ success, data }` pattern
   if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
+    const payload = json.data;
+    return (Array.isArray(payload) ? payload : [payload]) as T;
   }
 
-  // ✅ Support direct JSON responses
   return json as T;
 }
