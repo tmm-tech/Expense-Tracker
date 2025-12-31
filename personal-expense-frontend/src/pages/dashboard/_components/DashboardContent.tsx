@@ -682,13 +682,8 @@ export function DashboardContent() {
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
             /> */}
-            {/* <TransactionList
-              transactions={filteredTransactions || transactions}
-              onEdit={handleEditTransaction}
-              accounts={accounts}
-            /> */}
              <TransactionList
-              transactions={transactions}
+              transactions={filteredTransactions || transactions}
               onEdit={handleEditTransaction}
               accounts={accounts}
             />
