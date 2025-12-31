@@ -213,7 +213,9 @@ export function DashboardContent() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [editingTransactionId, setEditingTransactionId] = useState<
+    string | null
+  >(null);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [editingInvestmentId, setEditingInvestmentId] = useState<string | null>(
     null,
@@ -231,14 +233,46 @@ export function DashboardContent() {
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
   const [selectedDebtForPayment, setSelectedDebtForPayment] =
     useState<Debt | null>(null);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[] | null>(null);
+  const [filteredTransactions, setFilteredTransactions] = useState<
+    Transaction[] | null
+  >(null);
 
+  // Run alert checks on mount and periodically
   useEffect(() => {
-    if (!session) return;
-    runAllChecks.mutate();
-  }, [session]);
+    let isMounted = true;
 
-  if (loading) {
+    const runChecks = async () => {
+      try {
+        if (!isMounted) return;
+        await runAllChecks.mutateAsync();
+      } catch (err) {
+        console.error("Alert checks failed:", err);
+      }
+    };
+
+    // Initial check
+    runChecks();
+
+    // Every 5 minutes
+    const interval = setInterval(runChecks, 5 * 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (
+    transactions === undefined ||
+    budgets === undefined ||
+    investments === undefined ||
+    goals === undefined ||
+    categories === undefined ||
+    accounts === undefined ||
+    bills === undefined ||
+    debts === undefined ||
+    debtSummary === undefined
+  ) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -682,7 +716,7 @@ export function DashboardContent() {
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
             /> */}
-             <TransactionList
+            <TransactionList
               transactions={filteredTransactions || transactions}
               onEdit={handleEditTransaction}
               accounts={accounts}
