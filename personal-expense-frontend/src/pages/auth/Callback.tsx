@@ -18,18 +18,18 @@ export default function AuthCallback() {
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.getSession();
-    const session = data.session;
-
-    if (error || !session?.access_token) {
-      console.error("Auth callback error:", error);
-      setError("Unable to complete sign in. Please try again.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      await fetch(
+      const { data, error } = await supabase.auth.getSession();
+      const session = data?.session ?? null;
+
+      if (error || !session?.access_token) {
+        console.error("Auth callback error:", error, data);
+        setError("Unable to complete sign in. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(
         "https://expense-tracker-u6ge.onrender.com/api/users/sync",
         {
           method: "POST",
@@ -39,10 +39,16 @@ export default function AuthCallback() {
         }
       );
 
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        console.error("User sync failed:", body);
+        throw new Error(body?.message || "Failed to sync account");
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      console.error("User sync failed:", err);
-      setError("Failed to sync your account. Please try again.");
+      console.error("Finalize auth error:", err);
+      setError("Failed to complete sign in. Please try again.");
       setLoading(false);
     }
   }, [navigate]);
@@ -66,21 +72,15 @@ export default function AuthCallback() {
     return (
       <div className="flex flex-col items-center justify-center h-svh gap-6 px-4">
         <div className="flex flex-col items-center gap-2 text-center">
-          <p className="text-destructive font-medium">
-            Something went wrong
-          </p>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {error}
-          </p>
+          <p className="text-destructive font-medium">Something went wrong</p>
+          <p className="text-sm text-muted-foreground max-w-md">{error}</p>
         </div>
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={navigateHome}>
             Return home
           </Button>
-          <Button onClick={finalizeAuth}>
-            Try again
-          </Button>
+          <Button onClick={finalizeAuth}>Try again</Button>
         </div>
       </div>
     );
