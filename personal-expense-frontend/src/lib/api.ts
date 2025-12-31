@@ -9,7 +9,6 @@ export async function apiFetch<T>(
     data: { session },
   } = await supabase.auth.getSession();
 
-  // ✅ Force headers to be a record
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -19,34 +18,30 @@ export async function apiFetch<T>(
     headers["Authorization"] = `Bearer ${session.access_token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`,
-    {
-      ...options,
-      headers,
-      credentials: "include",
-    }
-  );
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
 
-  let payload: unknown;
+  // ✅ READ BODY ONCE
+  let json: any = null;
   try {
-    payload = await res.json();
+    json = await res.json();
   } catch {
-    payload = null;
+    // empty response body (204 etc.)
   }
 
+  // ❌ Handle error responses
   if (!res.ok) {
-    const message =
-      typeof payload === "object" && payload !== null && "message" in payload
-        ? (payload as any).message
-        : "API request failed";
-
-    throw new Error(message);
+    throw new Error(json?.message || "API request failed");
   }
-    const json = await res.json();
 
+  // ✅ Support `{ success, data }` pattern
   if (json && typeof json === "object" && "data" in json) {
     return json.data as T;
   }
 
-  return payload as T;
+  // ✅ Support direct JSON responses
+  return json as T;
 }

@@ -38,10 +38,9 @@ export function AIInsights() {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const result = await apiFetch<AIInsightsResponse>(
-        "/ai/insights",
-        { method: "POST" }
-      );
+      const result = await apiFetch<AIInsightsResponse>("/ai/insights", {
+        method: "POST",
+      });
 
       setInsights(result.insights);
       setSummary(result.summary);
@@ -51,7 +50,7 @@ export function AIInsights() {
       toast.error(
         `Failed to generate insights: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }`,
       );
     } finally {
       setIsGenerating(false);
@@ -147,7 +146,7 @@ export function AIInsights() {
                 [
                   "Return",
                   `${summary.investmentReturn >= 0 ? "+" : ""}KES ${summary.investmentReturn.toFixed(
-                    2
+                    2,
                   )} (${summary.returnPercentage}%)`,
                   summary.investmentReturn >= 0
                     ? "text-accent"
