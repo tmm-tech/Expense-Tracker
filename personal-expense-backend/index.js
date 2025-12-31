@@ -11,7 +11,7 @@ const InvestmentRoutes = require('./routes/InvestmentRoutes');
 const GoalRoutes = require('./routes/GoalRoutes');
 const AlertRoutes = require('./routes/AlertRoutes');
 const DebtRoutes = require('./routes/DebtRoutes');
-
+const AIRoutes = require('./routes/AIRoutes');
 
 const express = require("express");
 const cors = require("cors");
@@ -42,8 +42,10 @@ app.use('/api', AccountsRoutes);
 app.use('/api', BillRoutes);
 app.use('/api', CategoryRoutes);
 app.use('/api/goals', GoalRoutes);
-app.use('/api/investments', InvestmentRoutes)
-app.use('/api/alerts', AlertRoutes)
+app.use('/api/investments', InvestmentRoutes);
+app.use('/api/alerts', AlertRoutes);
+app.use('/api/ai', AIRoutes);
+
 app.get('/', (req, res) => {
     res.json({ message: "Confirmed Connection to Aurex Expense Tracker" });
 });
