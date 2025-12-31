@@ -43,7 +43,7 @@ module.exports = {
         },
       });
 
-      return res.json({ success: true });
+      return res.json({ success: true, data: user });
     } catch (error) {
       console.error("createSession error:", error);
       return res.status(500).json({
