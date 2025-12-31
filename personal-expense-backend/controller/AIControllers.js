@@ -1,5 +1,5 @@
 const { prisma } = require("../src/lib/prism");
-const openai = require("../src/lib/openai.js");
+const { openai } = require("../src/lib/openai.js");
 /**
  * NOTE:
  * req.user.id is assumed to be set by auth middleware
