@@ -677,13 +677,18 @@ export function DashboardContent() {
           </TabsContent>
 
           <TabsContent value="transactions" className="mt-6">
-            <TransactionFilters
+            {/* <TransactionFilters
               transactions={transactions}
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
-            />
-            <TransactionList
+            /> */}
+            {/* <TransactionList
               transactions={filteredTransactions || transactions}
+              onEdit={handleEditTransaction}
+              accounts={accounts}
+            /> */}
+             <TransactionList
+              transactions={transactions}
               onEdit={handleEditTransaction}
               accounts={accounts}
             />
