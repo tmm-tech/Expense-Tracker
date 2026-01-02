@@ -4,6 +4,7 @@ const { prisma } = require("../src/lib/prism");
    TRANSACTIONS
 ================================ */
 module.exports = {
+  
   getTransactionsByUser: async (userId) => {
     return prisma.transaction.findMany({
       where: { userId },

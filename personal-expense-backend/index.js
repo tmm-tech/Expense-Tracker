@@ -19,15 +19,26 @@ const app = express();
 // Middleware to parse cookies
 app.use(cookieParser());
 
+const allowedOrigins = [
+  "https://aurex-expense-tracker.vercel.app",
+  "http://localhost:5173", // dev
+];
+
 app.use(
   cors({
-    origin: [
-      "https://aurex-expense-tracker.vercel.app",
-      "http://localhost:5173",
-    ],
+    origin: function (origin, callback) {
+      // allow requests with no origin (mobile apps, curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
   })
 );
 
