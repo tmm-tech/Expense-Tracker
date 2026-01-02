@@ -75,17 +75,18 @@ export function DashboardContent() {
 
   const queryClient = useQueryClient();
 
-  const { data: transactions = [] } = useQuery<Transaction[]>({
+  const transactionsQuery = useQuery<Transaction[]>({
     queryKey: ["transactions"],
     enabled: !!session,
     queryFn: async () => {
       const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
       return res.data ?? [];
     },
+    retry: false,
   });
   
 
-  const { data: accounts = [] } = useQuery<Account[]>({
+  const accountsQuery = useQuery<Account[]>({
     queryKey: ["accounts"],
     enabled: !!session,
     queryFn: async () => {
@@ -94,7 +95,7 @@ export function DashboardContent() {
     },
   });
 
-  const { data: bills = [] } = useQuery<Bill[]>({
+  const billsQuery = useQuery<Bill[]>({
     queryKey: ["bills"],
     enabled: !!session,
     queryFn: async () => {
@@ -103,7 +104,7 @@ export function DashboardContent() {
     },
   });
 
-  const { data: debts = [] } = useQuery<Debt[]>({
+  const debtsQuery = useQuery<Debt[]>({
     queryKey: ["debts"],
     enabled: !!session,
     queryFn: async () => {
@@ -112,7 +113,7 @@ export function DashboardContent() {
     },
   });
 
-  const { data: budgets = [] } = useQuery<Budget[]>({
+  const budgetsQuery = useQuery<Budget[]>({
     queryKey: ["budgets"],
     enabled: !!session,
     queryFn: async () => {
@@ -120,7 +121,7 @@ export function DashboardContent() {
       return res.data ?? [];
     },
   });
-  const { data: goals = [] } = useQuery<Goal[]>({
+  const goalsQuery = useQuery<Goal[]>({
     queryKey: ["goals"],
     enabled: !!session,
     queryFn: async () => {
@@ -128,7 +129,7 @@ export function DashboardContent() {
       return res.data ?? [];
     },
   });
-  const { data: categories = [] } = useQuery<Category[]>({
+  const categoriesQuery = useQuery<Category[]>({
     queryKey: ["categories"],
     enabled: !!session,
     queryFn: async () => {
@@ -136,7 +137,7 @@ export function DashboardContent() {
       return res.data ?? [];
     },
   });
-  const { data: investments = [] } = useQuery<Investment[]>({
+  const investmentsQuery = useQuery<Investment[]>({
     queryKey: ["investments"],
     enabled: !!session,
     queryFn: async () => {
@@ -144,6 +145,15 @@ export function DashboardContent() {
       return res.data ?? [];
     },
   });
+
+  const transactions = transactionsQuery.data ?? [];
+const accounts = accountsQuery.data ?? [];
+const bills = billsQuery.data ?? [];
+const debts = debtsQuery.data ?? [];
+const budgets = budgetsQuery.data ?? [];
+const categories = categoriesQuery.data ?? [];
+const goals = goalsQuery.data ?? [];
+const investments = investmentsQuery.data ?? [];
 
   const deleteBill = useMutation({
     mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
@@ -261,18 +271,16 @@ export function DashboardContent() {
       clearInterval(interval);
     };
   }, []);
-
-  if (
-    transactions === undefined ||
-    budgets === undefined ||
-    investments === undefined ||
-    goals === undefined ||
-    categories === undefined ||
-    accounts === undefined ||
-    bills === undefined ||
-    debts === undefined ||
-    debtSummary === undefined
-  ) {
+const isLoading =
+  transactionsQuery.isLoading ||
+  accountsQuery.isLoading ||
+  billsQuery.isLoading ||
+  debtsQuery.isLoading ||
+  categoriesQuery.isLoading ||
+  budgetsQuery.isLoading ||
+  investmentsQuery.isLoading ||
+  goalsQuery.isLoading;
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -712,11 +720,11 @@ const totalExpense = transactions
           </TabsContent>
 
           <TabsContent value="transactions" className="mt-6">
-            {/* <TransactionFilters
+            <TransactionFilters
               transactions={transactions}
               accounts={accounts}
               onFilteredTransactionsChange={setFilteredTransactions}
-            /> */}
+            />
             <TransactionList
               transactions={filteredTransactions || transactions}
               onEdit={handleEditTransaction}

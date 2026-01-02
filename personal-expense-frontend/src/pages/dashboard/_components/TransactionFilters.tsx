@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Search,
-  X,
-  Calendar,
-  DollarSign,
-  Tag,
-  Filter,
-} from "lucide-react";
+import { Search, X, Calendar, DollarSign, Tag, Filter } from "lucide-react";
 import {
   startOfWeek,
   startOfMonth,
@@ -35,13 +28,7 @@ interface TransactionFiltersProps {
   onFilteredTransactionsChange: (filtered: Transaction[]) => void;
 }
 
-type DatePreset =
-  | "all"
-  | "today"
-  | "week"
-  | "month"
-  | "30days"
-  | "custom";
+type DatePreset = "all" | "today" | "week" | "month" | "30days" | "custom";
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -54,8 +41,9 @@ export default function TransactionFilters({
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
-  const [selectedType, setSelectedType] =
-    useState<"all" | "income" | "expense">("all");
+  const [selectedType, setSelectedType] = useState<
+    "all" | "income" | "expense"
+  >("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedAccount, setSelectedAccount] = useState("all");
   const [minAmount, setMinAmount] = useState("");
@@ -63,46 +51,28 @@ export default function TransactionFilters({
 
   /* --------- Derived values --------- */
 
-  const categories = Array.from(
-    new Set(transactions.map((t) => t.category).filter(Boolean)),
-  ).sort();
+const categories = useMemo(
+  () =>
+    Array.from(
+      new Set(transactions.map((t) => t.category).filter(Boolean)),
+    ).sort(),
+  [transactions],
+);
 
-  /* --------- Auto apply filters --------- */
 
   useEffect(() => {
-    applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    searchQuery,
-    datePreset,
-    customStartDate,
-    customEndDate,
-    selectedType,
-    selectedCategory,
-    selectedAccount,
-    minAmount,
-    maxAmount,
-    transactions,
-  ]);
-
-  /* ---------------- FILTER LOGIC ---------------- */
-
-  const applyFilters = () => {
     let filtered = [...transactions];
 
-    // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((t) =>
-        t.description.toLowerCase().includes(q),
+        t.description?.toLowerCase().includes(q),
       );
     }
 
-    // Date filter
     if (datePreset !== "all") {
-      const now = Date.now();
       let startDate = 0;
-      let endDate = now;
+      let endDate = Date.now();
 
       switch (datePreset) {
         case "today":
@@ -135,28 +105,21 @@ export default function TransactionFilters({
       });
     }
 
-    // Type
     if (selectedType !== "all") {
       filtered = filtered.filter((t) => t.type === selectedType);
     }
 
-    // Category
     if (selectedCategory !== "all") {
       filtered = filtered.filter((t) => t.category === selectedCategory);
     }
 
-    // Account
     if (selectedAccount !== "all") {
-      if (selectedAccount === "none") {
-        filtered = filtered.filter((t) => !t.accountId);
-      } else {
-        filtered = filtered.filter(
-          (t) => t.accountId === selectedAccount,
-        );
-      }
+      filtered =
+        selectedAccount === "none"
+          ? filtered.filter((t) => !t.accountId)
+          : filtered.filter((t) => t.accountId === selectedAccount);
     }
 
-    // Amount range
     if (minAmount) {
       const min = Number(minAmount);
       if (!Number.isNaN(min)) {
@@ -172,7 +135,19 @@ export default function TransactionFilters({
     }
 
     onFilteredTransactionsChange(filtered);
-  };
+  }, [
+    searchQuery,
+    datePreset,
+    customStartDate,
+    customEndDate,
+    selectedType,
+    selectedCategory,
+    selectedAccount,
+    minAmount,
+    maxAmount,
+    transactions,
+    onFilteredTransactionsChange,
+  ]);
 
   /* ---------------- CLEAR ---------------- */
 
@@ -277,7 +252,10 @@ export default function TransactionFilters({
 
         {/* Type / Category / Account */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select value={selectedType} onValueChange={(v) => setSelectedType(v as any)}>
+          <Select
+            value={selectedType}
+            onValueChange={(v) => setSelectedType(v as any)}
+          >
             <SelectTrigger className="glass">
               <SelectValue />
             </SelectTrigger>
