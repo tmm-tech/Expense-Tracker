@@ -1,9 +1,5 @@
 const { prisma } = require("../src/lib/prism");
 
-/**
- * Sync Supabase user → local User table
- * Called after successful authentication
- */
 module.exports = {
   createSession: async (req, res) => {
     try {
@@ -26,24 +22,24 @@ module.exports = {
         supabaseUser.user_metadata?.picture ||
         null;
 
-      await prisma.User.upsert({
+      const user = await prisma.User.upsert({
         where: { id },
         update: {
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          updated_at: new Date(), // ✅ FIX
+          updatedAt: new Date(),
         },
         create: {
           id,
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          createdAt: new Date(), // optional but recommended
+          createdAt: new Date(),
         },
       });
 
-      return res.json({ success: true, data: user });
+      return res.json({ success: true, user });
     } catch (error) {
       console.error("createSession error:", error);
       return res.status(500).json({
