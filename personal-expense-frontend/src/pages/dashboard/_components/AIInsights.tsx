@@ -25,25 +25,47 @@ interface InsightsSummary {
   investmentCount: number;
 }
 
+interface AIInsightMessage {
+  type: "info" | "warning" | "success";
+  message: string;
+}
+
 interface AIInsightsResponse {
-  insights: string;
-  summary: InsightsSummary;
+  insights: string | AIInsightMessage[];
+  summary?: InsightsSummary;
 }
 
 export function AIInsights() {
   const [insights, setInsights] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setInsights(null);
+    setInfoMessage(null);
+    setSummary(null);
+
     try {
       const result = await apiFetch<AIInsightsResponse>("/ai/insights", {
         method: "POST",
       });
 
+      // CASE 1: Not enough data (info message)
+      if (Array.isArray(result.insights)) {
+        const info = result.insights.find((i) => i.type === "info");
+        setInfoMessage(info?.message ?? "No insights available yet.");
+        toast.info("Add more data to unlock AI insights");
+        return;
+      }
+
+      // CASE 2: Full AI insights
       setInsights(result.insights);
-      setSummary(result.summary);
+      if (result.summary) {
+        setSummary(result.summary);
+      }
+
       toast.success("AI insights generated successfully");
     } catch (error) {
       console.error(error);
@@ -107,6 +129,18 @@ export function AIInsights() {
             <Skeleton className="h-4 w-full mt-6" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
+          </CardContent>
+        </Card>
+      )}
+      {/* Results */}
+      {infoMessage && !isGenerating && (
+        <Card className="border-dashed bg-muted/30">
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <Sparkles className="w-10 h-10 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Not Enough Data Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              {infoMessage}
+            </p>
           </CardContent>
         </Card>
       )}
