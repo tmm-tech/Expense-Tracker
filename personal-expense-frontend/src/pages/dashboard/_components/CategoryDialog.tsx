@@ -144,7 +144,7 @@ export function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong max-w-md">
+      <DialogContent className="glass-strong max-w-md bg-background">
         <DialogHeader>
           <DialogTitle>
             {editingCategory ? "Edit" : "New"} Category

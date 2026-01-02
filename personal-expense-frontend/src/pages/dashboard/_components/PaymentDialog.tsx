@@ -83,7 +83,7 @@ export default function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="glass">
+      <DialogContent className="glass-strong max-w-md bg-background">
         <DialogHeader>
           <DialogTitle>Make Payment</DialogTitle>
           <DialogDescription>

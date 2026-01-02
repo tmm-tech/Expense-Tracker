@@ -120,14 +120,20 @@ export function DashboardContent() {
     queryFn: () => apiFetch<Investment[]>(`/investments`),
   });
 
-const transactions = Array.isArray(transactionsQuery.data) ? transactionsQuery.data : [];
-const accounts = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
-const bills = Array.isArray(billsQuery.data) ? billsQuery.data : [];
-const budgets = Array.isArray(budgetsQuery.data) ? budgetsQuery.data : [];
-const categories = Array.isArray(categoriesQuery.data) ? categoriesQuery.data : [];
-const goals = Array.isArray(goalsQuery.data) ? goalsQuery.data : [];
-const investments = Array.isArray(investmentsQuery.data) ? investmentsQuery.data : [];
-const debts = Array.isArray(debtsQuery.data) ? debtsQuery.data : [];
+  const transactions = Array.isArray(transactionsQuery.data)
+    ? transactionsQuery.data
+    : [];
+  const accounts = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
+  const bills = Array.isArray(billsQuery.data) ? billsQuery.data : [];
+  const budgets = Array.isArray(budgetsQuery.data) ? budgetsQuery.data : [];
+  const categories = Array.isArray(categoriesQuery.data)
+    ? categoriesQuery.data
+    : [];
+  const goals = Array.isArray(goalsQuery.data) ? goalsQuery.data : [];
+  const investments = Array.isArray(investmentsQuery.data)
+    ? investmentsQuery.data
+    : [];
+  const debts = Array.isArray(debtsQuery.data) ? debtsQuery.data : [];
 
   const deleteBill = useMutation({
     mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
@@ -607,6 +613,12 @@ const debts = Array.isArray(debtsQuery.data) ? debtsQuery.data : [];
                 Goals
               </TabsTrigger>
               <TabsTrigger
+                value="challenges"
+                className="text-xs sm:text-sm px-2 sm:px-3 py-2"
+              >
+                Challenges
+              </TabsTrigger>
+              <TabsTrigger
                 value="investments"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden md:inline-flex"
               >
@@ -745,6 +757,9 @@ const debts = Array.isArray(debtsQuery.data) ? debtsQuery.data : [];
                 throw new Error("Function not implemented.");
               }}
             />
+          </TabsContent>
+          <TabsContent value="challenges" className="mt-6">
+            <SavingsChallengesView />
           </TabsContent>
           <TabsContent value="investments" className="mt-6">
             <InvestmentList

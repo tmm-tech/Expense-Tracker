@@ -204,7 +204,7 @@ const handleAddContribution = async (e: React.FormEvent) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="glass-card max-w-2xl max-h-[90vh] overflow-y-auto bg-background">
         <DialogHeader>
           <DialogTitle className="text-xl md:text-2xl">
             {challenge.name}

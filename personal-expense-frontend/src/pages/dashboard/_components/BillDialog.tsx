@@ -140,7 +140,7 @@ export default function BillDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="glass max-h-[90vh] overflow-y-auto">
+      <DialogContent className="glass max-h-[90vh] overflow-y-auto bg-background">
         <DialogHeader>
           <DialogTitle>{bill ? "Edit Bill" : "Create Bill"}</DialogTitle>
           <DialogDescription>

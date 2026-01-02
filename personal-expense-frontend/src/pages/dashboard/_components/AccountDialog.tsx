@@ -147,7 +147,7 @@ export default function AccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong max-w-md">
+      <DialogContent className="glass-strong max-w-md bg-background">
         <DialogHeader>
           <DialogTitle>
             {editingId ? "Edit Account" : "Create New Account"}
