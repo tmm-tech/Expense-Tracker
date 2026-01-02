@@ -4,7 +4,7 @@ const { prisma } = require("../src/lib/prism");
    TRANSACTIONS
 ================================ */
 module.exports = {
-  
+
   getTransactionsByUser: async (userId) => {
     return prisma.transaction.findMany({
       where: { userId },
@@ -19,7 +19,7 @@ module.exports = {
   getBillsByUser: async (userId) => {
     return prisma.bill.findMany({
       where: { userId },
-      orderBy: { dueDate: "asc" },
+      orderBy: { dueDay: "asc" },
     });
   },
 

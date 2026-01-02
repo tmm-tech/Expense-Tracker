@@ -52,7 +52,7 @@ module.exports = {
 
     // --- BILLS ---
     for (const bill of bills) {
-      const due = new Date(bill.dueDate).getTime();
+      const due = new Date(bill.dueDay).getTime();
       if (due >= start && due <= end) {
         events.push({
           id: bill.id,
