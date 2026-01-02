@@ -82,8 +82,8 @@ export function DashboardContent() {
       const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
       return res.data ?? [];
     },
-    retry: false,
   });
+  
 
   const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ["accounts"],
@@ -288,13 +288,14 @@ export function DashboardContent() {
     );
   }
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+const totalIncome = transactions
+  .filter(t => t.type === "income")
+  .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+const totalExpense = transactions
+  .filter(t => t.type === "expense")
+  .reduce((sum, t) => sum + t.amount, 0);
+
 
   const balance = totalIncome - totalExpense;
 
