@@ -1,5 +1,9 @@
-const { prisma } = require("../src/lib/prism");
+const { getTransactions } = require("../controller/TransactionControllers");
 
+const { getBills } = require("../controller/BillControllers");
+const { getDebts } = require("../controller/DebtControllers");
+const { getGoals } = require("../controller/GoalControllers");
+const { getBudgets } = require("../controller/BudgetControllers");
 /**
  * All Calendar operations are user-scoped
  * req.user.sub comes from Supabase JWT
