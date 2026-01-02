@@ -38,8 +38,7 @@ export async function apiFetch<T>(
     try {
       json = await res.json();
     } catch {
-      // empty response body (e.g., 204 No Content)
-      console.log("Empty Response Body")
+      console.log("apiFetch: empty response body (status", res.status, ")");
     }
 
     // Handle non-OK responses
@@ -50,13 +49,14 @@ export async function apiFetch<T>(
 
     // Normalize `{ success, data }` pattern
     if (json && typeof json === "object" && "data" in json) {
-      return json.data as T;
+      const payload = json.data;
+      // Defensive: ensure array if downstream expects it
+      return (Array.isArray(payload) ? payload : [payload]) as T;
     }
 
     // Return direct JSON response
     return json as T;
   } catch (err: any) {
-    // Catch any unexpected errors (network, parsing, etc.)
     console.error("apiFetch unexpected error:", err);
     throw new Error(err?.message || "Unexpected API error");
   }
