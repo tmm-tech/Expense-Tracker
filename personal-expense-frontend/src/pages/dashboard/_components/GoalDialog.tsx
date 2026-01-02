@@ -31,7 +31,7 @@ const goalSchema = z.object({
   name: z.string().min(1, "Name is required"),
   targetAmount: z.coerce.number().positive("Target amount must be positive"),
   currentAmount: z.coerce.number().min(0, "Current amount cannot be negative"),
-  deadline: z.string().min(1, "Deadline is required"),
+  endDate: z.string().min(1, "Deadline is required"),
   category: z.string().min(1, "Category is required"),
   description: z.string().optional(),
 });
@@ -69,7 +69,7 @@ export function GoalDialog({
       name: "",
       targetAmount: 0,
       currentAmount: 0,
-      deadline: "",
+      endDate: "",
       category: "",
       description: "",
     },
@@ -84,7 +84,7 @@ export function GoalDialog({
         name: editingGoal.name,
         targetAmount: editingGoal.targetAmount,
         currentAmount: editingGoal.currentAmount,
-        deadline: new Date(editingGoal.deadline)
+        endDate: new Date(editingGoal.endDate)
           .toISOString()
           .split("T")[0],
         category: editingGoal.category,
@@ -101,7 +101,7 @@ export function GoalDialog({
   const onSubmit = async (data: GoalFormData) => {
     setIsSubmitting(true);
     try {
-      const deadlineTs = new Date(data.deadline).getTime();
+      const deadlineTs = new Date(data.endDate).getTime();
 
       if (deadlineTs < Date.now()) {
         toast.error("Deadline must be in the future");
@@ -117,7 +117,7 @@ export function GoalDialog({
         name: data.name,
         targetAmount: data.targetAmount,
         currentAmount: data.currentAmount,
-        deadline: deadlineTs,
+        endDate: deadlineTs,
         category: data.category,
         description: data.description || undefined,
       };
@@ -232,7 +232,7 @@ export function GoalDialog({
 
             <FormField
               control={form.control}
-              name="deadline"
+              name="endDate"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Target Date</FormLabel>

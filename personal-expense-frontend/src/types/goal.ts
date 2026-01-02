@@ -3,7 +3,7 @@ export interface Goal {
   name: string;
   targetAmount: number;
   currentAmount: number;
-  deadline: number;
+  endDate: number;
   category: string;
   description?: string;
   status: "active" | "completed" | "cancelled";

@@ -41,7 +41,7 @@ module.exports = {
   getGoalsByUser: async (userId) => {
     return prisma.goal.findMany({
       where: { userId },
-      orderBy: { deadline: "asc" },
+      orderBy: { endDate: "asc" },
     });
   },
 

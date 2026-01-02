@@ -73,7 +73,7 @@ module.exports = {
 
     // --- Goals ---
     for (const goal of goals) {
-      const deadline = new Date(goal.deadline).getTime();
+      const deadline = new Date(goal.endDate).getTime();
 
       if (deadline >= start && deadline <= end) {
         events.push({

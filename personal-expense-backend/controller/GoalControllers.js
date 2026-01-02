@@ -60,7 +60,7 @@ module.exports = {
   createGoal: async (req, res) => {
     try {
       const userId = req.user.sub;
-      const { name, targetAmount, deadline } = req.body;
+      const { name, targetAmount, endDate } = req.body;
 
       if (!name || targetAmount == null) {
         return res
@@ -73,7 +73,7 @@ module.exports = {
           userId,
           name,
           targetAmount,
-          deadline: deadline ? new Date(deadline) : null,
+          endDate: endDate ? new Date(endDate) : null,
         },
       });
 

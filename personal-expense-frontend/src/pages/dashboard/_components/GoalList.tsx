@@ -117,12 +117,12 @@ export function GoalList({ goals, onEdit, onRefresh }: GoalListProps) {
   const progressPercent = (g: Goal) =>
     Math.min(Math.round((g.currentAmount / g.targetAmount) * 100), 100);
 
-  const daysLeft = (deadline: number) =>
-    differenceInDays(deadline, Date.now());
+  const daysLeft = (endDate: number) =>
+    differenceInDays(endDate, Date.now());
 
   const renderGoalCard = (goal: Goal) => {
     const progress = progressPercent(goal);
-    const remainingDays = daysLeft(goal.deadline);
+    const remainingDays = daysLeft(goal.endDate);
     const overdue = remainingDays < 0 && goal.status === "active";
 
     return (
@@ -177,7 +177,7 @@ export function GoalList({ goals, onEdit, onRefresh }: GoalListProps) {
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarIcon className="h-4 w-4" />
-            Target: {format(goal.deadline, "PPP")}
+            Target: {format(goal.endDate, "PPP")}
           </div>
 
           <div className="flex gap-2 pt-2">
