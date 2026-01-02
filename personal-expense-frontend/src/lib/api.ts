@@ -7,7 +7,7 @@ import { API_BASE_URL } from "./config";
  */
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   try {
     // Get current Supabase session
@@ -53,7 +53,10 @@ export async function apiFetch<T>(
       // Defensive: ensure array if downstream expects it
       return (Array.isArray(payload) ? payload : [payload]) as T;
     }
-
+    if ("message" in json && json.success) {
+      // API returned a success message but no data
+      return [] as T;
+    }
     // Return direct JSON response
     return json as T;
   } catch (err: any) {

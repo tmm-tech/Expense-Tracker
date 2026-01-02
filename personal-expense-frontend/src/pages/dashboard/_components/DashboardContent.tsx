@@ -120,14 +120,15 @@ export function DashboardContent() {
     queryFn: () => apiFetch<Investment[]>(`/investments`),
   });
 
-  const transactions = transactionsQuery.data ?? [];
-  const accounts = accountsQuery.data ?? [];
-  const bills = billsQuery.data ?? [];
-  const budgets = budgetsQuery.data ?? [];
-  const categories = categoriesQuery.data ?? [];
-  const goals = goalsQuery.data ?? [];
-  const investments = investmentsQuery.data ?? [];
-  const debts = debtsQuery.data ?? [];
+const transactions = Array.isArray(transactionsQuery.data) ? transactionsQuery.data : [];
+const accounts = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
+const bills = Array.isArray(billsQuery.data) ? billsQuery.data : [];
+const budgets = Array.isArray(budgetsQuery.data) ? budgetsQuery.data : [];
+const categories = Array.isArray(categoriesQuery.data) ? categoriesQuery.data : [];
+const goals = Array.isArray(goalsQuery.data) ? goalsQuery.data : [];
+const investments = Array.isArray(investmentsQuery.data) ? investmentsQuery.data : [];
+const debts = Array.isArray(debtsQuery.data) ? debtsQuery.data : [];
+
   const deleteBill = useMutation({
     mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
