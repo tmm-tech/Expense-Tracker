@@ -1,5 +1,4 @@
-// src/services/services.js
-import prisma from "../lib/prisma.js";
+const { prisma } = require("../src/lib/prism");
 
 /* ================================
    TRANSACTIONS
