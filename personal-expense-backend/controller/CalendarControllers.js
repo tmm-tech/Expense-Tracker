@@ -1,9 +1,11 @@
-const { getTransactions } = require("../controller/TransactionControllers");
-
-const { getBills } = require("../controller/BillControllers");
-const { getDebts } = require("../controller/DebtControllers");
-const { getGoals } = require("../controller/GoalControllers");
-const { getBudgets } = require("../controller/BudgetControllers");
+const {
+  getTransactionsByUser,
+  getBillsByUser,
+  getDebtsByUser,
+  getGoalsByUser,
+  getBudgetsByUser,
+  getRecurringTransactionsByUser
+} = require("../services/service");
 /**
  * All Calendar operations are user-scoped
  * req.user.sub comes from Supabase JWT
@@ -22,11 +24,12 @@ module.exports = {
     const end = Number(endDate);
 
     // Fetch data (examples – adapt to your DB layer)
-    const transactions = await getTransactions(req.user.id);
-    const bills = await getBills(req.user.id);
-    const debts = await getDebts(req.user.id);
-    const goals = await getGoals(req.user.id);
-    const budgets = await getBudgets(req.user.id);
+    const transactions = await getTransactionsByUser(req.user.id);
+    const bills = await getBillsByUser(req.user.id);
+    const debts = await getDebtsByUser(req.user.id);
+    const goals = await getGoalsByUser(req.user.id);
+    const budgets = await getBudgetsByUser(req.user.id);
+    const recurringTransactions = await getRecurringTransactionsByUser(req.user.id);
 
     const events = [];
 

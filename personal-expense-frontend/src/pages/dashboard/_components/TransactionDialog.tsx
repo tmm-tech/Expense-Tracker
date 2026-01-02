@@ -148,8 +148,7 @@ export function TransactionDialog({
     }
   };
 
-  const categories =
-    type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   /* ---------------- UI ---------------- */
 
@@ -179,7 +178,7 @@ export function TransactionDialog({
               }}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="income">Income</SelectItem>
@@ -208,12 +207,13 @@ export function TransactionDialog({
           {/* Account */}
           <div className="space-y-2">
             <Label>Account (Optional)</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
+            <Select value={accountId} onValueChange={(val) => setAccountId(val === "none" ? "" : val)}
+>
               <SelectTrigger>
                 <SelectValue placeholder="Select an account" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No account</SelectItem>
+                <SelectItem value="none">No account</SelectItem>
                 {accounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
                     {acc.name} ({acc.type})

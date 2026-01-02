@@ -68,7 +68,7 @@ export function AlertsBell() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-80 sm:w-96 p-0 glass-card" align="end">
+      <PopoverContent className="w-80 sm:w-96 p-0" align="end">
         {/* Header */}
         <div className="p-4 border-b border-border/40">
           <div className="flex items-center justify-between">
