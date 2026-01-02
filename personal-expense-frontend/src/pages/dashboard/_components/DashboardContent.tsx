@@ -123,11 +123,11 @@ export function DashboardContent() {
   const transactions = transactionsQuery.data ?? [];
   const accounts = accountsQuery.data ?? [];
   const bills = billsQuery.data ?? [];
-  const debts = debtsQuery.data ?? [];
   const budgets = budgetsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
   const goals = goalsQuery.data ?? [];
   const investments = investmentsQuery.data ?? [];
+  const debts = debtsQuery.data ?? [];
   const deleteBill = useMutation({
     mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -156,7 +156,6 @@ export function DashboardContent() {
       summary.totalMinimumPayment += debt.minimumPayment;
       summary.numberOfDebts += 1;
       summary.totalInterestRate += debt.interestRate;
-
       return summary;
     },
     {
