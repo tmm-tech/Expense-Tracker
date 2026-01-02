@@ -138,7 +138,7 @@ export function InvestmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] glass-strong bg-background">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>
             {editingId ? "Edit Investment" : "Add Investment"}

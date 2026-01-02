@@ -154,7 +154,7 @@ export function GoalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong max-w-md bg-background">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
             {editingGoal ? "Edit" : "New"} Financial Goal

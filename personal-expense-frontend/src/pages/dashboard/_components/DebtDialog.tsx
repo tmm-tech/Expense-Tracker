@@ -169,7 +169,7 @@ const onSubmit = async (data: DebtFormData) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto glass-strong bg-background">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{debt ? "Edit Debt" : "Add Debt"}</DialogTitle>
           <DialogDescription>

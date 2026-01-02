@@ -136,7 +136,7 @@ export function CreateChallengeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card max-w-lg max-h-[90vh] overflow-y-auto bg-background">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Savings Challenge</DialogTitle>
           <DialogDescription>

@@ -173,7 +173,7 @@ export function RecurringTransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong max-w-md bg-background">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
             {transaction ? "Edit" : "New"} Recurring Transaction

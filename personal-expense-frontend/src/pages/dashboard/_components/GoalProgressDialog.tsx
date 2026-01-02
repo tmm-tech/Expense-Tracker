@@ -103,7 +103,7 @@ export function GoalProgressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong max-w-sm">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Add Progress</DialogTitle>
           <DialogDescription>{goal.name}</DialogDescription>
