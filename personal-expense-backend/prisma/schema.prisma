@@ -203,3 +203,8 @@ model Investment {
   @@map("investments")
   
 }
+
+model RecurringTransaction {
+  id        String @id @default(uuid())
+  userId    String
+}
