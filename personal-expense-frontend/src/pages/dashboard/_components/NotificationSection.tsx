@@ -72,7 +72,7 @@ export default function NotificationsSection() {
 
   if (isLoading) {
     return (
-      <Card className="glass-card">
+      <Card>
         <CardContent className="p-6 space-y-4 animate-pulse">
           <div className="h-4 w-40 bg-muted rounded" />
           <div className="h-10 bg-muted rounded" />
@@ -84,7 +84,7 @@ export default function NotificationsSection() {
   }
 
   return (
-    <Card className="glass-card">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="h-5 w-5" />
