@@ -28,7 +28,7 @@ module.exports = {
           email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
         create: {
           id,
