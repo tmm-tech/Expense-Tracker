@@ -4,6 +4,6 @@ FetchCalendar,
 } = require('../controller/CalendarControllers')
 const {requireAuth} = require("../middleware/auth");
 // Fetch Calendar Data
-CalendarRoutes.post('/calendar', requireAuth, FetchCalendar)
+CalendarRoutes.get('/calendar', requireAuth, FetchCalendar)
 
 module.exports = CalendarRoutes
