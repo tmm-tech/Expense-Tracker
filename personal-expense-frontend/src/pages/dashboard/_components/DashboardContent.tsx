@@ -78,83 +78,56 @@ export function DashboardContent() {
   const transactionsQuery = useQuery<Transaction[]>({
     queryKey: ["transactions"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Transaction>>(`/transactions`);
-      return res.data ?? [];
-    },
-    retry: false,
+    queryFn: () => apiFetch<Transaction[]>(`/transactions`),
   });
-  
 
   const accountsQuery = useQuery<Account[]>({
     queryKey: ["accounts"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Account>>(`/accounts`);
-      return res.data ?? [];
-    },
+    queryFn: () => apiFetch<Account[]>(`/accounts`),
   });
 
   const billsQuery = useQuery<Bill[]>({
     queryKey: ["bills"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Bill>>(`/bills`);
-      return res.data ?? [];
-    },
+    queryFn: () => apiFetch<Bill[]>(`/bills`),
   });
 
   const debtsQuery = useQuery<Debt[]>({
     queryKey: ["debts"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Debt>>(`/debts`);
-      return res.data ?? [];
-    },
+    queryFn: () => apiFetch<Debt[]>(`/debts`),
   });
 
   const budgetsQuery = useQuery<Budget[]>({
     queryKey: ["budgets"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Budget>>(`/budgets`);
-      return res.data ?? [];
-    },
+    queryFn: () => apiFetch<Budget[]>(`/budgets`),
   });
   const goalsQuery = useQuery<Goal[]>({
     queryKey: ["goals"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Goal>>(`/goals`);
-      return res.data ?? [];
-    },
+    queryFn: () => apiFetch<Goal[]>(`/goals`),
   });
   const categoriesQuery = useQuery<Category[]>({
     queryKey: ["categories"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Category>>(`/categories`);
-      return res.data ?? [];
-    },
+    queryFn: async () => apiFetch<Category[]>(`/categories`),
   });
   const investmentsQuery = useQuery<Investment[]>({
     queryKey: ["investments"],
     enabled: !!session,
-    queryFn: async () => {
-      const res = await apiFetch<ApiResponse<Investment>>(`/investments`);
-      return res.data ?? [];
-    },
+    queryFn: () => apiFetch<Investment[]>(`/investments`),
   });
 
   const transactions = transactionsQuery.data ?? [];
-const accounts = accountsQuery.data ?? [];
-const bills = billsQuery.data ?? [];
-const debts = debtsQuery.data ?? [];
-const budgets = budgetsQuery.data ?? [];
-const categories = categoriesQuery.data ?? [];
-const goals = goalsQuery.data ?? [];
-const investments = investmentsQuery.data ?? [];
-
+  const accounts = accountsQuery.data ?? [];
+  const bills = billsQuery.data ?? [];
+  const debts = debtsQuery.data ?? [];
+  const budgets = budgetsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const goals = goalsQuery.data ?? [];
+  const investments = investmentsQuery.data ?? [];
   const deleteBill = useMutation({
     mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -271,15 +244,15 @@ const investments = investmentsQuery.data ?? [];
       clearInterval(interval);
     };
   }, []);
-const isLoading =
-  transactionsQuery.isLoading ||
-  accountsQuery.isLoading ||
-  billsQuery.isLoading ||
-  debtsQuery.isLoading ||
-  categoriesQuery.isLoading ||
-  budgetsQuery.isLoading ||
-  investmentsQuery.isLoading ||
-  goalsQuery.isLoading;
+  const isLoading =
+    transactionsQuery.isLoading ||
+    accountsQuery.isLoading ||
+    billsQuery.isLoading ||
+    debtsQuery.isLoading ||
+    categoriesQuery.isLoading ||
+    budgetsQuery.isLoading ||
+    investmentsQuery.isLoading ||
+    goalsQuery.isLoading;
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
@@ -296,14 +269,13 @@ const isLoading =
     );
   }
 
-const totalIncome = transactions
-  .filter(t => t.type === "income")
-  .reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
 
-const totalExpense = transactions
-  .filter(t => t.type === "expense")
-  .reduce((sum, t) => sum + t.amount, 0);
-
+  const totalExpense = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
 
   const balance = totalIncome - totalExpense;
 
@@ -892,15 +864,4 @@ const totalExpense = transactions
       />
     </div>
   );
-}
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
 }
