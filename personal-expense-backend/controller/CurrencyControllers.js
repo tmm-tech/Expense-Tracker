@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const CURRENCIES_URL = "https://currencyapi.net/api/v1/currencies";
 const RATES_URL = "https://currencyapi.net/api/v1/rates";
-const API_KEY = process.env.CURRENCY_API_KEY;
+const API_KEY = process.env.CURRENCY_API_KEY || "7613d5d5a5f2a7bfd7a968fa45324b6384bb";
 
 module.exports = {
   // GET /api/currencies
@@ -15,7 +15,6 @@ module.exports = {
       const currencies = Object.entries(response.data.currencies).map(([code, name]) => ({
         code,
         name,
-        symbol: null, // API doesn’t provide symbol
       }));
 
       res.json(currencies);
