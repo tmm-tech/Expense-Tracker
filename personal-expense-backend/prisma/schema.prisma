@@ -8,17 +8,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Currency {
-  code        String   @id                // e.g. "USD", "KES"
-  name        String                      // e.g. "US Dollar"
-  symbol      String?                     // e.g. "$"
-  rateToUSD   Float                       // conversion baseline
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  users       User[]    @relation("UserCurrency")
-}
   
 model User {
   id         String   @id
@@ -40,7 +29,6 @@ model User {
   alert        Alert[]
   Recurring    Recurring[]
   Savings      SavingsChallenge[]
-  defaultCurrency Currency? @relation("UserCurrency", fields: [currency], references: [code])
 }
 
 model Account {

@@ -52,14 +52,14 @@ module.exports = {
   getCurrentUser: async (req, res) => {
     try {
       const userId = req.user.id;
-      // assume middleware sets req.user
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, email: true, currency: true },
       });
+      if (!user) return res.status(404).json({ message: "User not found" });
       res.json(user);
-    } catch (err) {
-      console.error("Get current user error:", err);
+    } catch (error) {
+      console.error("Get current user error:", error.message);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   },
@@ -73,8 +73,8 @@ module.exports = {
         data: { currency },
       });
       res.json({ success: true, user: updated });
-    } catch (err) {
-      console.error("Update settings error:", err);
+    } catch (error) {
+      console.error("Update settings error:", error.message);
       res.status(500).json({ message: "Failed to update settings" });
     }
   },
