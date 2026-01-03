@@ -61,7 +61,7 @@ module.exports = {
 ================================ */
 
   getRecurringTransactionsByUser: async (userId) => {
-    return prisma.recurringTransaction.findMany({
+    return prisma.Recurring.findMany({
       where: {
         userId,
         isActive: true,

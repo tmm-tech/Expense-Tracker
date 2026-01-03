@@ -28,6 +28,7 @@ model User {
   investment   Investment[]
   alert        Alert[]
   Recurring    Recurring[]
+  Savings      SavingsChallenge[]
 }
 
 
@@ -228,4 +229,30 @@ model Recurring {
 
   @@index([userId])
   @@index([userId, startDate])
+}
+
+model SavingsChallenge {
+  id             String   @id @default(uuid())
+  userId         String
+
+  name           String
+  description    String?
+
+  targetAmount   Decimal  @db.Decimal(12, 2)
+  currentAmount  Decimal  @db.Decimal(12, 2) @default(0)
+
+  startDate      DateTime
+  endDate        DateTime
+
+  frequency      String?  // daily | weekly | monthly (optional)
+  isCompleted    Boolean  @default(false)
+  isActive       Boolean  @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
