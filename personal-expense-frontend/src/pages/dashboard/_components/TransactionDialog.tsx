@@ -81,7 +81,7 @@ export function TransactionDialog({
     if (editingTransaction) {
       setType(editingTransaction.type);
       setCategory(editingTransaction.category);
-      setAmount(editingTransaction.amount.toString());
+      setAmount(editingTransaction.amount.toString() || "0");
       setDescription(editingTransaction.description);
 
       const txDate =

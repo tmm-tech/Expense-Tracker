@@ -71,9 +71,9 @@ export function InvestmentDialog({
       setType(editingInvestment.type as InvestmentType);
       setName(editingInvestment.name);
       setSymbol(editingInvestment.symbol || "");
-      setQuantity(editingInvestment.quantity.toString());
-      setPurchasePrice(editingInvestment.purchasePrice.toString());
-      setCurrentPrice(editingInvestment.currentPrice.toString());
+      setQuantity(editingInvestment.quantity.toString() || "0");
+      setPurchasePrice(editingInvestment.purchasePrice.toString() || "0");
+      setCurrentPrice(editingInvestment.currentPrice.toString() || "0");
       setPurchaseDate(
         format(editingInvestment.purchaseDate, "yyyy-MM-dd")
       );

@@ -166,7 +166,7 @@ export default function PreferencesSection() {
         <div className="space-y-2">
           <Label>Fiscal Year Start</Label>
           <Select
-            value={fiscalYearStart.toString()}
+            value={fiscalYearStart.toString() || ""}
             onValueChange={(v) => setFiscalYearStart(Number(v))}
           >
             <SelectTrigger className="glass">
@@ -174,7 +174,7 @@ export default function PreferencesSection() {
             </SelectTrigger>
             <SelectContent>
               {FISCAL_MONTHS.map((m) => (
-                <SelectItem key={m.value} value={m.value.toString()}>
+                <SelectItem key={m.value} value={m.value.toString() || ""}>
                   {m.label}
                 </SelectItem>
               ))}

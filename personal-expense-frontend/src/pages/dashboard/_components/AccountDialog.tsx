@@ -104,7 +104,7 @@ export default function AccountDialog({
       setType(editingAccount.type);
       setInstitutionName(editingAccount.institutionName || "");
       setAccountNumber(editingAccount.accountNumber || "");
-      setBalance(editingAccount.balance.toString());
+      setBalance(editingAccount.balance.toString() || "0");
       setCurrency(editingAccount.currency || "KES");
     } else {
       setName("");
