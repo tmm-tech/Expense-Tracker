@@ -48,4 +48,34 @@ module.exports = {
       });
     }
   },
+  // GET /users/current
+  getCurrentUser: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      // assume middleware sets req.user
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, currency: true },
+      });
+      res.json(user);
+    } catch (err) {
+      console.error("Get current user error:", err);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  },
+  // PUT /users/settings
+  updateSettings: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { currency } = req.body;
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: { currency },
+      });
+      res.json({ success: true, user: updated });
+    } catch (err) {
+      console.error("Update settings error:", err);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  },
 };
