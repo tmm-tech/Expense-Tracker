@@ -13,7 +13,9 @@ module.exports = {
         where: { userId },
         orderBy: { createdAt: "desc" },
       });
-
+      if (challenges.length === 0) {
+        return res.json({ success: true, message: "No Challenges to check" });
+      }
       return res.json({
         success: true,
         data: challenges,
@@ -72,6 +74,9 @@ module.exports = {
           totalSavedAmount: 0,
         }
       );
+      if (summary.length === 0) {
+        return res.json({ success: true, message: "No Summary to view" });
+      }
 
       return res.json({
         success: true,

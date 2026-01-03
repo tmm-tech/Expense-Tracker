@@ -13,63 +13,68 @@ import {
   EmptyDescription,
   EmptyContent,
 } from "@/components/ui/empty";
-import {
-  Target,
-  Trophy,
-  Flame,
-  Plus,
-  Calendar,
-  Award,
-} from "lucide-react";
+import { Target, Trophy, Flame, Plus, Calendar, Award } from "lucide-react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import { CreateChallengeDialog } from "@/pages/dashboard/_components/CreateChallengeDialog.tsx";
 import { ChallengeDetailDialog } from "@/pages/dashboard/_components/ChallengeDetailsDialog.tsx";
-
+import { useAuth } from "@/hooks/use-auth";
 
 export function SavingsChallengesView() {
-    interface Milestone {
-  achieved: boolean;
-  reward?: string;
-}
+  const { session, loading } = useAuth();
+  interface Milestone {
+    achieved: boolean;
+    reward?: string;
+  }
 
-interface SavingsChallenge {
-  id: string;
-  name: string;
-  description?: string;
-  type: string;
-  status: "active" | "completed";
-  currentAmount: number;
-  targetAmount: number;
-  endDate: number;
-  streakDays: number;
-  milestones: Milestone[];
-}
+  interface SavingsChallenge {
+    id: string;
+    name: string;
+    description?: string;
+    type: string;
+    status: "active" | "completed";
+    currentAmount: number;
+    targetAmount: number;
+    endDate: number;
+    streakDays: number;
+    milestones: Milestone[];
+  }
 
-interface ChallengesSummary {
-  totalSaved: number;
-  activeChallenges: number;
-  completedChallenges: number;
-  totalMilestones: number;
-}
+  interface ChallengesSummary {
+    totalSavedAmount: number;
+    totalChallenges: number;
+    completedChallenges: number;
+    totalTargetAmount: number;
+  }
+  interface ChallengesSummaryResponse {
+    success: boolean;
+    summary: ChallengesSummary;
+  }
 
-const { data: challenges, isLoading: challengesLoading } =
-  useQuery<SavingsChallenge[]>({
+  const challengesQuery = useQuery<SavingsChallenge[]>({
     queryKey: ["savings-challenges"],
+    enabled: !!session,
     queryFn: () => apiFetch("/savings-challenges"),
   });
 
-const { data: summary, isLoading: summaryLoading } =
-  useQuery<ChallengesSummary>({
+  const summaryQuery = useQuery<ChallengesSummaryResponse>({
     queryKey: ["savings-challenges-summary"],
+    enabled: !!session,
     queryFn: () => apiFetch("/savings-challenges/summary"),
   });
+  const challenges = Array.isArray(challengesQuery.data)
+    ? challengesQuery.data
+    : [];
+ const summary: ChallengesSummary | null = summaryQuery.data?.summary ?? null;
 
-const [createOpen, setCreateOpen] = useState(false);
-const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(
+    null,
+  );
 
+  const isLoading = challengesQuery.isLoading || summaryQuery.isLoading;
 
-  if (challenges === undefined || summary === undefined) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-32 w-full" />
@@ -79,7 +84,9 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
   }
 
   const activeChallenges = challenges.filter((c) => c.status === "active");
-  const completedChallenges = challenges.filter((c) => c.status === "completed");
+  const completedChallenges = challenges.filter(
+    (c) => c.status === "completed",
+  );
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -92,8 +99,10 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <Target className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs md:text-sm text-muted-foreground">Total Saved</p>
-                <p className="text-base md:text-xl font-bold truncate">KES {summary.totalSaved.toLocaleString()}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Total Saved
+                </p>
+               <p className="text-base md:text-xl font-bold truncate"> KES {summary?.totalSavedAmount?.toLocaleString() ?? 0} </p>
               </div>
             </div>
           </CardContent>
@@ -106,8 +115,12 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <Flame className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs md:text-sm text-muted-foreground">Active</p>
-                <p className="text-base md:text-xl font-bold">{summary.activeChallenges}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Active
+                </p>
+                <p className="text-base md:text-xl font-bold">
+                    {summary?.totalChallenges ?? 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -120,8 +133,12 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <Trophy className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs md:text-sm text-muted-foreground">Completed</p>
-                <p className="text-base md:text-xl font-bold">{summary.completedChallenges}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Completed
+                </p>
+                <p className="text-base md:text-xl font-bold">
+                    {summary?.completedChallenges ?? 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -134,8 +151,12 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <Award className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs md:text-sm text-muted-foreground">Milestones</p>
-                <p className="text-base md:text-xl font-bold">{summary.totalMilestones}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Milestones
+                </p>
+                <p className="text-base md:text-xl font-bold">
+                    {summary?.totalTargetAmount ?? 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -145,8 +166,14 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
       {/* Active Challenges */}
       <div className="space-y-3 md:space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg md:text-xl font-semibold">Active Challenges</h2>
-          <Button onClick={() => setCreateOpen(true)} size="sm" className="gap-2">
+          <h2 className="text-lg md:text-xl font-semibold">
+            Active Challenges
+          </h2>
+          <Button
+            onClick={() => setCreateOpen(true)}
+            size="sm"
+            className="gap-2"
+          >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">New Challenge</span>
           </Button>
@@ -159,10 +186,14 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <Target />
               </EmptyMedia>
               <EmptyTitle>No active challenges</EmptyTitle>
-              <EmptyDescription>Start a savings challenge to reach your financial goals!</EmptyDescription>
+              <EmptyDescription>
+                Start a savings challenge to reach your financial goals!
+              </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button size="sm" onClick={() => setCreateOpen(true)}>Create Challenge</Button>
+              <Button size="sm" onClick={() => setCreateOpen(true)}>
+                Create Challenge
+              </Button>
             </EmptyContent>
           </Empty>
         ) : (
@@ -176,10 +207,17 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base md:text-lg truncate">{challenge.name}</CardTitle>
-                      <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">{challenge.description}</p>
+                      <CardTitle className="text-base md:text-lg truncate">
+                        {challenge.name}
+                      </CardTitle>
+                      <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {challenge.description}
+                      </p>
                     </div>
-                    <Badge variant="outline" className="bg-primary/10 border-primary/20 shrink-0">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 border-primary/20 shrink-0"
+                    >
                       {getChallengeTypeLabel(challenge.type)}
                     </Badge>
                   </div>
@@ -189,11 +227,17 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                     <div className="flex items-center justify-between text-xs md:text-sm mb-2">
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-semibold">
-                        {((challenge.currentAmount / challenge.targetAmount) * 100).toFixed(1)}%
+                        {(
+                          (challenge.currentAmount / challenge.targetAmount) *
+                          100
+                        ).toFixed(1)}
+                        %
                       </span>
                     </div>
                     <Progress
-                      value={(challenge.currentAmount / challenge.targetAmount) * 100}
+                      value={
+                        (challenge.currentAmount / challenge.targetAmount) * 100
+                      }
                       className="h-2"
                     />
                     <div className="flex items-center justify-between text-xs mt-2">
@@ -209,12 +253,17 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      <span>Ends {format(challenge.endDate, "MMM dd, yyyy")}</span>
+                      <span>
+                        Ends {format(challenge.endDate, "MMM dd, yyyy")}
+                      </span>
                     </div>
                     {challenge.streakDays > 0 && (
                       <div className="flex items-center gap-1 text-orange-500">
                         <Flame className="w-3 h-3" />
-                        <span>{challenge.streakDays} day{challenge.streakDays !== 1 ? "s" : ""}</span>
+                        <span>
+                          {challenge.streakDays} day
+                          {challenge.streakDays !== 1 ? "s" : ""}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -242,7 +291,9 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
       {/* Completed Challenges */}
       {completedChallenges.length > 0 && (
         <div className="space-y-3 md:space-y-4">
-          <h2 className="text-lg md:text-xl font-semibold">Completed Challenges</h2>
+          <h2 className="text-lg md:text-xl font-semibold">
+            Completed Challenges
+          </h2>
           <div className="grid md:grid-cols-2 gap-3 md:gap-4">
             {completedChallenges.map((challenge) => (
               <Card
@@ -253,15 +304,21 @@ const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(nu
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base md:text-lg truncate">{challenge.name}</CardTitle>
-                      <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">{challenge.description}</p>
+                      <CardTitle className="text-base md:text-lg truncate">
+                        {challenge.name}
+                      </CardTitle>
+                      <p className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {challenge.description}
+                      </p>
                     </div>
                     <Trophy className="w-5 h-5 text-green-500 shrink-0" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Saved</span>
+                    <span className="text-sm text-muted-foreground">
+                      Total Saved
+                    </span>
                     <span className="text-base md:text-lg font-bold text-green-500">
                       KES {challenge.currentAmount.toLocaleString()}
                     </span>
