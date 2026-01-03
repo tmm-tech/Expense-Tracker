@@ -9,7 +9,7 @@ module.exports = {
     try {
       const userId = req.user.id;
 
-      const challenges = await prisma.Savings.findMany({
+      const challenges = await prisma.savingsChallenge.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
       });
@@ -35,7 +35,7 @@ module.exports = {
     try {
       const userId = req.user.id;
 
-      const challenges = await prisma.Savings.findMany({
+      const challenges = await prisma.savingsChallenge.findMany({
         where: { userId },
         select: {
           targetAmount: true,
