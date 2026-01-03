@@ -20,6 +20,7 @@ type UserProfile = {
   full_name: string | null;
   email: string | null;
   avatar_url: string | null;
+
 };
 
 export default function ProfileSection() {
@@ -86,21 +87,15 @@ export default function ProfileSection() {
           <User className="h-5 w-5" />
           Profile Information
         </CardTitle>
-        <CardDescription>Manage your personal information</CardDescription>
+        <CardDescription>
+          Manage your personal information
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt="User avatar"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <User className="h-10 w-10 text-primary" />
-            )}
+          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="h-10 w-10 text-primary" />
           </div>
 
           <div className="flex-1">
