@@ -26,6 +26,8 @@ import {
   CheckIcon,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { apiFetch } from "@/lib/api";
 
 interface CurrencyData {
   code: string;
@@ -34,26 +36,28 @@ interface CurrencyData {
   rateToUSD: number;
 }
 
+interface User {
+  id: string;
+  email: string;
+  currency: string;
+}
+
+interface Exchange {
+  rate: number;
+}
+
 export default function CurrencyView() {
+  const { session, loading } = useAuth();
   // ---------------- Queries ----------------
-  const { data: currencies, isLoading: currenciesLoading } = useQuery<
-    CurrencyData[]
-  >({
+  const currenciesQuery = useQuery<CurrencyData[]>({
     queryKey: ["currencies"],
-    queryFn: async () => {
-      const res = await fetch("/currencies");
-      if (!res.ok) throw new Error("Failed to fetch currencies");
-      return res.json();
-    },
+    enabled: !!session,
+    queryFn: () => apiFetch("/currencies"),
   });
 
-  const { data: currentUser, isLoading: userLoading } = useQuery({
+  const usersQuery = useQuery<User>({
     queryKey: ["currentUser"],
-    queryFn: async () => {
-      const res = await fetch("/users/current");
-      if (!res.ok) throw new Error("Failed to fetch user");
-      return res.json();
-    },
+    queryFn: () => apiFetch("/users/current"),
   });
 
   const updateSettings = useMutation({
@@ -73,26 +77,22 @@ export default function CurrencyView() {
   const [toCurrency, setToCurrency] = useState("USD");
   const [amount, setAmount] = useState("1000");
 
-  const { data: exchangeRate } = useQuery({
+  const exchangQuery = useQuery<Exchange>({
     queryKey: ["exchangeRate", fromCurrency, toCurrency],
-    queryFn: async () => {
-      const res = await fetch(
+    queryFn: () =>
+      apiFetch(
         `/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`,
-      );
-      return res.json();
-    },
-    enabled: !!fromCurrency && !!toCurrency,
+      ),
+    enabled: !!session && !!fromCurrency && !!toCurrency,
   });
 
-  const { data: convertedAmount } = useQuery<number>({
+  const convertedQuery = useQuery<number>({
     queryKey: ["convert", amount, fromCurrency, toCurrency],
-    queryFn: async () => {
-      const res = await fetch(
+    queryFn: () =>
+      apiFetch(
         `/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`,
-      );
-      return res.json();
-    },
-    enabled: !!amount && !!fromCurrency && !!toCurrency,
+      ),
+    enabled: !!session && !!amount && !!fromCurrency && !!toCurrency,
   });
 
   const handleSetDefaultCurrency = async (code: string) => {
@@ -104,12 +104,19 @@ export default function CurrencyView() {
     }
   };
 
+  const currencies = currenciesQuery.data ?? [];
+  const currentUser = usersQuery.data ?? null;
+  const convertedAmount = convertedQuery.data ?? undefined;
+  const exchangeRate = exchangQuery.data ?? undefined;
+
+  const isLoading = currenciesQuery.isLoading || usersQuery.isLoading;
+
   // ---------------- Loading state ----------------
-  if (currenciesLoading || userLoading || !currencies || !currentUser) {
+  if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
   }
 
-  const userCurrency = currentUser.currency ?? "KES";
+  const userCurrency = currentUser?.currency ?? "KES";
 
   // ---------------- UI ----------------
   return (
