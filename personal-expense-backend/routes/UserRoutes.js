@@ -13,7 +13,7 @@ const { requireAuth } = require("../middleware/auth");
 UserRoutes.post("/sync", requireAuth, createSession);
 UserRoutes.get("/current", requireAuth, getCurrentUser);
 UserRoutes.put("/settings", requireAuth, updateSettings);
-router.get("/me/preferences",requireAuth,  getPreferences);
-router.get("/me/notifications", requireAuth, getNotifications);
+UserRoutes.get("/me/preferences",requireAuth,  getPreferences);
+UserRoutes.get("/me/notifications", requireAuth, getNotifications);
 
 module.exports = UserRoutes;
