@@ -3,27 +3,27 @@ const { prisma } = require("../src/lib/prism");
 module.exports = {
   /* ---------------- CREATE ---------------- */
   createRecurring: async (data) => {
-    return prisma.recurringTransaction.create({
+    return prisma.Recurring.create({
       data,
     });
   },
 
   /* ---------------- READ ---------------- */
   getRecurringByUser: async (userId) => {
-    return prisma.recurringTransaction.findMany({
+    return prisma.Recurring.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
   },
   getRecurringById: async (id, userId) => {
-    return prisma.recurringTransaction.findFirst({
+    return prisma.Recurring.findFirst({
       where: { id, userId },
     });
   },
 
   /* ---------------- UPDATE ---------------- */
   updateRecurring: async (id, userId, data) => {
-    return prisma.recurringTransaction.updateMany({
+    return prisma.Recurring.updateMany({
       where: { id, userId },
       data,
     });
@@ -31,7 +31,7 @@ module.exports = {
 
   /* ---------------- DELETE ---------------- */
   deleteRecurring: async (id, userId) => {
-    return prisma.recurringTransaction.deleteMany({
+    return prisma.Recurring.deleteMany({
       where: { id, userId },
     });
   },
