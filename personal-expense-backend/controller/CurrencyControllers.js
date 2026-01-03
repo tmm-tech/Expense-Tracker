@@ -12,19 +12,15 @@ module.exports = {
         params: { output: "json", key: API_KEY },
       });
 
-      // Transform into array for frontend dropdown
-      const currencies = Object.entries(response.data.currencies).map(([code, details]) => ({
+      const currencies = Object.entries(response.data.currencies).map(([code, name]) => ({
         code,
-        name: details.name,
-        symbol: details.symbol,
+        name,
+        symbol: null, // API doesn’t provide symbol
       }));
 
       res.json(currencies);
     } catch (error) {
-      console.error("Get currencies error:", error.response?.data || error.message);
-      res.status(error.response?.status || 500).json({
-        message: "Failed to fetch currencies",
-      });
+      res.status(error.response?.status || 500).json({ message: "Failed to fetch currencies" });
     }
   },
 
@@ -42,10 +38,7 @@ module.exports = {
 
       res.json({ rate });
     } catch (error) {
-      console.error("Exchange rate error:", error.response?.data || error.message);
-      res.status(error.response?.status || 500).json({
-        message: "Failed to fetch exchange rate",
-      });
+      res.status(error.response?.status || 500).json({ message: "Failed to fetch exchange rate" });
     }
   },
 
@@ -64,10 +57,7 @@ module.exports = {
       const converted = Number(amount) * rate;
       res.json({ converted, rate });
     } catch (error) {
-      console.error("Convert error:", error.response?.data || error.message);
-      res.status(error.response?.status || 500).json({
-        message: "Failed to convert currency",
-      });
+      res.status(error.response?.status || 500).json({ message: "Failed to convert currency" });
     }
   },
 };

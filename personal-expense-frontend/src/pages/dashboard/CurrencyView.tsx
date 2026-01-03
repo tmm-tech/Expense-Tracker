@@ -77,20 +77,25 @@ export default function CurrencyView() {
   const [toCurrency, setToCurrency] = useState("USD");
   const [amount, setAmount] = useState("1000");
 
-  const exchangQuery = useQuery<Exchange>({
-  queryKey: ["exchangeRate", fromCurrency, toCurrency],
-  queryFn: () =>
-    apiFetch(`/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`),
-  enabled: !!session && !!fromCurrency && !!toCurrency,
-});
+  // Exchange rate
+  const exchangQuery = useQuery<{ rate: number }>({
+    queryKey: ["exchangeRate", fromCurrency, toCurrency],
+    queryFn: () =>
+      apiFetch(
+        `/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`,
+      ),
+    enabled: !!session && !!fromCurrency && !!toCurrency,
+  });
 
-const convertedQuery = useQuery<{ converted: number; rate: number }>({
-  queryKey: ["convert", amount, fromCurrency, toCurrency],
-  queryFn: () =>
-    apiFetch(`/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`),
-  enabled: !!session && !!amount && !!fromCurrency && !!toCurrency,
-});
-
+  // Convert
+  const convertedQuery = useQuery<{ converted: number; rate: number }>({
+    queryKey: ["convert", amount, fromCurrency, toCurrency],
+    queryFn: () =>
+      apiFetch(
+        `/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`,
+      ),
+    enabled: !!session && !!amount && !!fromCurrency && !!toCurrency,
+  });
 
   const handleSetDefaultCurrency = async (code: string) => {
     try {
