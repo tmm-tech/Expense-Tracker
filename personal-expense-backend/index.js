@@ -62,7 +62,7 @@ app.use("/api/alerts", AlertRoutes);
 app.use("/api/ai", AIRoutes);
 app.use("/api", CalendarRoutes);
 app.use("/api/savings-challenges", savingsChallengesRoutes);
-app.use("/api/recurring", RecurringTransactionRoutes);
+app.use("/api/recurring-transactions", RecurringTransactionRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Confirmed Connection to Aurex Expense Tracker" });
 });
