@@ -130,7 +130,7 @@ export default function ProfileSection() {
               <Button
                 onClick={() =>
                   updateProfile.mutate({
-                    name: name.trim() || undefined,
+                    name: name.trim() || "",
                   })
                 }
                 size="sm"
