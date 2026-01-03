@@ -666,12 +666,12 @@ export function DashboardContent() {
               >
                 Export
               </TabsTrigger>
-              <TabsTrigger
+              {/* <TabsTrigger
                 value="currency"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2"
               >
                 Currency
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger
                 value="settings"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2"
@@ -788,9 +788,9 @@ export function DashboardContent() {
           <TabsContent value="export" className="mt-6">
             <EnhancedExport />
           </TabsContent>
-          <TabsContent value="currency" className="mt-6">
+          {/* <TabsContent value="currency" className="mt-6">
             <CurrencyView />
-          </TabsContent>
+          </TabsContent> */}
           <TabsContent value="settings" className="mt-6">
             <SettingsView />
           </TabsContent>
