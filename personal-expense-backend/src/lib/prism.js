@@ -9,5 +9,5 @@ if (!global.prisma) {
 }
 
 prisma = global.prisma;
-
+console.log("Value: "+ Object.keys(prisma));
 module.exports = { prisma };
