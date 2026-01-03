@@ -91,10 +91,32 @@ module.exports = {
       res.status(500).json({ message: "Failed to update settings" });
     }
   },
+  getMe: async (req, res) => {
+    try {
+      if (!req.user || !req.user.sub) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
+      const userId = req.user.sub;
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { preferences: true, notifications: true },
+      });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  },
+  // GET /api/users/me/preferences
   getPreferences: async (req, res) => {
     try {
-      const userId = req.user.id;
+      if (!req.user || !req.user.sub) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const userId = req.user.sub;
       // assume auth middleware sets this
       const preferences = await prisma.preferences.findUnique({
         where: { userId },
