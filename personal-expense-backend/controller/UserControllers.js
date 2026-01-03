@@ -122,7 +122,7 @@ module.exports = {
         where: { userId },
       });
       if (!preferences) {
-        return res.status(404).json({ message: "Preferences not found" });
+        return res.status(200).json({ message: "Preferences not found" });
       }
       res.json(preferences);
     } catch (error) {
