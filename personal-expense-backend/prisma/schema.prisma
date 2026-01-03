@@ -29,6 +29,27 @@ model User {
   alert        Alert[]
   Recurring    Recurring[]
   Savings      SavingsChallenge[]
+  preferences   Preferences?
+  notifications Notification[]
+}
+
+model Preferences {
+  id       String @id @default(uuid())
+  theme    String @default("light")
+  language String @default("en")
+  currency String @default("USD")
+  user     User   @relation(fields: [userId], references: [id])
+  userId   String @unique
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
 }
 
 model Account {

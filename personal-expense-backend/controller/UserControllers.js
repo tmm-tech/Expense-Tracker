@@ -91,4 +91,36 @@ module.exports = {
       res.status(500).json({ message: "Failed to update settings" });
     }
   },
+
+  getPreferences: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      // assume auth middleware sets this
+      const preferences = await prisma.preferences.findUnique({
+        where: { userId },
+      });
+      if (!preferences) {
+        return res.status(404).json({ message: "Preferences not found" });
+      }
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching preferences:", error);
+      res.status(500).json({ message: "Failed to fetch preferences" });
+    }
+  },
+
+  // GET /api/users/me/notifications
+  getNotifications: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const notifications = await prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      });
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  },
 };
