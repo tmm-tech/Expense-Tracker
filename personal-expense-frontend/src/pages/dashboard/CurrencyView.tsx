@@ -78,22 +78,19 @@ export default function CurrencyView() {
   const [amount, setAmount] = useState("1000");
 
   const exchangQuery = useQuery<Exchange>({
-    queryKey: ["exchangeRate", fromCurrency, toCurrency],
-    queryFn: () =>
-      apiFetch(
-        `/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`,
-      ),
-    enabled: !!session && !!fromCurrency && !!toCurrency,
-  });
+  queryKey: ["exchangeRate", fromCurrency, toCurrency],
+  queryFn: () =>
+    apiFetch(`/currencies/exchange-rate?from=${fromCurrency}&to=${toCurrency}`),
+  enabled: !!session && !!fromCurrency && !!toCurrency,
+});
 
-  const convertedQuery = useQuery<number>({
-    queryKey: ["convert", amount, fromCurrency, toCurrency],
-    queryFn: () =>
-      apiFetch(
-        `/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`,
-      ),
-    enabled: !!session && !!amount && !!fromCurrency && !!toCurrency,
-  });
+const convertedQuery = useQuery<{ converted: number; rate: number }>({
+  queryKey: ["convert", amount, fromCurrency, toCurrency],
+  queryFn: () =>
+    apiFetch(`/currencies/convert?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`),
+  enabled: !!session && !!amount && !!fromCurrency && !!toCurrency,
+});
+
 
   const handleSetDefaultCurrency = async (code: string) => {
     try {
@@ -181,7 +178,7 @@ export default function CurrencyView() {
                 1 {fromCurrency} = {exchangeRate.rate.toFixed(4)} {toCurrency}
               </p>
               <p className="text-lg font-bold text-emerald-500">
-                {convertedAmount.toFixed(2)}
+                {convertedAmount.converted.toFixed(2)}
               </p>
             </div>
           )}
