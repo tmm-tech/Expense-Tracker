@@ -79,13 +79,13 @@ export default function PreferencesSection() {
     queryFn: () => apiFetch("/users/me/preferences"),
   });
 
-useEffect(() => {
-  if (preferences) {
-    setCurrency(preferences.currency);
-    setDateFormat(preferences.dateFormat);
-    setFiscalYearStart(preferences.fiscalYearStart);
-  }
-}, [preferences]);
+  useEffect(() => {
+    if (preferences) {
+      setCurrency(preferences.currency);
+      setDateFormat(preferences.dateFormat);
+      setFiscalYearStart(preferences.fiscalYearStart);
+    }
+  }, [preferences]);
 
   const updatePreferences = useMutation({
     mutationFn: (payload: Preferences) =>
@@ -166,8 +166,8 @@ useEffect(() => {
         <div className="space-y-2">
           <Label>Fiscal Year Start</Label>
           <Select
-            value={fiscalYearStart.toString()}
-            onValueChange={(v) => setFiscalYearStart(Number(v) ?? 1)}
+            value={String(fiscalYearStart ?? "")}
+            onValueChange={(v) => setFiscalYearStart(Number(v))}
           >
             <SelectTrigger className="glass">
               <SelectValue />
