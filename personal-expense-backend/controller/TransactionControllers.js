@@ -48,12 +48,18 @@ module.exports = {
   ============================ */
   getTransactions: async (req, res) => {
     try {
+      const userId = req.user.sub;
+      if (!userId) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized: missing user ID" });
+      }
       const { page = 1, limit = 20, category, type, from, to } = req.query;
 
       const where = {
         userId: req.user.id,
       };
-      const userId = req.user.sub;
+
       if (category) where.category = category;
 
       if (type === "income") where.amount = { gt: 0 };
@@ -66,11 +72,11 @@ module.exports = {
       }
 
       const transactions = await prisma.transaction.findMany({
-          where,
-          orderBy: { date: "desc" },
-          skip: (page - 1) * limit,
-          take: Number(limit),
-        });
+        where,
+        orderBy: { date: "desc" },
+        skip: (page - 1) * limit,
+        take: Number(limit),
+      });
       const transactionCount = await prisma.transaction.count({
         where: { userId },
       });
@@ -86,7 +92,7 @@ module.exports = {
           page: Number(page),
           limit: Number(limit),
           total: transactionCount,
-          totalPages: Math.ceil(total / limit),
+          totalPages: Math.ceil(transactionCount / limit),
         },
       });
     } catch (error) {

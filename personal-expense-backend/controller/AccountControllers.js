@@ -47,10 +47,12 @@ module.exports = {
     ============================ */
   getAccounts: async (req, res) => {
     try {
-      const where = {
-        userId: req.user.id,
-      };
       const userId = req.user.sub;
+      if (!userId) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized: missing user ID" });
+      }
       // 1️⃣ Parse pagination params safely
       const page = Math.max(parseInt(req.query.page) || 1, 1);
       const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -66,7 +68,7 @@ module.exports = {
       const accountCount = await prisma.account.count({ where: { userId } });
 
       if (accountCount === 0) {
-        return res.json({ success: true, message: "No bills to check" });
+        return res.json({ success: true, message: "No accounts to check" });
       }
 
       // 3️⃣ Send ApiResponse-compliant payload
@@ -77,7 +79,7 @@ module.exports = {
           page,
           limit,
           total: accountCount,
-          totalPages: Math.ceil(total / limit),
+          totalPages: Math.ceil(accountCount / limit),
         },
       });
     } catch (error) {

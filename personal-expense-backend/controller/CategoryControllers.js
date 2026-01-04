@@ -25,12 +25,14 @@ module.exports = {
 
       // 2️⃣ Fetch categories + count
       const categories = await prisma.category.findMany({
-          where: { userId },
-          orderBy: { name: "asc" },
-          skip,
-          take: limit,
-        });
-      const categoriesCount = await prisma.category.count({ where: { userId } });
+        where: { userId },
+        orderBy: { name: "asc" },
+        skip,
+        take: limit,
+      });
+      const categoriesCount = await prisma.category.count({
+        where: { userId },
+      });
 
       if (categoriesCount === 0) {
         return res.json({ success: true, message: "No category to check" });
@@ -44,7 +46,7 @@ module.exports = {
           page,
           limit,
           total: categoriesCount,
-          totalPages: Math.ceil(total / limit),
+          totalPages: Math.ceil(categoriesCount / limit),
         },
       });
     } catch (err) {

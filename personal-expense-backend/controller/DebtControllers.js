@@ -44,7 +44,7 @@ module.exports = {
           page,
           limit,
           total: debtCount,
-          totalPages: Math.ceil(total / limit),
+          totalPages: Math.ceil(debtCount / limit),
         },
       });
     } catch (err) {

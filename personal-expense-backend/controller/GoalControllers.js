@@ -24,12 +24,12 @@ module.exports = {
       const skip = (page - 1) * limit;
 
       // 2️⃣ Fetch goals + total count
-       const goals = await prisma.goal.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        });
+      const goals = await prisma.goal.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      });
       const goalCount = await prisma.goal.count({ where: { userId } });
 
       if (goalCount === 0) {
@@ -44,7 +44,7 @@ module.exports = {
           page,
           limit,
           total: goalCount,
-          totalPages: Math.ceil(total / limit),
+          totalPages: Math.ceil(goalCount / limit),
         },
       });
     } catch (err) {

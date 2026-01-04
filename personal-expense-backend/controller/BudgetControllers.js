@@ -44,7 +44,7 @@ module.exports = {
           page,
           limit,
           total: budgetsCount,
-          totalPages: Math.ceil(total / limit),
+          totalPages: Math.ceil(budgetsCount / limit),
         },
       });
     } catch (err) {
