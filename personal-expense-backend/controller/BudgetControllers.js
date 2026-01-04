@@ -43,7 +43,7 @@ module.exports = {
         pagination: {
           page,
           limit,
-          total,
+          total: budgetsCount,
           totalPages: Math.ceil(total / limit),
         },
       });

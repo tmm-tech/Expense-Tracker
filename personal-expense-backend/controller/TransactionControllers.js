@@ -85,7 +85,7 @@ module.exports = {
         pagination: {
           page: Number(page),
           limit: Number(limit),
-          total,
+          total: transactionCount,
           totalPages: Math.ceil(total / limit),
         },
       });

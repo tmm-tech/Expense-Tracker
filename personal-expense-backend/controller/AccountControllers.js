@@ -76,7 +76,7 @@ module.exports = {
         pagination: {
           page,
           limit,
-          total,
+          total: accountCount,
           totalPages: Math.ceil(total / limit),
         },
       });
