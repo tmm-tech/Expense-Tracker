@@ -33,7 +33,7 @@ import { GoalDialog } from "./GoalDialog.tsx";
 import { CategoryList } from "./CategoryList.tsx";
 import { CategoryDialog } from "./CategoryDialog.tsx";
 import { InsightsView } from "./InsightsView.tsx";
-import { ReportsView } from "./ReportsView.tsx";
+// import { ReportsView } from "./ReportsView.tsx";
 import { CSVExport } from "./CSVExport.tsx";
 import { CSVImport } from "./CSVImport.tsx";
 import { AIInsights } from "./AIInsights.tsx";
@@ -636,12 +636,12 @@ export function DashboardContent() {
               >
                 Categories
               </TabsTrigger>
-              <TabsTrigger
+              {/* <TabsTrigger
                 value="reports"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden lg:inline-flex"
               >
                 Reports
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger
                 value="ai-insights"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2"
@@ -773,9 +773,9 @@ export function DashboardContent() {
           <TabsContent value="categories" className="mt-6">
             <CategoryList categories={categories} onEdit={handleEditCategory} />
           </TabsContent>
-          <TabsContent value="reports" className="mt-6">
+          {/* <TabsContent value="reports" className="mt-6">
             <ReportsView />
-          </TabsContent>
+          </TabsContent> */}
           <TabsContent value="ai-insights" className="mt-6">
             <AIInsights />
           </TabsContent>
