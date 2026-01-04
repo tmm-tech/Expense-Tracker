@@ -804,6 +804,7 @@ export function DashboardContent() {
         editingId={editingTransactionId}
         transactions={transactions}
         accounts={accounts}
+        categories={categories}
       />
 
       {/* Budget Dialog */}

@@ -89,6 +89,7 @@ module.exports = {
           type,
           color,
           icon,
+          isDefault: false,
         },
       });
 

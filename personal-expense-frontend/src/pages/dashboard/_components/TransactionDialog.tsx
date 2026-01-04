@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
+import type { Category } from "@/types/category";
 /* ---------------- TYPES ---------------- */
 
 interface TransactionDialogProps {
@@ -30,30 +31,8 @@ interface TransactionDialogProps {
   editingId: string | null;
   transactions: Transaction[];
   accounts: Account[];
+  categories: Category[];
 }
-
-/* ---------------- CONSTANTS ---------------- */
-
-const INCOME_CATEGORIES = [
-  "Salary",
-  "Freelance",
-  "Business",
-  "Investment",
-  "Gift",
-  "Other Income",
-];
-
-const EXPENSE_CATEGORIES = [
-  "Food & Dining",
-  "Transportation",
-  "Shopping",
-  "Entertainment",
-  "Bills & Utilities",
-  "Healthcare",
-  "Education",
-  "Travel",
-  "Other Expense",
-];
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -63,13 +42,14 @@ export function TransactionDialog({
   editingId,
   transactions,
   accounts,
+  categories,
 }: TransactionDialogProps) {
   const editingTransaction = editingId
     ? transactions.find((t) => t.id === editingId)
     : null;
 
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -148,7 +128,7 @@ export function TransactionDialog({
     }
   };
 
-  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const filteredCategories = categories.filter((c) => c.type === type);
 
   /* ---------------- UI ---------------- */
 
@@ -195,9 +175,9 @@ export function TransactionDialog({
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
+                {filteredCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.name}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -207,8 +187,10 @@ export function TransactionDialog({
           {/* Account */}
           <div className="space-y-2">
             <Label>Account (Optional)</Label>
-            <Select value={accountId} onValueChange={(val) => setAccountId(val === "none" ? "" : val)}
->
+            <Select
+              value={accountId}
+              onValueChange={(val) => setAccountId(val === "none" ? "" : val)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select an account" />
               </SelectTrigger>
