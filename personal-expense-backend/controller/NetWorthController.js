@@ -110,7 +110,13 @@ module.exports = {
   createSnapshot: async (req, res) => {
     try {
       const userId = req.user?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const accounts = await prisma.account.findMany({ where: { userId } });
+      if (!accounts.length) {
+        return res
+          .status(400)
+          .json({ message: "No accounts found for snapshot" });
+      }
       const totalAssets = accounts
         .filter((a) => a.balance >= 0)
         .reduce((sum, a) => sum + a.balance, 0);
