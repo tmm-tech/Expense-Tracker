@@ -130,7 +130,7 @@ export default function AccountDialog({
     const payload = {
       name: name.trim(),
       type,
-      institutionName: institutionName || undefined,
+      institution: institutionName || undefined,
       accountNumber: accountNumber || undefined,
       balance: balanceNum,
       currency,

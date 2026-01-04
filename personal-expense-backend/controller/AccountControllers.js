@@ -11,13 +11,22 @@ module.exports = {
     ============================ */
   createAccount: async (req, res) => {
     try {
-      const { name, type, balance } = req.body;
+      const userId = req.user?.sub; // or req.user.id depending on your auth
+      if (!userId) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized: missing user ID" });
+      }
+      const { name, type, balance, institution, currency, accountNumber } = req.body;
       const account = await prisma.account.create({
         data: {
-          userId: req.user.id,
+          userId,
           name,
           type,
           balance: Number(balance),
+          institution,
+          currency,
+          accountNumber,
         },
       });
       res.json({
