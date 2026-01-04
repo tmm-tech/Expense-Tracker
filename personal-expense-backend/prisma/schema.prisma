@@ -67,7 +67,18 @@ model Account {
   user          User          @relation(fields: [userId], references: [id])
   transactions  Transaction[]
   Recurring     Recurring[]
+  Snapshot      AccountSnapshot[]
 }
+
+model AccountSnapshot {
+  id          String   @id @default(uuid())
+  accountId   String
+  snapshotId  String
+  balance     Float
+  account     Account  @relation(fields: [accountId], references: [id])
+  snapshot    NetWorthSnapshot @relation(fields: [snapshotId], references: [id])
+}
+
 
 model Category {
   id           String        @id @default(uuid())
@@ -301,4 +312,6 @@ model NetWorthSnapshot {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   netWorth NetWorth? @relation(fields: [netWorthId], references: [id])
+  AccountSnapshot  AccountSnapshot[]
+ @@index([userId])
 }

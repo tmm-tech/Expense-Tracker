@@ -107,4 +107,36 @@ module.exports = {
       res.status(500).json({ message: "Failed to fetch current net worth" });
     }
   },
+  createSnapshot: async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      const accounts = await prisma.account.findMany({ where: { userId } });
+      const totalAssets = accounts
+        .filter((a) => a.balance >= 0)
+        .reduce((sum, a) => sum + a.balance, 0);
+      const totalLiabilities = accounts
+        .filter((a) => a.balance < 0)
+        .reduce((sum, a) => sum + Math.abs(a.balance), 0);
+      const netWorth = totalAssets - totalLiabilities;
+      const snapshot = await prisma.netWorthSnapshot.create({
+        data: {
+          userId,
+          totalAssets,
+          totalLiabilities,
+          netWorth,
+          accountSnapshots: {
+            create: accounts.map((a) => ({
+              accountId: a.id,
+              balance: a.balance,
+            })),
+          },
+        },
+        include: { accountSnapshots: true },
+      });
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error creating snapshot:", error);
+      res.status(500).json({ message: "Failed to create snapshot" });
+    }
+  },
 };
