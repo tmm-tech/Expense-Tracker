@@ -106,23 +106,19 @@ export default function NetWorthView() {
   const { session, loading } = useAuth();
   const qc = useQueryClient();
 
-  const { data: currentNetWorth, isLoading: loadingCurrent } =
-    useQuery<NetWorthCurrent>({
-      queryKey: ["net-worth-current"],
-      enabled: !!session,
-      queryFn: () => apiFetch("/net-worth/current"),
-    });
+  const currentNetWorthQuery = useQuery<NetWorthCurrent>({
+    queryKey: ["net-worth-current"],
+    enabled: !!session,
+    queryFn: () => apiFetch("/net-worth/current"),
+  });
 
-  const { data: snapshots, isLoading: loadingSnapshots } = useQuery<
-    NetWorthSnapshot[]
-  >({
+  const snapshotsQuery = useQuery<NetWorthSnapshot[]>({
     queryKey: ["net-worth-snapshots"],
     enabled: !!session,
     queryFn: () => apiFetch("/net-worth/snapshots"),
   });
 
-  const { data: trendData, isLoading: loadingTrend } = useQuery<NetWorthSnapshot[]
-  >({
+  const trendDataQuery = useQuery<NetWorthSnapshot[]>({
     queryKey: ["net-worth-trend", period],
     enabled: !!session,
     queryFn: () => apiFetch(`/net-worth/trend?period=${period}`),
@@ -181,8 +177,21 @@ export default function NetWorthView() {
       toast.error("Failed to delete snapshot");
     }
   };
+  const currentNetWorth = currentNetWorthQuery.data ?? {
+    netWorth: 0,
+    totalAssets: 0,
+    totalLiabilities: 0,
+    breakdown: { cash: 0, investments: 0, debts: 0 },
+  };
+  const snapshots = snapshotsQuery.data ?? [];
+  const trendData = trendDataQuery.data ?? [];
 
-  if (!currentNetWorth || !snapshots || !trendData) {
+  const isLoading =
+    currentNetWorthQuery.isLoading ||
+    snapshotsQuery.isLoading ||
+    trendDataQuery.isLoading;
+
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -196,8 +205,8 @@ export default function NetWorthView() {
   }
 
   // Calculate change from previous snapshot
-  const latestSnapshot = snapshots[0];
-  const previousSnapshot = snapshots[1];
+  const latestSnapshot = snapshots[0] ? snapshots[0] : undefined;;
+  const previousSnapshot = snapshots[1] ? snapshots[1] : undefined;;
   const change =
     latestSnapshot && previousSnapshot
       ? latestSnapshot.netWorth - previousSnapshot.netWorth
@@ -207,7 +216,7 @@ export default function NetWorthView() {
     : 0;
 
   // Format chart data
-  const chartData = trendData.map((snapshot) => ({
+  const chartData = trendData.map((snapshot: NetWorthSnapshot) => ({
     date: format(snapshot.timestamp, "MMM dd"),
     fullDate: format(snapshot.timestamp, "MMM dd, yyyy"),
     netWorth: snapshot.netWorth,

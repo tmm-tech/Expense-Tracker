@@ -286,16 +286,19 @@ model NetWorth {
 }
 
 model NetWorthSnapshot {
-  id          String   @id @default(uuid())
-  netWorthId  String
-  userId      String
-  date        DateTime @default(now())
-  assets      Float
-  liabilities Float
+  id             String   @id @default(uuid())
+  netWorthId     String
+  userId         String
+  date           DateTime @default(now())
+  assets         Float
+  liabilities    Float
+  totalAssets    Float
+  totalLiabilities Float
+  notes          String?
+  cash           Float?
+  investments    Float?
+  debts          Float?
 
-  // relations
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   netWorth NetWorth? @relation(fields: [netWorthId], references: [id])
-
-  @@index([userId])
 }

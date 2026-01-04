@@ -76,19 +76,32 @@ module.exports = {
   getCurrent: async (req, res) => {
     try {
       const userId = req.user?.sub;
-      if (!userId) {
-        return res
-          .status(401)
-          .json({ message: "Unauthorized: missing user ID" });
-      }
-      const latest = await prisma.netWorthSnapshot.findFirst({
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const snapshot = await prisma.netWorthSnapshot.findFirst({
         where: { userId },
         orderBy: { date: "desc" },
       });
-      if (!latest) {
-        return res.json({ netWorth: 0 }); // safe default
+      if (!snapshot) {
+        return res.json({
+          netWorth: 0,
+          totalAssets: 0,
+          totalLiabilities: 0,
+          breakdown: { cash: 0, investments: 0, debts: 0 },
+        });
       }
-      res.json(latest);
+      res.json({
+        id: snapshot.id,
+        timestamp: snapshot.date.getTime(),
+        netWorth: snapshot.assets - snapshot.liabilities,
+        totalAssets: snapshot.assets,
+        totalLiabilities: snapshot.liabilities,
+        notes: snapshot.notes ?? null,
+        breakdown: {
+          cash: snapshot.cash ?? 0,
+          investments: snapshot.investments ?? 0,
+          debts: snapshot.liabilities ?? 0,
+        },
+      });
     } catch (error) {
       console.error("Error fetching current net worth:", error);
       res.status(500).json({ message: "Failed to fetch current net worth" });
