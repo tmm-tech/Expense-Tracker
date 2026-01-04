@@ -38,12 +38,31 @@ import {
   FormMessage,
 } from "@/components/ui/form.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty.tsx";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useAuth } from "@/hooks/use-auth";
 
 const COLORS = {
   chart1: "hsl(var(--chart-1))",
@@ -75,7 +94,6 @@ interface NetWorthCurrent {
   };
 }
 
-
 const snapshotSchema = z.object({
   notes: z.string().optional(),
 });
@@ -85,53 +103,57 @@ type SnapshotFormData = z.infer<typeof snapshotSchema>;
 export default function NetWorthView() {
   const [period, setPeriod] = useState<Period>("6M");
   const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
+  const { session, loading } = useAuth();
+  const qc = useQueryClient();
 
-const qc = useQueryClient();
+  const { data: currentNetWorth, isLoading: loadingCurrent } =
+    useQuery<NetWorthCurrent>({
+      queryKey: ["net-worth-current"],
+      enabled: !!session,
+      queryFn: () => apiFetch("/net-worth/current"),
+    });
 
-const { data: currentNetWorth, isLoading: loadingCurrent } = useQuery<NetWorthCurrent>({
-  queryKey: ["net-worth-current"],
-  queryFn: () => apiFetch("/net-worth/current"),
-});
+  const { data: snapshots, isLoading: loadingSnapshots } = useQuery<
+    NetWorthSnapshot[]
+  >({
+    queryKey: ["net-worth-snapshots"],
+    enabled: !!session,
+    queryFn: () => apiFetch("/net-worth/snapshots"),
+  });
 
-const { data: snapshots, isLoading: loadingSnapshots } = useQuery<NetWorthSnapshot[]>({
-  queryKey: ["net-worth-snapshots"],
-  queryFn: () => apiFetch("/net-worth/snapshots"),
-});
+  const { data: trendData, isLoading: loadingTrend } = useQuery<NetWorthSnapshot[]
+  >({
+    queryKey: ["net-worth-trend", period],
+    enabled: !!session,
+    queryFn: () => apiFetch(`/net-worth/trend?period=${period}`),
+  });
 
-const { data: trendData, isLoading: loadingTrend } = useQuery<NetWorthSnapshot[]>({
-  queryKey: ["net-worth-trend", period],
-  queryFn: () =>
-    apiFetch(`/net-worth/trend?period=${period}`),
-});
+  const createSnapshot = useMutation({
+    mutationFn: (data: { notes?: string }) =>
+      apiFetch("/net-worth/snapshots", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      toast.success("Snapshot created successfully");
+      qc.invalidateQueries({ queryKey: ["net-worth-snapshots"] });
+      qc.invalidateQueries({ queryKey: ["net-worth-current"] });
+      qc.invalidateQueries({ queryKey: ["net-worth-trend"] });
+      setIsSnapshotDialogOpen(false);
+    },
+    onError: () => toast.error("Failed to create snapshot"),
+  });
 
-
-const createSnapshot = useMutation({
-  mutationFn: (data: { notes?: string }) =>
-    apiFetch("/net-worth/snapshots", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  onSuccess: () => {
-    toast.success("Snapshot created successfully");
-    qc.invalidateQueries({ queryKey: ["net-worth-snapshots"] });
-    qc.invalidateQueries({ queryKey: ["net-worth-current"] });
-    qc.invalidateQueries({ queryKey: ["net-worth-trend"] });
-    setIsSnapshotDialogOpen(false);
-  },
-  onError: () => toast.error("Failed to create snapshot"),
-});
-
-const deleteSnapshot = useMutation({
-  mutationFn: (id: string) =>
-    apiFetch(`/net-worth/snapshots/${id}`, { method: "DELETE" }),
-  onSuccess: () => {
-    toast.success("Snapshot deleted");
-    qc.invalidateQueries({ queryKey: ["net-worth-snapshots"] });
-    qc.invalidateQueries({ queryKey: ["net-worth-trend"] });
-  },
-  onError: () => toast.error("Failed to delete snapshot"),
-});
-
+  const deleteSnapshot = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/net-worth/snapshots/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Snapshot deleted");
+      qc.invalidateQueries({ queryKey: ["net-worth-snapshots"] });
+      qc.invalidateQueries({ queryKey: ["net-worth-trend"] });
+    },
+    onError: () => toast.error("Failed to delete snapshot"),
+  });
 
   const form = useForm<SnapshotFormData>({
     resolver: zodResolver(snapshotSchema),
@@ -176,9 +198,10 @@ const deleteSnapshot = useMutation({
   // Calculate change from previous snapshot
   const latestSnapshot = snapshots[0];
   const previousSnapshot = snapshots[1];
-  const change = latestSnapshot && previousSnapshot
-    ? latestSnapshot.netWorth - previousSnapshot.netWorth
-    : 0;
+  const change =
+    latestSnapshot && previousSnapshot
+      ? latestSnapshot.netWorth - previousSnapshot.netWorth
+      : 0;
   const changePercent = previousSnapshot
     ? (change / previousSnapshot.netWorth) * 100
     : 0;
@@ -263,7 +286,9 @@ const deleteSnapshot = useMutation({
               </div>
               <div className="flex justify-between">
                 <span>Investments:</span>
-                <span>KES {currentNetWorth.breakdown.investments.toFixed(2)}</span>
+                <span>
+                  KES {currentNetWorth.breakdown.investments.toFixed(2)}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -297,9 +322,14 @@ const deleteSnapshot = useMutation({
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Net Worth Trend</CardTitle>
-                <CardDescription>Historical net worth over time</CardDescription>
+                <CardDescription>
+                  Historical net worth over time
+                </CardDescription>
               </div>
-              <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+              <Tabs
+                value={period}
+                onValueChange={(v) => setPeriod(v as Period)}
+              >
                 <TabsList className="glass">
                   <TabsTrigger value="1M">1M</TabsTrigger>
                   <TabsTrigger value="3M">3M</TabsTrigger>
@@ -314,12 +344,30 @@ const deleteSnapshot = useMutation({
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="netWorthGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.chart1} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.chart1} stopOpacity={0} />
+                  <linearGradient
+                    id="netWorthGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor={COLORS.chart1}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={COLORS.chart1}
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  opacity={0.3}
+                />
                 <XAxis
                   dataKey="date"
                   stroke="hsl(var(--foreground))"
@@ -389,7 +437,11 @@ const deleteSnapshot = useMutation({
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  opacity={0.3}
+                />
                 <XAxis
                   dataKey="date"
                   stroke="hsl(var(--foreground))"
@@ -443,7 +495,8 @@ const deleteSnapshot = useMutation({
           <CardHeader>
             <CardTitle>Snapshot History</CardTitle>
             <CardDescription>
-              {snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""} recorded
+              {snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""}{" "}
+              recorded
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -463,8 +516,8 @@ const deleteSnapshot = useMutation({
                       </Badge>
                     </div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      Assets: KES {snapshot.totalAssets.toFixed(2)} • Liabilities: KES{" "}
-                      {snapshot.totalLiabilities.toFixed(2)}
+                      Assets: KES {snapshot.totalAssets.toFixed(2)} •
+                      Liabilities: KES {snapshot.totalLiabilities.toFixed(2)}
                     </div>
                     {snapshot.notes && (
                       <div className="mt-2 text-sm text-muted-foreground">
@@ -487,7 +540,10 @@ const deleteSnapshot = useMutation({
       )}
 
       {/* Create Snapshot Dialog */}
-      <Dialog open={isSnapshotDialogOpen} onOpenChange={setIsSnapshotDialogOpen}>
+      <Dialog
+        open={isSnapshotDialogOpen}
+        onOpenChange={setIsSnapshotDialogOpen}
+      >
         <DialogContent className="glass">
           <DialogHeader>
             <DialogTitle>Create Net Worth Snapshot</DialogTitle>
@@ -504,13 +560,17 @@ const deleteSnapshot = useMutation({
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total Assets</span>
+                <span className="text-xs text-muted-foreground">
+                  Total Assets
+                </span>
                 <span className="text-sm font-medium text-green-400">
                   KES {currentNetWorth.totalAssets.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total Liabilities</span>
+                <span className="text-xs text-muted-foreground">
+                  Total Liabilities
+                </span>
                 <span className="text-sm font-medium text-red-400">
                   KES {currentNetWorth.totalLiabilities.toFixed(2)}
                 </span>

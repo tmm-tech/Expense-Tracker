@@ -67,12 +67,31 @@ module.exports = {
       return res.json(snapshots || []);
     } catch (error) {
       console.error("Error fetching net worth snapshots:", error);
-      return res
-        .status(500)
-        .json({
-          message: "Failed to fetch net worth snapshots",
-          error: error.message,
-        });
+      return res.status(500).json({
+        message: "Failed to fetch net worth snapshots",
+        error: error.message,
+      });
+    }
+  },
+  getCurrent: async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized: missing user ID" });
+      }
+      const latest = await prisma.netWorthSnapshot.findFirst({
+        where: { userId },
+        orderBy: { date: "desc" },
+      });
+      if (!latest) {
+        return res.json({ netWorth: 0 }); // safe default
+      }
+      res.json(latest);
+    } catch (error) {
+      console.error("Error fetching current net worth:", error);
+      res.status(500).json({ message: "Failed to fetch current net worth" });
     }
   },
 };
