@@ -8,29 +8,30 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-  
 model User {
   id         String   @id
   email      String   @unique
   full_name  String?
   avatar_url String?
-  currency    String?
+  currency   String?
   createdAt  DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  accounts     Account[]
-  categories   Category[]
-  transactions Transaction[]
-  budgets      Budget[]
-  goals        Goal[]
-  bills        Bill[]
-  debt         Debt[]
-  investment   Investment[]
-  alert        Alert[]
-  Recurring    Recurring[]
-  Savings      SavingsChallenge[]
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  goals         Goal[]
+  bills         Bill[]
+  debt          Debt[]
+  investment    Investment[]
+  alert         Alert[]
+  Recurring     Recurring[]
+  Savings       SavingsChallenge[]
   preferences   Preferences?
   notifications Notification[]
+  NetWorth      NetWorth[]
+  Snapshot      NetWorthSnapshot[]
 }
 
 model Preferences {
@@ -267,6 +268,34 @@ model SavingsChallenge {
 
   // relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NetWorth {
+  id        String             @id @default(uuid())
+  userId    String
+  date      DateTime           @default(now())
+  value     Float
+  snapshots NetWorthSnapshot[]
+
+  // relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NetWorthSnapshot {
+  id          String   @id @default(uuid())
+  netWorthId  String
+  userId      String
+  date        DateTime @default(now())
+  assets      Float
+  liabilities Float
+
+  // relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  netWorth NetWorth? @relation(fields: [netWorthId], references: [id])
 
   @@index([userId])
 }
