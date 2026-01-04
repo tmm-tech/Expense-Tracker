@@ -553,7 +553,7 @@ export default function NetWorthView() {
         open={isSnapshotDialogOpen}
         onOpenChange={setIsSnapshotDialogOpen}
       >
-        <DialogContent className="glass">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Net Worth Snapshot</DialogTitle>
             <DialogDescription>
