@@ -34,13 +34,13 @@ import { CategoryList } from "./CategoryList.tsx";
 import { CategoryDialog } from "./CategoryDialog.tsx";
 import { InsightsView } from "./InsightsView.tsx";
 // import { ReportsView } from "./ReportsView.tsx";
-import { CSVExport } from "./CSVExport.tsx";
-import { CSVImport } from "./CSVImport.tsx";
+// import { CSVExport } from "./CSVExport.tsx";
+// import { CSVImport } from "./CSVImport.tsx";
 import { AIInsights } from "./AIInsights.tsx";
 import SettingsView from "./SettingsView.tsx";
 import AccountList from "./AccountList.tsx";
 import AccountDialog from "./AccountDialog.tsx";
-import CurrencyView from "../CurrencyView.tsx";
+// import CurrencyView from "../CurrencyView.tsx";
 import AccountDetailView from "./AccountDetailView.tsx";
 import TransactionFilters from "./TransactionFilters.tsx";
 import BillList from "./BillList.tsx";
@@ -51,7 +51,7 @@ import PaymentDialog from "./PaymentDialog.tsx";
 import DebtDetailView from "./DebtDetailView.tsx";
 import NetWorthView from "./NetWorthView.tsx";
 import CalendarView from "./CalendarView.tsx";
-import EnhancedExport from "./EnhancedExport.tsx";
+// import EnhancedExport from "./EnhancedExport.tsx";
 import { SavingsChallengesView } from "../SavingsChallenge.tsx";
 import { AlertsView } from "../AlertsView.tsx";
 import { AlertsBell } from "./AlertsBell.tsx";
@@ -654,7 +654,7 @@ export function DashboardContent() {
               >
                 Alerts
               </TabsTrigger>
-              <TabsTrigger
+              {/* <TabsTrigger
                 value="import"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
@@ -665,7 +665,7 @@ export function DashboardContent() {
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
                 Export
-              </TabsTrigger>
+              </TabsTrigger> */}
               {/* <TabsTrigger
                 value="currency"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2"
@@ -782,12 +782,12 @@ export function DashboardContent() {
           <TabsContent value="alerts" className="mt-6">
             <AlertsView />
           </TabsContent>
-          <TabsContent value="import" className="mt-6">
+          {/* <TabsContent value="import" className="mt-6">
             <CSVImport />
           </TabsContent>
           <TabsContent value="export" className="mt-6">
             <EnhancedExport />
-          </TabsContent>
+          </TabsContent> */}
           {/* <TabsContent value="currency" className="mt-6">
             <CurrencyView />
           </TabsContent> */}
