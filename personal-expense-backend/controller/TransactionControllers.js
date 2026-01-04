@@ -111,9 +111,7 @@ module.exports = {
       });
 
       if (!transaction) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Transaction not found" });
+        return res.json({ success: false, message: "Transaction not found" });
       }
 
       res.json({ success: true, data: transaction });

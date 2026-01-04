@@ -62,7 +62,7 @@ module.exports = {
         select: { id: true, email: true, currency: true },
       });
 
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) return res.json({ success: true, message: "User not found" });
       res.json(user);
     } catch (error) {
       console.error("Get current user error:", error.message);
@@ -102,7 +102,7 @@ module.exports = {
         where: { id: userId },
         include: { preferences: true, notifications: true },
       });
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) return res.json({ success: true, message: "User not found" });
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -122,7 +122,7 @@ module.exports = {
         where: { userId },
       });
       if (!preferences) {
-        return res.status(200).json({ message: "Preferences not found" });
+        return res.json({ success: true, message: "Preferences not found" });
       }
       res.json(preferences);
     } catch (error) {

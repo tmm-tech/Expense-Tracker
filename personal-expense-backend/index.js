@@ -16,6 +16,7 @@ const CalendarRoutes = require("./routes/CalendarRoutes");
 const savingsChallengesRoutes = require("./routes/savingsChallengesRoutes");
 const RecurringTransactionRoutes = require("./routes/RecurringRoutes");
 const CurrencyRoutes = require("./routes/CurrencyRoutes");
+const NetWorthRoutes = require("./routes/NetWorthRoutes");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -64,6 +65,7 @@ app.use("/api", CalendarRoutes);
 app.use("/api/savings-challenges", savingsChallengesRoutes);
 app.use("/api/recurring-transactions", RecurringTransactionRoutes);
 app.use("/api/currencies", CurrencyRoutes);
+app.use("/api/net-worth", NetWorthRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Confirmed Connection to Aurex Expense Tracker" });
 });
