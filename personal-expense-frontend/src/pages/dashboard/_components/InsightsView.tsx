@@ -117,7 +117,7 @@ export function InsightsView() {
     0,
   );
   const investmentGains = currentInvestmentValue - totalInvested;
-  const netWorth = cashBalance + currentInvestmentValue + totalBalance;
+  const netWorth = totalBalance + currentInvestmentValue;
 
   const savingsRate =
     totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
