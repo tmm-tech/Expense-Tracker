@@ -93,9 +93,9 @@ export default function AccountDetailView({
               <CardTitle className="text-2xl">{account.name}</CardTitle>
               <p className="text-muted-foreground">{account.type}</p>
 
-              {account.institutionName && (
+              {account.institution && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  {account.institutionName}
+                  {account.institution}
                 </p>
               )}
 
