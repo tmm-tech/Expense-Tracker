@@ -100,7 +100,7 @@ model Transaction {
   id         String @id @default(uuid())
   userId     String
   accountId  String
-  categoryId String
+  category String
 
   type        String // "income" | "expense"
   amount      Float

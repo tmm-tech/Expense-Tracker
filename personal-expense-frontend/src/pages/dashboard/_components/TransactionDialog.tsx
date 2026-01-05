@@ -23,6 +23,9 @@ import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+
 /* ---------------- TYPES ---------------- */
 
 interface TransactionDialogProps {
@@ -52,7 +55,7 @@ export function TransactionDialog({
   const [category, setCategory] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const [accountId, setAccountId] = useState<string>("");
 
   /* --------- Populate on edit --------- */
@@ -69,14 +72,14 @@ export function TransactionDialog({
           ? new Date(editingTransaction.date)
           : new Date(editingTransaction.date);
 
-      setDate(format(txDate, "yyyy-MM-dd"));
+      setDate(txDate);
       setAccountId(editingTransaction.accountId ?? "");
     } else {
       setType("expense");
       setCategory("");
       setAmount("");
       setDescription("");
-      setDate(format(new Date(), "yyyy-MM-dd"));
+      setDate(new Date());
       setAccountId("");
     }
   }, [editingTransaction, open]);
@@ -103,7 +106,7 @@ export function TransactionDialog({
         category,
         amount: amountNum,
         description,
-        date: new Date(date).getTime(),
+        date: date ? date.getTime() : null,
         accountId: accountId || null,
       };
 
@@ -175,7 +178,7 @@ export function TransactionDialog({
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                 <SelectItem value="none">No category</SelectItem>
+                <SelectItem value="none">No category</SelectItem>
                 {filteredCategories.map((c) => (
                   <SelectItem key={c.id} value={c.name}>
                     {c.name}
@@ -219,12 +222,26 @@ export function TransactionDialog({
 
           {/* Date */}
           <div className="space-y-2">
-            <Label>Date</Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            {" "}
+            <Label>Date</Label>{" "}
+            <Popover>
+              {" "}
+              <PopoverTrigger asChild>
+                {" "}
+                <Button variant="outline">
+                  {" "}
+                  {date ? format(date, "yyyy-MM-dd") : "Pick a date"}{" "}
+                </Button>{" "}
+              </PopoverTrigger>{" "}
+              <PopoverContent>
+                {" "}
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                />{" "}
+              </PopoverContent>{" "}
+            </Popover>
           </div>
 
           {/* Description */}

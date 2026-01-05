@@ -11,15 +11,17 @@ module.exports = {
   ============================ */
   createTransaction: async (req, res) => {
     try {
-      const { name, category, amount, date } = req.body;
+      const { accountId, category, amount, date, description, type } = req.body;
 
       const transaction = await prisma.transaction.create({
         data: {
-          userId: req.user.id,
-          name,
+          userId: req.user.sub,
+          accountId,
           category,
           amount: Number(amount),
           date: new Date(date),
+          type,
+          description,
         },
       });
 
