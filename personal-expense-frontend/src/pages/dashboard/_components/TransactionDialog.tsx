@@ -23,7 +23,11 @@ import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
 /* ---------------- TYPES ---------------- */
@@ -106,7 +110,7 @@ export function TransactionDialog({
         category,
         amount: amountNum,
         description,
-        date: date ? date.getTime() : null,
+        date: date ? format(date, "yyyy-MM-dd") : null,
         accountId: accountId || null,
       };
 
@@ -222,25 +226,16 @@ export function TransactionDialog({
 
           {/* Date */}
           <div className="space-y-2">
-            {" "}
-            <Label>Date</Label>{" "}
+            <Label>Date</Label>
             <Popover>
-              {" "}
               <PopoverTrigger asChild>
-                {" "}
                 <Button variant="outline">
-                  {" "}
                   {date ? format(date, "yyyy-MM-dd") : "Pick a date"}{" "}
-                </Button>{" "}
-              </PopoverTrigger>{" "}
+                </Button>
+              </PopoverTrigger>
               <PopoverContent>
-                {" "}
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                />{" "}
-              </PopoverContent>{" "}
+                <Calendar mode="single" selected={date} onSelect={setDate} />
+              </PopoverContent>
             </Popover>
           </div>
 
