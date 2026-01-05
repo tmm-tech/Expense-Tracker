@@ -56,7 +56,7 @@ export function TransactionDialog({
     : null;
 
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [category, setCategory] = useState<string>("");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -67,7 +67,7 @@ export function TransactionDialog({
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type);
-      setCategory(editingTransaction.category);
+      setCategoryId(editingTransaction.category);
       setAmount(editingTransaction.amount.toString() || "0");
       setDescription(editingTransaction.description);
 
@@ -80,7 +80,7 @@ export function TransactionDialog({
       setAccountId(editingTransaction.accountId ?? "");
     } else {
       setType("expense");
-      setCategory("");
+      setCategoryId("");
       setAmount("");
       setDescription("");
       setDate(new Date());
@@ -93,7 +93,7 @@ export function TransactionDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!category || !amount || !description) {
+    if (!categoryId || !amount || !description) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -107,7 +107,7 @@ export function TransactionDialog({
     try {
       const payload = {
         type,
-        category,
+        categoryId,
         amount: amountNum,
         description,
         date: date ? format(date, "yyyy-MM-dd") : null,
@@ -161,7 +161,7 @@ export function TransactionDialog({
               value={type}
               onValueChange={(v) => {
                 setType(v as "income" | "expense");
-                setCategory("");
+                setCategoryId("");
               }}
             >
               <SelectTrigger>
@@ -177,7 +177,7 @@ export function TransactionDialog({
           {/* Category */}
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
