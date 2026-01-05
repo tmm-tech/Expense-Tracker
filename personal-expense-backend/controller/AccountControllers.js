@@ -17,7 +17,8 @@ module.exports = {
           .status(401)
           .json({ message: "Unauthorized: missing user ID" });
       }
-      const { name, type, balance, institution, currency, accountNumber } = req.body;
+      const { name, type, balance, institution, currency, accountNumber } =
+        req.body;
       const account = await prisma.account.create({
         data: {
           userId,
@@ -126,25 +127,29 @@ module.exports = {
     try {
       const { id } = req.params;
       const { name, type, balance } = req.body;
-      const updated = await prisma.account.updateMany({
-        where: { id: Number(id), userId: req.user.id },
+
+      const updated = await prisma.account.update({
+        where: { id, userId: req.user.sub }, // ✅ use id as string if schema is String
         data: {
           name,
           type,
           balance: balance !== undefined ? Number(balance) : undefined,
         },
       });
-      if (!updated.count) {
+
+      res.json({
+        success: true,
+        message: "Account updated successfully",
+        account: updated, // ✅ return updated record
+      });
+    } catch (error) {
+      if (error.code === "P2025") {
+        // Prisma "Record not found" error
         return res.status(404).json({
           success: false,
           message: "Account not found",
         });
       }
-      res.json({
-        success: true,
-        message: "Account updated successfully",
-      });
-    } catch (error) {
       console.error("Update account error:", error);
       res.status(500).json({
         success: false,
