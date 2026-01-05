@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   TrendingUp,
   TrendingDown,
@@ -27,6 +33,7 @@ import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Budget } from "@/types/budget";
 import type { Investment } from "@/types/investment";
+import type { Account } from "@/types/account";
 
 /* ---------------- COLORS ---------------- */
 
@@ -60,6 +67,10 @@ export function InsightsView() {
     queryFn: () => apiFetch<Investment[]>("/investments"),
   });
 
+  const accountsQuery = useQuery<Account[]>({
+    queryKey: ["accounts"],
+    queryFn: () => apiFetch<Account[]>(`/accounts`),
+  });
   /* ---------- Loading ---------- */
   if (txLoading) {
     return (
@@ -99,14 +110,17 @@ export function InsightsView() {
     (s, i) => s + i.quantity * i.currentPrice,
     0,
   );
+  const accounts = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
 
+  const totalBalance = accounts.reduce(
+    (sum, account) => sum + account.balance,
+    0,
+  );
   const investmentGains = currentInvestmentValue - totalInvested;
-  const netWorth = cashBalance + currentInvestmentValue;
+  const netWorth = cashBalance + currentInvestmentValue + totalBalance;
 
   const savingsRate =
-    totalIncome > 0
-      ? ((totalIncome - totalExpenses) / totalIncome) * 100
-      : 0;
+    totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
   /* ---------- Charts ---------- */
 
@@ -135,8 +149,12 @@ export function InsightsView() {
 
     return {
       month: format(date, "MMM"),
-      Income: monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
-      Expenses: monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+      Income: monthTx
+        .filter((t) => t.type === "income")
+        .reduce((s, t) => s + t.amount, 0),
+      Expenses: monthTx
+        .filter((t) => t.type === "expense")
+        .reduce((s, t) => s + t.amount, 0),
     };
   });
 
@@ -149,23 +167,22 @@ export function InsightsView() {
   ).map(([name, value]) => ({ name, value }));
 
   // Budget utilization
-const budgetUtilization = budgets.map((b) => {
-  const spent = transactions
-    .filter(
-      (t) =>
-        t.type === "expense" &&
-        b.categoryId.includes(t.category) &&
-        t.date >= b.startDate
-    )
-    .reduce((s, t) => s + t.amount, 0);
+  const budgetUtilization = budgets.map((b) => {
+    const spent = transactions
+      .filter(
+        (t) =>
+          t.type === "expense" &&
+          b.categoryId.includes(t.category) &&
+          t.date >= b.startDate,
+      )
+      .reduce((s, t) => s + t.amount, 0);
 
-  return {
-    categoryId: b.categoryId,
-    used: spent,
-    limit: b.limit,
-  };
-});
-
+    return {
+      categoryId: b.categoryId,
+      used: spent,
+      limit: b.limit,
+    };
+  });
 
   /* ---------- UI ---------- */
 
@@ -174,7 +191,11 @@ const budgetUtilization = budgets.map((b) => {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={Wallet} label="Net Worth" value={netWorth} />
-        <MetricCard icon={DollarSign} label="Cash Balance" value={cashBalance} />
+        <MetricCard
+          icon={DollarSign}
+          label="Cash Balance"
+          value={cashBalance}
+        />
         <MetricCard
           icon={TrendingUp}
           label="Investments"
@@ -221,7 +242,8 @@ function MetricCard({
       </CardHeader>
       <CardContent>
         <CardTitle className="text-3xl font-bold">
-          KES {value.toFixed(2)}{suffix}
+          KES {value.toFixed(2)}
+          {suffix}
         </CardTitle>
         {delta !== undefined && (
           <p
