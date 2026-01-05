@@ -11,30 +11,46 @@ module.exports = {
   ============================ */
   createTransaction: async (req, res) => {
     try {
-      const { accountId, category, amount, date, description, type } = req.body;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
+      const { accountId, categoryId, amount, date, description, type } =
+        req.body;
+
+      if (!accountId || !categoryId || !amount || !date || !type) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields",
+        });
+      }
 
       const transaction = await prisma.transaction.create({
         data: {
-          userId: req.user.sub,
+          userId,
           accountId,
-          category,
+          categoryId, // ✅ use categoryId, not category
           amount: Number(amount),
           date: new Date(date),
-          type,
-          description,
+          type, // should be "income" or "expense"
+          description: description || null,
         },
       });
 
-      res.json({
+      return res.json({
         success: true,
         message: "Transaction created successfully",
         data: transaction,
       });
     } catch (error) {
       console.error("Create transaction error:", error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: `Create Transaction Error: ${error.message}`,
+        message: "Create Transaction Error: Something went wrong",
       });
     }
   },

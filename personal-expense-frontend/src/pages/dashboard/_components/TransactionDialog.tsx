@@ -184,7 +184,7 @@ export function TransactionDialog({
               <SelectContent>
                 <SelectItem value="none">No category</SelectItem>
                 {filteredCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.name}>
+                  <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>
                 ))}
