@@ -12,7 +12,7 @@ export interface Account {
   name: string;
   type: AccountType;
   balance: number;
-  institutionName?: string;
+  institution?: string;
   accountNumber?: string;
   currency?: string;
   color?: string;

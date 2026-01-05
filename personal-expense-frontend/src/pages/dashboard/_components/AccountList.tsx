@@ -138,11 +138,11 @@ export default function AccountList({
               </CardHeader>
 
               <CardContent className="space-y-3">
-                {account.institutionName && (
+                {account.institution && (
                   <div>
                     <p className="text-xs text-muted-foreground">Institution</p>
                     <p className="text-sm font-medium">
-                      {account.institutionName}
+                      {account.institution}
                     </p>
                   </div>
                 )}

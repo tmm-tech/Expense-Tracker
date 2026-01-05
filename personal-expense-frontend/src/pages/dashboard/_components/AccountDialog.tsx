@@ -102,7 +102,7 @@ export default function AccountDialog({
     if (editingAccount) {
       setName(editingAccount.name);
       setType(editingAccount.type);
-      setInstitutionName(editingAccount.institutionName || "");
+      setInstitutionName(editingAccount.institution || "");
       setAccountNumber(editingAccount.accountNumber || "");
       setBalance(editingAccount.balance.toString() || "0");
       setCurrency(editingAccount.currency || "KES");
