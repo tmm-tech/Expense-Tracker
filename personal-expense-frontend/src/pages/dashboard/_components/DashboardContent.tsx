@@ -282,8 +282,11 @@ export function DashboardContent() {
   const totalExpense = transactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
-
-  const balance = totalIncome - totalExpense;
+  const totalBalance = accounts.reduce(
+    (sum, account) => sum + account.balance,
+    0,
+  );
+  const balance = totalBalance
 
   const handleEditTransaction = (id: string) => {
     setEditingTransactionId(id);

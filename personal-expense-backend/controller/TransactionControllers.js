@@ -40,6 +40,15 @@ module.exports = {
           description: description || null,
         },
       });
+      // Update account balance
+      await prisma.account.update({
+        where: { id: accountId },
+        data: {
+          balance: {
+            increment: type === "income" ? Number(amount) : -Number(amount),
+          },
+        },
+      });
 
       return res.json({
         success: true,
