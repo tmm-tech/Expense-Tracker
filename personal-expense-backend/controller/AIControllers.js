@@ -59,7 +59,7 @@ Respond as bullet points.
 
       // 3️⃣ Call OpenAI
       const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL,
+        model: process.env.OPENAI_MODEL || "gpt-4.1",
         messages: [
           { role: "system", content: "You are a financial advisor." },
           { role: "user", content: prompt },
