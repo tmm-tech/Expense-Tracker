@@ -38,6 +38,7 @@ type DatePreset = "all" | "today" | "week" | "month" | "30days" | "custom";
 export default function TransactionFilters({
   transactions,
   accounts,
+  categories,
   onFilteredTransactionsChange,
 }: TransactionFiltersProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -270,7 +271,7 @@ export default function TransactionFilters({
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="none">No Category</SelectItem>
-              {accounts.map((a) => (
+              {categories.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
                   {a.name}
                 </SelectItem>

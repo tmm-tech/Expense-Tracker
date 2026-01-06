@@ -14,12 +14,14 @@ import {
 import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
+import type { Category } from "@/types/category";
 /* ---------------- TYPES ---------------- */
 
 interface TransactionListProps {
   transactions: Transaction[];
   onEdit: (id: string) => void;
   accounts: Account[];
+  categories: Category[];
 }
 /* ---------------- COMPONENT ---------------- */
 
@@ -27,6 +29,7 @@ export function TransactionList({
   transactions,
   onEdit,
   accounts,
+  categories,
 }: TransactionListProps) {
   const handleDelete = async (id: string) => {
     try {
@@ -73,6 +76,9 @@ export function TransactionList({
             const account = transaction.accountId
               ? accounts.find((a) => a.id === transaction.accountId)
               : null;
+            const category = transaction.categoryId
+              ? categories.find((c) => c.id === transaction.categoryId)
+              : null;
 
             const txDate =
               typeof transaction.date === "string"
@@ -97,11 +103,11 @@ export function TransactionList({
                     >
                       {transaction.type}
                     </Badge>
-
-                    <span className="text-sm text-muted-foreground">
-                      {transaction.categoryId}
-                    </span>
-
+                    {category && (
+                      <span className="text-sm text-muted-foreground">
+                        {category.name}
+                      </span>
+                    )}
                     {account && (
                       <Badge variant="outline" className="text-xs">
                         {account.name}

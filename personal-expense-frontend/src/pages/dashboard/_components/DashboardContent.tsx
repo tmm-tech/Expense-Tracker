@@ -717,6 +717,7 @@ export function DashboardContent() {
               transactions={filteredTransactions || transactions}
               onEdit={handleEditTransaction}
               accounts={accounts}
+              categories={categories}
             />
           </TabsContent>
 
