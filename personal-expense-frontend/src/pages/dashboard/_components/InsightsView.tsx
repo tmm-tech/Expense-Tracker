@@ -266,12 +266,12 @@ export function InsightsView() {
                     <stop
                       offset="5%"
                       stopColor={COLORS.chart2}
-                      stopOpacity={0.3}
+                      stopOpacity={0.55}
                     />
                     <stop
                       offset="95%"
                       stopColor={COLORS.chart2}
-                      stopOpacity={0}
+                      stopOpacity={0.08}
                     />
                   </linearGradient>
                   <linearGradient
@@ -284,12 +284,12 @@ export function InsightsView() {
                     <stop
                       offset="5%"
                       stopColor={COLORS.chart5}
-                      stopOpacity={0.3}
+                      stopOpacity={0.55}
                     />
                     <stop
                       offset="95%"
                       stopColor={COLORS.chart5}
-                      stopOpacity={0}
+                      stopOpacity={0.08}
                     />
                   </linearGradient>
                 </defs>
@@ -364,7 +364,7 @@ export function InsightsView() {
                       <text
                         x={x}
                         y={y}
-                        fill="white"
+                        fill="hsl(var(--foreground))"
                         textAnchor={x > cx ? "start" : "end"}
                         dominantBaseline="central"
                         style={{ fontWeight: "bold", fontSize: "12px" }}
@@ -509,7 +509,7 @@ export function InsightsView() {
                         <text
                           x={x}
                           y={y}
-                          fill="white"
+                          fill="hsl(var(--foreground))"
                           textAnchor={x > cx ? "start" : "end"}
                           dominantBaseline="central"
                           style={{ fontWeight: "bold", fontSize: "12px" }}

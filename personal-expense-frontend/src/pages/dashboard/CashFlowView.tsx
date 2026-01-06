@@ -157,8 +157,8 @@ export function CashFlowView() {
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="5%" stopOpacity={0.3} />
-                  <stop offset="95%" stopOpacity={0} />
+                  <stop offset="5%" stopOpacity={0.55} />
+                  <stop offset="95%" stopOpacity={0.08} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />

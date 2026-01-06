@@ -363,12 +363,12 @@ export default function NetWorthView() {
                     <stop
                       offset="5%"
                       stopColor={COLORS.chart1}
-                      stopOpacity={0.3}
+                      stopOpacity={0.55}
                     />
                     <stop
                       offset="95%"
                       stopColor={COLORS.chart1}
-                      stopOpacity={0}
+                      stopOpacity={0.08}
                     />
                   </linearGradient>
                 </defs>
