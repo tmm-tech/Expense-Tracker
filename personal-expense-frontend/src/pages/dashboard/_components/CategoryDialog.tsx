@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as LucideIcons from "lucide-react";
 import type { Category } from "@/types/category";
 /* =========================
@@ -58,10 +59,26 @@ type CategoryFormData = z.infer<typeof categorySchema>;
 ========================= */
 
 const popularIcons = [
-  "DollarSign", "Briefcase", "Laptop", "TrendingUp", "Building",
-  "UtensilsCrossed", "Car", "ShoppingBag", "Film", "Receipt",
-  "Heart", "GraduationCap", "Home", "Shield", "MoreHorizontal",
-  "Target", "PiggyBank", "Palmtree", "Wallet", "CreditCard",
+  "DollarSign",
+  "Briefcase",
+  "Laptop",
+  "TrendingUp",
+  "Building",
+  "UtensilsCrossed",
+  "Car",
+  "ShoppingBag",
+  "Film",
+  "Receipt",
+  "Heart",
+  "GraduationCap",
+  "Home",
+  "Shield",
+  "MoreHorizontal",
+  "Target",
+  "PiggyBank",
+  "Palmtree",
+  "Wallet",
+  "CreditCard",
 ];
 
 const colorOptions = [
@@ -86,11 +103,11 @@ export function CategoryDialog({
   editingId,
   categories,
 }: CategoryDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const editingCategory = useMemo(
     () => categories.find((c) => c.id === editingId) ?? null,
-    [categories, editingId]
+    [categories, editingId],
   );
 
   const form = useForm<CategoryFormData>({
@@ -112,33 +129,86 @@ export function CategoryDialog({
 
   const selectedIcon = form.watch("icon");
   const selectedColor = form.watch("color");
+  const createCategory = useMutation({
+    mutationFn: (payload: CategoryFormData) =>
+      apiFetch<Category>("/categories", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
 
-  const onSubmit = async (data: CategoryFormData) => {
-    setIsSubmitting(true);
-    try {
-      if (editingCategory) {
-        await apiFetch(`/categories/${editingCategory.id}`, {
-          method: "PUT",
-          body: JSON.stringify(data),
-        });
-        toast.success("Category updated");
-      } else {
-        await apiFetch("/categories", {
-          method: "POST",
-          body: JSON.stringify(data),
-        });
-        toast.success("Category created");
-      }
+    onMutate: async (newCategory) => {
+      await queryClient.cancelQueries({ queryKey: ["categories"] });
 
+      const previousCategories =
+        queryClient.getQueryData<Category[]>(["categories"]) ?? [];
+
+      const optimisticCategory: Category = {
+        id: `temp-${Date.now()}`,
+        ...newCategory,
+      };
+
+      queryClient.setQueryData<Category[]>(
+        ["categories"],
+        [optimisticCategory, ...previousCategories],
+      );
+
+      return { previousCategories };
+    },
+
+    onError: (_err, _newCategory, context) => {
+      queryClient.setQueryData(["categories"], context?.previousCategories);
+      toast.error("Failed to create category");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Category created");
       form.reset();
       onOpenChange(false);
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        `Failed to ${editingCategory ? "update" : "create"} category`
+    },
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: (payload: Category) =>
+      apiFetch<Category>(`/categories/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (updatedCategory) => {
+      await queryClient.cancelQueries({ queryKey: ["categories"] });
+
+      const previousCategories =
+        queryClient.getQueryData<Category[]>(["categories"]) ?? [];
+
+      queryClient.setQueryData<Category[]>(["categories"], (old = []) =>
+        old.map((c) => (c.id === updatedCategory.id ? updatedCategory : c)),
       );
-    } finally {
-      setIsSubmitting(false);
+
+      return { previousCategories };
+    },
+
+    onError: (_err, _updatedCategory, context) => {
+      queryClient.setQueryData(["categories"], context?.previousCategories);
+      toast.error("Failed to update category");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Category updated");
+      form.reset();
+      onOpenChange(false);
+    },
+  });
+
+  const onSubmit = (data: CategoryFormData) => {
+    if (editingCategory) {
+      updateCategory.mutate({
+        id: editingCategory.id,
+        ...data,
+      });
+    } else {
+      createCategory.mutate(data);
     }
   };
 
@@ -146,9 +216,7 @@ export function CategoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editingCategory ? "Edit" : "New"} Category
-          </DialogTitle>
+          <DialogTitle>{editingCategory ? "Edit" : "New"} Category</DialogTitle>
           <DialogDescription>
             Create custom categories to organize your finances
           </DialogDescription>
@@ -207,8 +275,9 @@ export function CategoryDialog({
                   <FormControl>
                     <div className="grid grid-cols-5 gap-2">
                       {popularIcons.map((iconName) => {
-                        const Icon =
-                          (LucideIcons as Record<string, any>)[iconName];
+                        const Icon = (LucideIcons as Record<string, any>)[
+                          iconName
+                        ];
                         return (
                           <button
                             key={iconName}
@@ -265,16 +334,20 @@ export function CategoryDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={createCategory.isPending || updateCategory.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
+
+              <Button
+                type="submit"
+                disabled={createCategory.isPending || updateCategory.isPending}
+              >
+                {createCategory.isPending || updateCategory.isPending
                   ? "Saving..."
                   : editingCategory
-                  ? "Update"
-                  : "Create"}
+                    ? "Update"
+                    : "Create"}
               </Button>
             </div>
           </form>

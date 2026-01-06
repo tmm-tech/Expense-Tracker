@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,12 +53,12 @@ const billSchema = z.object({
 
 type BillFormData = z.infer<typeof billSchema>;
 
-
 interface BillDialogProps {
   open: boolean;
   onClose: () => void;
   bill?: Bill | null;
   accounts: Account[];
+  categories: Category[];
 }
 
 /* ---------------- component ---------------- */
@@ -67,8 +68,9 @@ export default function BillDialog({
   onClose,
   bill,
   accounts,
+  categories,
 }: BillDialogProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const queryClient = useQueryClient();
 
   const form = useForm<BillFormData>({
     resolver: zodResolver(billSchema),
@@ -91,48 +93,110 @@ export default function BillDialog({
 
   useEffect(() => {
     apiFetch<Category[]>("/categories?type=expense")
-      .then(setCategories)
+      .then()
       .catch(() => toast.error("Failed to load categories"));
   }, []);
+  const createBill = useMutation({
+    mutationFn: (payload: Omit<Bill, "id">) =>
+      apiFetch<Bill>("/bills", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (newBill) => {
+      await queryClient.cancelQueries({ queryKey: ["bills"] });
+
+      const previousBills = queryClient.getQueryData<Bill[]>(["bills"]) ?? [];
+
+      const optimisticBill: Bill = {
+        id: `temp-${Date.now()}`,
+        ...newBill,
+      };
+
+      queryClient.setQueryData<Bill[]>(
+        ["bills"],
+        [optimisticBill, ...previousBills],
+      );
+
+      return { previousBills };
+    },
+
+    onError: (_err, _newBill, context) => {
+      queryClient.setQueryData(["bills"], context?.previousBills);
+      toast.error("Failed to create bill");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      toast.success("Bill created successfully");
+      form.reset();
+      onClose();
+    },
+  });
+
+  const updateBill = useMutation({
+    mutationFn: (payload: Bill) =>
+      apiFetch<Bill>(`/bills/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (updatedBill) => {
+      await queryClient.cancelQueries({ queryKey: ["bills"] });
+
+      const previousBills = queryClient.getQueryData<Bill[]>(["bills"]) ?? [];
+
+      queryClient.setQueryData<Bill[]>(["bills"], (old = []) =>
+        old.map((b) => (b.id === updatedBill.id ? updatedBill : b)),
+      );
+
+      return { previousBills };
+    },
+
+    onError: (_err, _updatedBill, context) => {
+      queryClient.setQueryData(["bills"], context?.previousBills);
+      toast.error("Failed to update bill");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      toast.success("Bill updated successfully");
+      form.reset();
+      onClose();
+    },
+  });
 
   /* -------- submit -------- */
 
-  const onSubmit = async (data: BillFormData) => {
-    try {
-      const payload = {
-        name: data.name,
-        category: data.category,
-        amount: parseFloat(data.amount),
-        dueDay: new Date(data.dueDay).getTime(),
-        frequency: data.frequency,
-        accountId:
-          data.accountId && data.accountId !== "none"
-            ? data.accountId
-            : undefined,
-        reminderDays: parseInt(data.reminderDays, 10),
-        notes: data.notes || undefined,
-        autoPayEnabled: data.autoPayEnabled,
-      };
+  const onSubmit = (data: BillFormData) => {
+    const payload: Omit<Bill, "id" | "status" | "isPaid"> = {
+      name: data.name,
+      category: data.category,
+      amount: parseFloat(data.amount),
+      dueDay: new Date(data.dueDay).getTime(),
+      frequency: data.frequency,
+      accountId:
+        data.accountId && data.accountId !== "none"
+          ? data.accountId
+          : undefined,
+      reminderDays: parseInt(data.reminderDays, 10),
+      notes: data.notes || undefined,
+      autoPayEnabled: data.autoPayEnabled,
+    };
 
-      if (bill) {
-        await apiFetch(`/bills/${bill.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Bill updated successfully");
-      } else {
-        await apiFetch("/bills", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Bill created successfully");
-      }
-
-      form.reset();
-      onClose();
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to save bill");
+    if (bill) {
+      updateBill.mutate({
+        id: bill.id,
+        status: bill.status,
+        isPaid: bill.isPaid,
+        ...payload,
+      });
+    } else {
+      createBill.mutate({
+        status: "pending",
+        isPaid: false,
+        ...payload,
+      });
     }
   };
 

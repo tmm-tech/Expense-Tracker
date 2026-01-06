@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import type { Goal } from "@/types/goal";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 /* =========================
    Validation
 ========================= */
@@ -43,7 +45,6 @@ interface GoalDialogProps {
   onOpenChange: (open: boolean) => void;
   editingId?: string | null;
   goals: Goal[];
-  onSaved: () => void;
 }
 
 /* =========================
@@ -55,13 +56,10 @@ export function GoalDialog({
   onOpenChange,
   editingId,
   goals,
-  onSaved,
 }: GoalDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
-  const editingGoal = editingId
-    ? goals.find((g) => g.id === editingId)
-    : null;
+  const editingGoal = editingId ? goals.find((g) => g.id === editingId) : null;
 
   const form = useForm<GoalFormData>({
     resolver: zodResolver(goalSchema),
@@ -84,9 +82,7 @@ export function GoalDialog({
         name: editingGoal.name,
         targetAmount: editingGoal.targetAmount,
         currentAmount: editingGoal.currentAmount,
-        endDate: new Date(editingGoal.endDate)
-          .toISOString()
-          .split("T")[0],
+        endDate: new Date(editingGoal.endDate).toISOString().split("T")[0],
         category: editingGoal.category,
         description: editingGoal.description || "",
       });
@@ -94,57 +90,111 @@ export function GoalDialog({
       form.reset();
     }
   }, [editingGoal, open, form]);
+  const createGoal = useMutation({
+    mutationFn: (payload: Omit<Goal, "id">) =>
+      apiFetch<Goal>("/goals", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (newGoal) => {
+      await queryClient.cancelQueries({ queryKey: ["goals"] });
+
+      const previous = queryClient.getQueryData<Goal[]>(["goals"]) ?? [];
+
+      const optimisticGoal: Goal = {
+        id: `temp-${Date.now()}`,
+        ...newGoal,
+      };
+
+      queryClient.setQueryData<Goal[]>(
+        ["goals"],
+        [optimisticGoal, ...previous],
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _goal, ctx) => {
+      queryClient.setQueryData(["goals"], ctx?.previous);
+      toast.error("Failed to create goal");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      toast.success("Goal created");
+      onOpenChange(false);
+      form.reset();
+    },
+  });
+
+  const updateGoal = useMutation({
+    mutationFn: (payload: Goal) =>
+      apiFetch<Goal>(`/goals/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (updatedGoal) => {
+      await queryClient.cancelQueries({ queryKey: ["goals"] });
+
+      const previous = queryClient.getQueryData<Goal[]>(["goals"]) ?? [];
+
+      queryClient.setQueryData<Goal[]>(["goals"], (old = []) =>
+        old.map((g) => (g.id === updatedGoal.id ? updatedGoal : g)),
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _goal, ctx) => {
+      queryClient.setQueryData(["goals"], ctx?.previous);
+      toast.error("Failed to update goal");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      toast.success("Goal updated");
+      onOpenChange(false);
+      form.reset();
+    },
+  });
 
   /* -------------------------
      Submit
   -------------------------- */
-  const onSubmit = async (data: GoalFormData) => {
-    setIsSubmitting(true);
-    try {
-      const deadlineTs = new Date(data.endDate).getTime();
+  const onSubmit = (data: GoalFormData) => {
+    const deadlineTs = new Date(data.endDate).getTime();
 
-      if (deadlineTs < Date.now()) {
-        toast.error("Deadline must be in the future");
-        return;
-      }
+    if (deadlineTs < Date.now()) {
+      toast.error("Deadline must be in the future");
+      return;
+    }
 
-      if (data.currentAmount > data.targetAmount) {
-        toast.error("Current amount cannot exceed target");
-        return;
-      }
+    if (data.currentAmount > data.targetAmount) {
+      toast.error("Current amount cannot exceed target");
+      return;
+    }
+    const status: Goal["status"] =
+      data.currentAmount >= data.targetAmount ? "completed" : "active";
 
-      const payload = {
-        name: data.name,
-        targetAmount: data.targetAmount,
-        currentAmount: data.currentAmount,
-        endDate: deadlineTs,
-        category: data.category,
-        description: data.description || undefined,
-      };
+    const payload = {
+      name: data.name,
+      targetAmount: data.targetAmount,
+      currentAmount: data.currentAmount,
+      endDate: deadlineTs,
+      category: data.category,
+      status,
+      description: data.description || undefined,
+    };
 
-      if (editingGoal) {
-        await apiFetch(`/goals/${editingGoal.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Goal updated");
-      } else {
-        await apiFetch("/goals", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Goal created");
-      }
-
-      onSaved();
-      onOpenChange(false);
-      form.reset();
-    } catch {
-      toast.error(
-        `Failed to ${editingGoal ? "update" : "create"} goal`
-      );
-    } finally {
-      setIsSubmitting(false);
+    if (editingGoal) {
+      updateGoal.mutate({
+        id: editingGoal.id,
+        ...payload,
+      });
+    } else {
+      createGoal.mutate(payload);
     }
   };
 
@@ -173,10 +223,7 @@ export function GoalDialog({
                 <FormItem>
                   <FormLabel>Goal Name</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g. Emergency Fund"
-                      {...field}
-                    />
+                    <Input placeholder="e.g. Emergency Fund" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -263,16 +310,19 @@ export function GoalDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={createGoal.isPending || updateGoal.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
+              <Button
+                type="submit"
+                disabled={createGoal.isPending || updateGoal.isPending}
+              >
+                {createGoal.isPending || updateGoal.isPending
                   ? "Saving..."
                   : editingGoal
-                  ? "Update"
-                  : "Create"}
+                    ? "Update"
+                    : "Create"}
               </Button>
             </div>
           </form>

@@ -27,10 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { Debt } from "@/types/debt";
 import type { Account } from "@/types/account";
@@ -72,37 +72,77 @@ export default function DebtDialog({
   debt,
   accounts,
 }: DebtDialogProps) {
+  const queryClient = useQueryClient();
+
   const createDebt = useMutation({
-    mutationFn: async (newDebt: Omit<Debt, "id">) => {
-      const response = await fetch("/debts", {
+    mutationFn: (payload: Omit<Debt, "id">) =>
+      apiFetch<Debt>("/debts", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newDebt),
-      });
-        if (!response.ok) {
-            throw new Error("Failed to create debt");
-        }
-        return response.json();
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (newDebt) => {
+      await queryClient.cancelQueries({ queryKey: ["debts"] });
+
+      const previousDebts = queryClient.getQueryData<Debt[]>(["debts"]) ?? [];
+
+      const optimisticDebt: Debt = {
+        id: `temp-${Date.now()}`,
+        ...newDebt,
+      };
+
+      queryClient.setQueryData<Debt[]>(
+        ["debts"],
+        [optimisticDebt, ...previousDebts],
+      );
+
+      return { previousDebts };
     },
-  });
-  const updateDebt = useMutation({
-    mutationFn: async (updatedDebt: Debt) => {
-      const response = await fetch(`/debts/${updatedDebt.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedDebt),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to update debt");
-      }
-      return response.json();
+
+    onError: (_err, _newDebt, context) => {
+      queryClient.setQueryData(["debts"], context?.previousDebts);
+      toast.error("Failed to create debt");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      toast.success("Debt created successfully");
+      form.reset();
+      onClose();
     },
   });
 
+  const updateDebt = useMutation({
+    mutationFn: (payload: Debt) =>
+      apiFetch<Debt>(`/debts/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (updatedDebt) => {
+      await queryClient.cancelQueries({ queryKey: ["debts"] });
+
+      const previousDebts = queryClient.getQueryData<Debt[]>(["debts"]) ?? [];
+
+      queryClient.setQueryData<Debt[]>(["debts"], (old = []) =>
+        old.map((d) => (d.id === updatedDebt.id ? updatedDebt : d)),
+      );
+
+      return { previousDebts };
+    },
+
+    onError: (_err, _updatedDebt, context) => {
+      queryClient.setQueryData(["debts"], context?.previousDebts);
+      toast.error("Failed to update debt");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      toast.success("Debt updated successfully");
+      form.reset();
+      onClose();
+    },
+  });
 
   const form = useForm<DebtFormData>({
     resolver: zodResolver(debtSchema),
@@ -123,47 +163,28 @@ export default function DebtDialog({
     },
   });
 
-const onSubmit = async (data: DebtFormData) => {
-    try {
-      const payload = {
-        name: data.name,
-        type: data.type,
-        creditor: data.creditor,
-        originalAmount: data.originalAmount
-          ? parseFloat(data.originalAmount)
+  const onSubmit = async (data: DebtFormData) => {
+    const payload = {
+      name: data.name,
+      type: data.type,
+      creditor: data.creditor,
+      originalAmount: parseFloat(data.originalAmount),
+      currentBalance: parseFloat(data.currentBalance),
+      interestRate: parseFloat(data.interestRate),
+      minimumPayment: parseFloat(data.minimumPayment),
+      dueDay: parseInt(data.dueDay),
+      startDate: new Date(data.startDate).getTime(),
+      accountId:
+        data.accountId && data.accountId !== "none"
+          ? data.accountId
           : undefined,
-        currentBalance: parseFloat(data.currentBalance),
-        interestRate: parseFloat(data.interestRate),
-        minimumPayment: parseFloat(data.minimumPayment),
-        dueDay: parseInt(data.dueDay),
-        startDate: data.startDate
-          ? new Date(data.startDate).getTime()
-          : undefined,
-        accountId:
-          data.accountId && data.accountId !== "none"
-            ? data.accountId
-            : undefined,
-        notes: data.notes || undefined,
-      };
+      notes: data.notes || undefined,
+    };
 
-      if (debt) {
-        await apiFetch(`/debts/${debt.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Debt updated successfully");
-      } else {
-        await apiFetch("/debts", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Debt created successfully");
-      }
-
-      form.reset();
-      onClose();
-    } catch {
-      toast.error("Failed to save debt");
+    if (debt) {
+      updateDebt.mutate({ id: debt.id, ...payload });
+    } else {
+      createDebt.mutate(payload);
     }
   };
 
@@ -212,11 +233,17 @@ const onSubmit = async (data: DebtFormData) => {
                       </FormControl>
                       <SelectContent className="glass">
                         <SelectItem value="Credit Card">Credit Card</SelectItem>
-                        <SelectItem value="Personal Loan">Personal Loan</SelectItem>
+                        <SelectItem value="Personal Loan">
+                          Personal Loan
+                        </SelectItem>
                         <SelectItem value="Mortgage">Mortgage</SelectItem>
                         <SelectItem value="Auto Loan">Auto Loan</SelectItem>
-                        <SelectItem value="Student Loan">Student Loan</SelectItem>
-                        <SelectItem value="Medical Debt">Medical Debt</SelectItem>
+                        <SelectItem value="Student Loan">
+                          Student Loan
+                        </SelectItem>
+                        <SelectItem value="Medical Debt">
+                          Medical Debt
+                        </SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -422,9 +449,7 @@ const onSubmit = async (data: DebtFormData) => {
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">
-                {debt ? "Update Debt" : "Add Debt"}
-              </Button>
+              <Button type="submit">{debt ? "Update Debt" : "Add Debt"}</Button>
             </DialogFooter>
           </form>
         </Form>

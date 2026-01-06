@@ -29,6 +29,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 /* ---------------- TYPES ---------------- */
 
@@ -56,6 +57,7 @@ export function TransactionDialog({
   const editingTransaction = editingId
     ? transactions.find((t) => t.id === editingId)
     : null;
+  const queryClient = useQueryClient();
 
   const [type, setType] = useState<"income" | "expense">("expense");
   const [categoryId, setCategoryId] = useState<string>("");
@@ -89,10 +91,79 @@ export function TransactionDialog({
       setAccountId("");
     }
   }, [editingTransaction, open]);
+  const createTransaction = useMutation({
+    mutationFn: (payload: Omit<Transaction, "id">) =>
+      apiFetch<Transaction>("/transactions", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (newTx) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+
+      const previous =
+        queryClient.getQueryData<Transaction[]>(["transactions"]) ?? [];
+
+      const optimisticTx: Transaction = {
+        id: `temp-${Date.now()}`,
+        ...newTx,
+      };
+
+      queryClient.setQueryData<Transaction[]>(
+        ["transactions"],
+        [optimisticTx, ...previous],
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _tx, ctx) => {
+      queryClient.setQueryData(["transactions"], ctx?.previous);
+      toast.error("Failed to create transaction");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Transaction created");
+      onOpenChange(false);
+    },
+  });
+
+  const updateTransaction = useMutation({
+    mutationFn: (payload: Transaction) =>
+      apiFetch<Transaction>(`/transactions/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (updatedTx) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+
+      const previous =
+        queryClient.getQueryData<Transaction[]>(["transactions"]) ?? [];
+
+      queryClient.setQueryData<Transaction[]>(["transactions"], (old = []) =>
+        old.map((t) => (t.id === updatedTx.id ? updatedTx : t)),
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _tx, ctx) => {
+      queryClient.setQueryData(["transactions"], ctx?.previous);
+      toast.error("Failed to update transaction");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Transaction updated");
+      onOpenChange(false);
+    },
+  });
 
   /* ---------------- SUBMIT ---------------- */
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!categoryId || !amount || !description) {
@@ -106,34 +177,22 @@ export function TransactionDialog({
       return;
     }
 
-    try {
-      const payload = {
-        type,
-        categoryId,
-        amount: amountNum,
-        description,
-        date: date ? format(date, "yyyy-MM-dd") : null,
-        accountId: accountId || null,
-      };
+    const payload = {
+      type,
+      categoryId,
+      amount: amountNum,
+      description,
+      date: date ? date.getTime() : Date.now(),
+      accountId: accountId || null,
+    };
 
-      if (editingId) {
-        await apiFetch(`/transactions/${editingId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Transaction updated");
-      } else {
-        await apiFetch("/transactions", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Transaction created");
-      }
-      onTransactionSaved();
-      onOpenChange(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to save transaction");
+    if (editingTransaction) {
+      updateTransaction.mutate({
+        id: editingTransaction.id,
+        ...payload,
+      });
+    } else {
+      createTransaction.mutate(payload);
     }
   };
 
@@ -253,9 +312,20 @@ export function TransactionDialog({
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button type="submit" className="flex-1">
-              {editingId ? "Update" : "Create"}
+            <Button
+              type="submit"
+              className="flex-1"
+              disabled={
+                createTransaction.isPending || updateTransaction.isPending
+              }
+            >
+              {createTransaction.isPending || updateTransaction.isPending
+                ? "Saving..."
+                : editingId
+                  ? "Update"
+                  : "Create"}
             </Button>
+
             <Button
               type="button"
               variant="secondary"

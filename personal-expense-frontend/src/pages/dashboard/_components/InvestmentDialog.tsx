@@ -20,7 +20,10 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import type { Investment } from "@/types/investment";
-/* ---------------- TYPES (REST) ---------------- */
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+/* ---------------- TYPES ---------------- */
+
 interface InvestmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +53,8 @@ export function InvestmentDialog({
   editingId,
   investments,
 }: InvestmentDialogProps) {
+  const queryClient = useQueryClient();
+
   const editingInvestment = editingId
     ? investments.find((i) => i.id === editingId)
     : null;
@@ -61,21 +66,21 @@ export function InvestmentDialog({
   const [purchasePrice, setPurchasePrice] = useState("");
   const [currentPrice, setCurrentPrice] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(
-    format(new Date(), "yyyy-MM-dd")
+    format(new Date(), "yyyy-MM-dd"),
   );
 
-  /* -------- Populate form when editing -------- */
+  /* ---------- Sync form ---------- */
 
   useEffect(() => {
     if (editingInvestment) {
       setType(editingInvestment.type as InvestmentType);
       setName(editingInvestment.name);
       setSymbol(editingInvestment.symbol || "");
-      setQuantity(editingInvestment.quantity.toString() || "0");
-      setPurchasePrice(editingInvestment.purchasePrice.toString() || "0");
-      setCurrentPrice(editingInvestment.currentPrice.toString() || "0");
+      setQuantity(editingInvestment.quantity.toString());
+      setPurchasePrice(editingInvestment.purchasePrice.toString());
+      setCurrentPrice(editingInvestment.currentPrice.toString());
       setPurchaseDate(
-        format(editingInvestment.purchaseDate, "yyyy-MM-dd")
+        format(editingInvestment.purchaseDate, "yyyy-MM-dd"),
       );
     } else {
       resetForm();
@@ -92,9 +97,83 @@ export function InvestmentDialog({
     setPurchaseDate(format(new Date(), "yyyy-MM-dd"));
   };
 
-  /* ---------------- SUBMIT ---------------- */
+  /* ---------- Mutations ---------- */
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const createInvestment = useMutation({
+    mutationFn: (payload: Omit<Investment, "id">) =>
+      apiFetch<Investment>("/investments", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (newInvestment) => {
+      await queryClient.cancelQueries({ queryKey: ["investments"] });
+
+      const previous =
+        queryClient.getQueryData<Investment[]>(["investments"]) ?? [];
+
+      const optimistic: Investment = {
+        id: `temp-${Date.now()}`,
+        ...newInvestment,
+      };
+
+      queryClient.setQueryData<Investment[]>(["investments"], [
+        optimistic,
+        ...previous,
+      ]);
+
+      return { previous };
+    },
+
+    onError: (_err, _payload, ctx) => {
+      queryClient.setQueryData(["investments"], ctx?.previous);
+      toast.error("Failed to add investment");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investments"] });
+      toast.success("Investment added");
+      resetForm();
+      onOpenChange(false);
+    },
+  });
+
+  const updateInvestment = useMutation({
+    mutationFn: (payload: Investment) =>
+      apiFetch<Investment>(`/investments/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (updated) => {
+      await queryClient.cancelQueries({ queryKey: ["investments"] });
+
+      const previous =
+        queryClient.getQueryData<Investment[]>(["investments"]) ?? [];
+
+      queryClient.setQueryData<Investment[]>(["investments"], (old = []) =>
+        old.map((i) => (i.id === updated.id ? updated : i)),
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _payload, ctx) => {
+      queryClient.setQueryData(["investments"], ctx?.previous);
+      toast.error("Failed to update investment");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investments"] });
+      toast.success("Investment updated");
+      resetForm();
+      onOpenChange(false);
+    },
+  });
+
+  /* ---------- Submit ---------- */
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !quantity || !purchasePrice || !currentPrice) {
@@ -112,29 +191,14 @@ export function InvestmentDialog({
       purchaseDate: new Date(purchaseDate).getTime(),
     };
 
-    try {
-      if (editingId) {
-        await apiFetch(`/investments/${editingId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Investment updated");
-      } else {
-        await apiFetch("/investments", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        toast.success("Investment added");
-      }
-
-      onOpenChange(false);
-      resetForm();
-    } catch {
-      toast.error("Failed to save investment");
+    if (editingInvestment) {
+      updateInvestment.mutate({ id: editingInvestment.id, ...payload });
+    } else {
+      createInvestment.mutate(payload);
     }
   };
 
-  /* ---------------- UI ---------------- */
+  /* ---------- UI ---------- */
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,13 +215,11 @@ export function InvestmentDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Type / Symbol */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Type *</Label>
-              <Select
-                value={type}
-                onValueChange={(v) => setType(v as InvestmentType)}
-              >
+              <Select value={type} onValueChange={(v) => setType(v as InvestmentType)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -181,6 +243,7 @@ export function InvestmentDialog({
             </div>
           </div>
 
+          {/* Name */}
           <div className="space-y-2">
             <Label>Name *</Label>
             <Input
@@ -190,6 +253,7 @@ export function InvestmentDialog({
             />
           </div>
 
+          {/* Quantity / Date */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Quantity *</Label>
@@ -211,6 +275,7 @@ export function InvestmentDialog({
             </div>
           </div>
 
+          {/* Prices */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Purchase Price *</Label>
@@ -233,15 +298,12 @@ export function InvestmentDialog({
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex gap-3 pt-4">
             <Button type="submit" className="flex-1">
               {editingId ? "Update" : "Add"}
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
           </div>

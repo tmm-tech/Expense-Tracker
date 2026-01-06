@@ -70,30 +70,72 @@ export default function AccountDialog({
 
   const createAccount = useMutation({
     mutationFn: (payload: Omit<Account, "id">) =>
-      apiFetch("/accounts", {
+      apiFetch<Account>("/accounts", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
+
+    onMutate: async (newAccount) => {
+      await queryClient.cancelQueries({ queryKey: ["accounts"] });
+
+      const previousAccounts =
+        queryClient.getQueryData<Account[]>(["accounts"]) ?? [];
+
+      const optimisticAccount: Account = {
+        id: `temp-${Date.now()}`,
+        ...newAccount,
+      };
+
+      queryClient.setQueryData<Account[]>(
+        ["accounts"],
+        [optimisticAccount, ...previousAccounts],
+      );
+
+      return { previousAccounts };
+    },
+
+    onError: (_err, _newAccount, context) => {
+      queryClient.setQueryData(["accounts"], context?.previousAccounts);
+      toast.error("Failed to create account");
+    },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Account created successfully");
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to create account"),
   });
 
   const updateAccount = useMutation({
     mutationFn: (payload: Account) =>
-      apiFetch(`/accounts/${payload.id}`, {
+      apiFetch<Account>(`/accounts/${payload.id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
+
+    onMutate: async (updatedAccount) => {
+      await queryClient.cancelQueries({ queryKey: ["accounts"] });
+
+      const previousAccounts =
+        queryClient.getQueryData<Account[]>(["accounts"]) ?? [];
+
+      queryClient.setQueryData<Account[]>(["accounts"], (old = []) =>
+        old.map((a) => (a.id === updatedAccount.id ? updatedAccount : a)),
+      );
+
+      return { previousAccounts };
+    },
+
+    onError: (_err, _updatedAccount, context) => {
+      queryClient.setQueryData(["accounts"], context?.previousAccounts);
+      toast.error("Failed to update account");
+    },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Account updated successfully");
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to update account"),
   });
 
   /* ---------- Sync form ---------- */
@@ -216,7 +258,11 @@ export default function AccountDialog({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">

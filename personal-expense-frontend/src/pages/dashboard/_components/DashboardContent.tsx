@@ -842,9 +842,6 @@ export function DashboardContent() {
         onOpenChange={handleCloseGoalDialog}
         editingId={editingGoalId}
         goals={goals}
-        onSaved={function (): void {
-          throw new Error("Function not implemented.");
-        }}
       />
 
       {/* Category Dialog */}
@@ -869,6 +866,7 @@ export function DashboardContent() {
         onClose={handleCloseBillDialog}
         bill={editingBillId ? bills.find((b) => b.id === editingBillId) : null}
         accounts={accounts}
+        categories={categories}
       />
 
       {/* Debt Dialog */}

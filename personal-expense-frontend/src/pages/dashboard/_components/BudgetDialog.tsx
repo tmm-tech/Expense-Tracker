@@ -62,23 +62,71 @@ export default function BudgetDialog({
 
   const createBudget = useMutation({
     mutationFn: (input: CreateBudgetInput) =>
-      apiFetch("/budgets", {
+      apiFetch<UpdateBudgetInput>("/budgets", {
         method: "POST",
         body: JSON.stringify(input),
       }),
+
+    onMutate: async (newBudget) => {
+      await queryClient.cancelQueries({ queryKey: ["budgets"] });
+
+      const previousBudgets =
+        queryClient.getQueryData<UpdateBudgetInput[]>(["budgets"]) ?? [];
+
+      const optimisticBudget: UpdateBudgetInput = {
+        id: `temp-${Date.now()}`,
+        ...newBudget,
+      };
+
+      queryClient.setQueryData<UpdateBudgetInput[]>(
+        ["budgets"],
+        [optimisticBudget, ...previousBudgets],
+      );
+
+      return { previousBudgets };
+    },
+
+    onError: (_err, _newBudget, context) => {
+      queryClient.setQueryData(["budgets"], context?.previousBudgets);
+      toast.error("Failed to create budget");
+    },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      toast.success("Budget created");
+      onOpenChange(false);
     },
   });
 
   const updateBudget = useMutation({
     mutationFn: ({ id, ...payload }: UpdateBudgetInput) =>
-      apiFetch(`/budgets/${id}`, {
+      apiFetch<UpdateBudgetInput>(`/budgets/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
+
+    onMutate: async (updatedBudget) => {
+      await queryClient.cancelQueries({ queryKey: ["budgets"] });
+
+      const previousBudgets =
+        queryClient.getQueryData<UpdateBudgetInput[]>(["budgets"]) ?? [];
+
+      queryClient.setQueryData<UpdateBudgetInput[]>(["budgets"], (old = []) =>
+        old.map((b) => (b.id === updatedBudget.id ? updatedBudget : b)),
+      );
+
+      return { previousBudgets };
+    },
+
+    onError: (_err, _updatedBudget, context) => {
+      queryClient.setQueryData(["budgets"], context?.previousBudgets);
+      toast.error("Failed to update budget");
+    },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      toast.success("Budget updated");
+      onOpenChange(false);
     },
   });
 
@@ -99,7 +147,7 @@ export default function BudgetDialog({
   -------------------------- */
   useEffect(() => {
     if (editingBudget) {
-      setCategory(editingBudget.categoryId?.toString()?? "");
+      setCategory(editingBudget.categoryId?.toString() ?? "");
       setLimit(editingBudget.limit?.toString() ?? "");
       setPeriod(editingBudget.period ?? "monthly");
       setStartDate(format(editingBudget.startDate ?? Date.now(), "yyyy-MM-dd"));
@@ -114,7 +162,7 @@ export default function BudgetDialog({
   /* -------------------------
      Submit
   -------------------------- */
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!category || !limit) {
@@ -145,9 +193,9 @@ export default function BudgetDialog({
               ),
             ).getTime();
 
-    const basePayload: CreateBudgetInput = {
+    const payload: CreateBudgetInput = {
       name: `${category} Budget`,
-      amount: limitNum, // or total allowed amount
+      amount: limitNum,
       limit: limitNum,
       categoryId: category,
       period,
@@ -155,31 +203,13 @@ export default function BudgetDialog({
       endDate: endDateTs,
     };
 
-    try {
-      try {
-        if (editingBudget) {
-          const updatePayload: UpdateBudgetInput = {
-            id: editingBudget.id,
-            ...basePayload,
-          };
-
-          await updateBudget.mutateAsync(updatePayload);
-          toast.success("Budget updated");
-        } else {
-          const createPayload: CreateBudgetInput = basePayload;
-
-          await createBudget.mutateAsync(createPayload);
-          toast.success("Budget created");
-        }
-
-        onOpenChange(false);
-      } catch {
-        toast.error("Failed to save budget");
-      }
-
-      onOpenChange(false);
-    } catch {
-      toast.error("Failed to save budget");
+    if (editingBudget) {
+      updateBudget.mutate({
+        id: editingBudget.id,
+        ...payload,
+      });
+    } else {
+      createBudget.mutate(payload);
     }
   };
 

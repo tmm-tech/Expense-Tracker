@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Goal } from "@/types/goal";
+import { apiFetch } from "@/lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 /* =========================
    Schema
@@ -48,53 +48,66 @@ export function GoalProgressDialog({
   open,
   onOpenChange,
 }: GoalProgressDialogProps) {
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const goal =
+    queryClient
+      .getQueryData<Goal[]>(["goals"])
+      ?.find((g) => g.id === goalId) ?? null;
 
   const form = useForm<ProgressFormData>({
     resolver: zodResolver(progressSchema),
     defaultValues: { amount: 0 },
   });
 
-  /* -------------------------
-     Load goal
-  -------------------------- */
-  useEffect(() => {
-    if (!goalId || !open) return;
-
-    apiFetch(`/goals/${goalId}`)
-      .then((res) => setGoal(res as Goal))
-      .catch(() => {
-        toast.error("Failed to load goal");
-        onOpenChange(false);
-      });
-  }, [goalId, open, onOpenChange]);
-
-  /* -------------------------
-     Submit
-  -------------------------- */
-  const onSubmit = async (data: ProgressFormData) => {
-    if (!goalId) return;
-
-    setIsSubmitting(true);
-    try {
-      await apiFetch(`/goals/${goalId}/progress`, {
+  const addProgress = useMutation({
+    mutationFn: (amount: number) =>
+      apiFetch(`/goals/${goalId}/progress`, {
         method: "POST",
-        body: JSON.stringify({ amount: data.amount }),
-      });
+        body: JSON.stringify({ amount }),
+      }),
 
+    onMutate: async (amount) => {
+      await queryClient.cancelQueries({ queryKey: ["goals"] });
+
+      const previous =
+        queryClient.getQueryData<Goal[]>(["goals"]) ?? [];
+
+      queryClient.setQueryData<Goal[]>(["goals"], (old = []) =>
+        old.map((g) => {
+          if (g.id !== goalId) return g;
+
+          const newAmount = g.currentAmount + amount;
+          const status: Goal["status"] =
+            newAmount >= g.targetAmount ? "completed" : "active";
+
+          return {
+            ...g,
+            currentAmount: newAmount,
+            status,
+          };
+        }),
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _amount, ctx) => {
+      queryClient.setQueryData(["goals"], ctx?.previous);
+      toast.error("Failed to update progress");
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
       toast.success("Progress added");
-
-      const updatedGoal = await apiFetch(`/goals/${goalId}`);
-      setGoal(updatedGoal as Goal);
-
       form.reset();
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to update progress");
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+  });
+
+  const onSubmit = (data: ProgressFormData) => {
+    if (!goalId) return;
+    addProgress.mutate(data.amount);
   };
 
   if (!goal) return null;
@@ -133,12 +146,7 @@ export function GoalProgressDialog({
                 <FormItem>
                   <FormLabel>Amount (KES)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      autoFocus
-                      {...field}
-                    />
+                    <Input type="number" step="0.01" autoFocus {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -150,12 +158,12 @@ export function GoalProgressDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={addProgress.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Progress"}
+              <Button type="submit" disabled={addProgress.isPending}>
+                {addProgress.isPending ? "Adding..." : "Add Progress"}
               </Button>
             </div>
           </form>
