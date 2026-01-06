@@ -21,7 +21,6 @@ interface TransactionListProps {
   onEdit: (id: string) => void;
   accounts: Account[];
 }
-
 /* ---------------- COMPONENT ---------------- */
 
 export function TransactionList({
@@ -100,7 +99,7 @@ export function TransactionList({
                     </Badge>
 
                     <span className="text-sm text-muted-foreground">
-                      {transaction.category}
+                      {transaction.categoryId}
                     </span>
 
                     {account && (

@@ -20,11 +20,14 @@ import {
 } from "date-fns";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
+import type { Category } from "@/types/category";
+
 /* ---------------- TYPES ---------------- */
 
 interface TransactionFiltersProps {
   transactions: Transaction[];
   accounts: Account[];
+  categories: Category[];
   onFilteredTransactionsChange: (filtered: Transaction[]) => void;
 }
 
@@ -50,15 +53,6 @@ export default function TransactionFilters({
   const [maxAmount, setMaxAmount] = useState("");
 
   /* --------- Derived values --------- */
-
-const categories = useMemo(
-  () =>
-    Array.from(
-      new Set(transactions.map((t) => t.category).filter(Boolean)),
-    ).sort(),
-  [transactions],
-);
-
 
   useEffect(() => {
     let filtered = [...transactions];
@@ -110,7 +104,10 @@ const categories = useMemo(
     }
 
     if (selectedCategory !== "all") {
-      filtered = filtered.filter((t) => t.category === selectedCategory);
+      filtered =
+        selectedCategory === "none"
+          ? filtered.filter((t) => !t.categoryId)
+          : filtered.filter((t) => t.categoryId === selectedCategory);
     }
 
     if (selectedAccount !== "all") {
@@ -272,9 +269,10 @@ const categories = useMemo(
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+              <SelectItem value="none">No Category</SelectItem>
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
                 </SelectItem>
               ))}
             </SelectContent>

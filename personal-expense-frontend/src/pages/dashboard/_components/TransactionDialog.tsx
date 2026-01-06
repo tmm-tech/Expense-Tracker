@@ -39,6 +39,7 @@ interface TransactionDialogProps {
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  onTransactionSaved: () => void;
 }
 
 /* ---------------- COMPONENT ---------------- */
@@ -50,6 +51,7 @@ export function TransactionDialog({
   transactions,
   accounts,
   categories,
+  onTransactionSaved,
 }: TransactionDialogProps) {
   const editingTransaction = editingId
     ? transactions.find((t) => t.id === editingId)
@@ -127,7 +129,7 @@ export function TransactionDialog({
         });
         toast.success("Transaction created");
       }
-
+      onTransactionSaved();
       onOpenChange(false);
     } catch (error) {
       console.error(error);

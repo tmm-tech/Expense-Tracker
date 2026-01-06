@@ -286,7 +286,7 @@ export function DashboardContent() {
     (sum, account) => sum + account.balance,
     0,
   );
-  const balance = totalBalance
+  const balance = totalBalance;
 
   const handleEditTransaction = (id: string) => {
     setEditingTransactionId(id);
@@ -710,6 +710,7 @@ export function DashboardContent() {
             <TransactionFilters
               transactions={transactions}
               accounts={accounts}
+              categories={categories}
               onFilteredTransactionsChange={setFilteredTransactions}
             />
             <TransactionList
@@ -808,6 +809,9 @@ export function DashboardContent() {
         transactions={transactions}
         accounts={accounts}
         categories={categories}
+        onTransactionSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        }}
       />
 
       {/* Budget Dialog */}
