@@ -34,7 +34,7 @@ import type { Transaction } from "@/types/transaction";
 import type { Budget } from "@/types/budget";
 import type { Investment } from "@/types/investment";
 import type { Account } from "@/types/account";
-
+import type { Category } from "@/types/category";
 /* ---------------- COLORS ---------------- */
 
 const COLORS = {
@@ -66,7 +66,10 @@ export function InsightsView() {
     queryKey: ["investments"],
     queryFn: () => apiFetch<Investment[]>("/investments"),
   });
-
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => apiFetch<Category[]>("/categories"),
+  });
   const accountsQuery = useQuery<Account[]>({
     queryKey: ["accounts"],
     queryFn: () => apiFetch<Account[]>(`/accounts`),
@@ -125,19 +128,25 @@ export function InsightsView() {
   /* ---------- Charts ---------- */
 
   // Spending by category
-  const categoryChartData = Object.entries(
-    transactions
-      .filter((t) => t.type === "expense")
-      .reduce<Record<string, number>>((acc, t) => {
-        if (t.categoryId) {
-          acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
-        }
-        return acc;
-      }, {}),
-  )
-    .map(([name, value]) => ({ name, value }))
+  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+
+  const categoryTotals = transactions
+    .filter((t) => t.type === "expense" && t.categoryId)
+    .reduce<Record<string, number>>((acc, t) => {
+      acc[t.categoryId!] = (acc[t.categoryId!] || 0) + t.amount;
+      return acc;
+    }, {});
+
+  const categoryChartData = Object.entries(categoryTotals)
+    .map(([categoryId, value]) => ({
+      name: categoryMap[categoryId] ?? "Unknown",
+      value,
+    }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
+
+  const getDateTs = (date: string | number) =>
+    typeof date === "string" ? new Date(date).getTime() : date;
 
   // Income vs Expenses over last 6 months
   const last6Months = Array.from({ length: 6 }, (_, i) => {
@@ -149,22 +158,19 @@ export function InsightsView() {
     };
   });
   const monthlyData = last6Months.map((month) => {
-    const monthTransactions = transactions.filter(
-      (t) => t.date >= month.startDate && t.date <= month.endDate,
-    );
-
-    const income = monthTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expenses = monthTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
+    const monthTransactions = transactions.filter((t) => {
+      const ts = getDateTs(t.date);
+      return ts >= month.startDate && ts <= month.endDate;
+    });
 
     return {
       month: month.month,
-      Income: income,
-      Expenses: expenses,
+      Income: monthTransactions
+        .filter((t) => t.type === "income")
+        .reduce((s, t) => s + t.amount, 0),
+      Expenses: monthTransactions
+        .filter((t) => t.type === "expense")
+        .reduce((s, t) => s + t.amount, 0),
     };
   });
 
@@ -193,7 +199,7 @@ export function InsightsView() {
         (t) =>
           t.type === "expense" &&
           t.categoryId === budget.categoryId &&
-          t.date >= budget.startDate,
+          getDateTs(t.date) >= budget.startDate,
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
@@ -232,7 +238,13 @@ export function InsightsView() {
       </div>
 
       {/* Charts */}
-    {/* Charts Row 1 */}
+      {monthlyData.some((d) => d.Income > 0 || d.Expenses > 0) && (
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={monthlyData}>...</LineChart>
+        </ResponsiveContainer>
+      )}
+
+      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Income vs Expenses */}
         <Card className="glass-card">
@@ -244,16 +256,48 @@ export function InsightsView() {
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyData}>
                 <defs>
-                  <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.chart2} stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor={COLORS.chart2} stopOpacity={0}/>
+                  <linearGradient
+                    id="incomeGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor={COLORS.chart2}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={COLORS.chart2}
+                      stopOpacity={0}
+                    />
                   </linearGradient>
-                  <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.chart5} stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor={COLORS.chart5} stopOpacity={0}/>
+                  <linearGradient
+                    id="expenseGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor={COLORS.chart5}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={COLORS.chart5}
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  opacity={0.3}
+                />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip
@@ -301,18 +345,29 @@ export function InsightsView() {
                   cx="50%"
                   cy="50%"
                   labelLine={true}
-                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-                    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+                  label={({
+                    cx,
+                    cy,
+                    midAngle,
+                    innerRadius,
+                    outerRadius,
+                    percent,
+                    name,
+                  }) => {
+                    const radius =
+                      innerRadius + (outerRadius - innerRadius) * 0.5;
+                    const x =
+                      cx + radius * Math.cos((-midAngle * Math.PI) / 180);
+                    const y =
+                      cy + radius * Math.sin((-midAngle * Math.PI) / 180);
                     return (
                       <text
                         x={x}
                         y={y}
                         fill="white"
-                        textAnchor={x > cx ? 'start' : 'end'}
+                        textAnchor={x > cx ? "start" : "end"}
                         dominantBaseline="central"
-                        style={{ fontWeight: 'bold', fontSize: '12px' }}
+                        style={{ fontWeight: "bold", fontSize: "12px" }}
                       >
                         {`${(percent * 100).toFixed(0)}%`}
                       </text>
@@ -327,7 +382,16 @@ export function InsightsView() {
                   {categoryChartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={[COLORS.chart1, COLORS.chart2, COLORS.chart3, COLORS.chart4, COLORS.chart5, COLORS.accent][index % 6]}
+                      fill={
+                        [
+                          COLORS.chart1,
+                          COLORS.chart2,
+                          COLORS.chart3,
+                          COLORS.chart4,
+                          COLORS.chart5,
+                          COLORS.accent,
+                        ][index % 6]
+                      }
                     />
                   ))}
                 </Pie>
@@ -338,8 +402,14 @@ export function InsightsView() {
                     borderRadius: "8px",
                     color: "hsl(var(--foreground))",
                   }}
-                  formatter={(value: number) => [`KES ${value.toFixed(2)}`, "Amount"]}
-                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
+                  formatter={(value: number) => [
+                    `KES ${value.toFixed(2)}`,
+                    "Amount",
+                  ]}
+                  labelStyle={{
+                    color: "hsl(var(--foreground))",
+                    fontWeight: "bold",
+                  }}
                 />
                 <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
               </PieChart>
@@ -360,7 +430,11 @@ export function InsightsView() {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={budgetUtilization}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                    opacity={0.3}
+                  />
                   <XAxis
                     dataKey="category"
                     stroke="hsl(var(--muted-foreground))"
@@ -377,11 +451,24 @@ export function InsightsView() {
                       color: "hsl(var(--foreground))",
                     }}
                     formatter={(value: number) => `KES ${value.toFixed(2)}`}
-                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
+                    labelStyle={{
+                      color: "hsl(var(--foreground))",
+                      fontWeight: "bold",
+                    }}
                   />
                   <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
-                  <Bar dataKey="used" fill={COLORS.chart5} name="Spent" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="limit" fill={COLORS.chart1} name="Budget" radius={[8, 8, 0, 0]} />
+                  <Bar
+                    dataKey="used"
+                    fill={COLORS.chart5}
+                    name="Spent"
+                    radius={[8, 8, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="limit"
+                    fill={COLORS.chart1}
+                    name="Budget"
+                    radius={[8, 8, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -403,18 +490,29 @@ export function InsightsView() {
                     cx="50%"
                     cy="50%"
                     labelLine={true}
-                    label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-                      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                      const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-                      const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+                    label={({
+                      cx,
+                      cy,
+                      midAngle,
+                      innerRadius,
+                      outerRadius,
+                      percent,
+                      name,
+                    }) => {
+                      const radius =
+                        innerRadius + (outerRadius - innerRadius) * 0.5;
+                      const x =
+                        cx + radius * Math.cos((-midAngle * Math.PI) / 180);
+                      const y =
+                        cy + radius * Math.sin((-midAngle * Math.PI) / 180);
                       return (
                         <text
                           x={x}
                           y={y}
                           fill="white"
-                          textAnchor={x > cx ? 'start' : 'end'}
+                          textAnchor={x > cx ? "start" : "end"}
                           dominantBaseline="central"
-                          style={{ fontWeight: 'bold', fontSize: '12px' }}
+                          style={{ fontWeight: "bold", fontSize: "12px" }}
                         >
                           {`${(percent * 100).toFixed(0)}%`}
                         </text>
@@ -429,7 +527,17 @@ export function InsightsView() {
                     {investmentChartData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={[COLORS.chart3, COLORS.chart1, COLORS.chart2, COLORS.chart4, COLORS.chart5, COLORS.primary, COLORS.accent][index % 7]}
+                        fill={
+                          [
+                            COLORS.chart3,
+                            COLORS.chart1,
+                            COLORS.chart2,
+                            COLORS.chart4,
+                            COLORS.chart5,
+                            COLORS.primary,
+                            COLORS.accent,
+                          ][index % 7]
+                        }
                       />
                     ))}
                   </Pie>
@@ -440,8 +548,14 @@ export function InsightsView() {
                       borderRadius: "8px",
                       color: "hsl(var(--foreground))",
                     }}
-                    formatter={(value: number) => [`KES ${value.toFixed(2)}`, "Value"]}
-                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
+                    formatter={(value: number) => [
+                      `KES ${value.toFixed(2)}`,
+                      "Value",
+                    ]}
+                    labelStyle={{
+                      color: "hsl(var(--foreground))",
+                      fontWeight: "bold",
+                    }}
                   />
                   <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
                 </PieChart>
@@ -461,26 +575,36 @@ export function InsightsView() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Total Income</p>
-              <p className="text-2xl font-bold text-accent">KES {totalIncome.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-accent">
+                KES {totalIncome.toFixed(2)}
+              </p>
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-2xl font-bold text-destructive">KES {totalExpenses.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-destructive">
+                KES {totalExpenses.toFixed(2)}
+              </p>
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Total Invested</p>
-              <p className="text-2xl font-bold">KES {totalInvested.toFixed(2)}</p>
+              <p className="text-2xl font-bold">
+                KES {totalInvested.toFixed(2)}
+              </p>
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Active Budgets</p>
               <p className="text-2xl font-bold">{budgets.length}</p>
             </div>
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Total Transactions</p>
+              <p className="text-sm text-muted-foreground">
+                Total Transactions
+              </p>
               <p className="text-2xl font-bold">{transactions.length}</p>
             </div>
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Investment Holdings</p>
+              <p className="text-sm text-muted-foreground">
+                Investment Holdings
+              </p>
               <p className="text-2xl font-bold">{investments.length}</p>
             </div>
           </div>
