@@ -160,6 +160,7 @@ model Debt {
   id             String   @id @default(uuid())
   userId         String
   name           String
+  type           String
   creditor       String
   originalAmount Float
   currentBalance Float
@@ -167,6 +168,7 @@ model Debt {
   minimumPayment Float
   dueDay         Int
   startDate      DateTime
+  notes          String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
