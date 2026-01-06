@@ -253,81 +253,76 @@ export function InsightsView() {
             <CardDescription>Last 6 months trend</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyData}>
-                <defs>
-                  <linearGradient
-                    id="incomeGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor={COLORS.chart2}
-                      stopOpacity={0.55}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor={COLORS.chart2}
-                      stopOpacity={0.08}
-                    />
-                  </linearGradient>
-                  <linearGradient
-                    id="expenseGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor={COLORS.chart5}
-                      stopOpacity={0.55}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor={COLORS.chart5}
-                      stopOpacity={0.08}
-                    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="hsl(var(--border))"
-                  opacity={0.3}
-                />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value: number) => `KES ${value.toFixed(2)}`}
-                  labelStyle={{ color: "hsl(var(--foreground))" }}
-                />
-                <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
-                <Line
-                  type="monotone"
-                  dataKey="Income"
-                  stroke={COLORS.chart2}
-                  strokeWidth={3}
-                  dot={{ fill: COLORS.chart2, r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="Expenses"
-                  stroke={COLORS.chart5}
-                  strokeWidth={3}
-                  dot={{ fill: COLORS.chart5, r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+<ResponsiveContainer width="100%" height={300}>
+  <LineChart data={monthlyData}>
+    <defs>
+      <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="5%" stopColor={COLORS.chart2} stopOpacity={0.6} />
+        <stop offset="95%" stopColor={COLORS.chart2} stopOpacity={0.05} />
+      </linearGradient>
+
+      <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="5%" stopColor={COLORS.chart5} stopOpacity={0.6} />
+        <stop offset="95%" stopColor={COLORS.chart5} stopOpacity={0.05} />
+      </linearGradient>
+
+      {/* subtle glow */}
+      <filter id="lineGlow">
+        <feDropShadow
+          dx="0"
+          dy="0"
+          stdDeviation="6"
+          floodColor="white"
+          floodOpacity="0.2"
+        />
+      </filter>
+    </defs>
+
+    <CartesianGrid stroke="hsl(var(--border))" opacity={0.25} />
+    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+    <YAxis stroke="hsl(var(--muted-foreground))" />
+
+    <Tooltip
+      contentStyle={{
+        backgroundColor: "hsl(var(--card))",
+        border: "1px solid hsl(var(--border))",
+        borderRadius: "8px",
+      }}
+      formatter={(v: number) => `KES ${v.toFixed(2)}`}
+    />
+
+    <Legend
+      formatter={(value) => (
+        <span style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
+          {value}
+        </span>
+      )}
+    />
+
+    {/* INCOME */}
+    <Line
+      type="monotone"
+      dataKey="Income"
+      stroke={COLORS.chart2}
+      strokeWidth={3}
+      dot={{ r: 4, fill: COLORS.chart2 }}
+      activeDot={{ r: 7 }}
+      filter="url(#lineGlow)"
+    />
+
+    {/* EXPENSES */}
+    <Line
+      type="monotone"
+      dataKey="Expenses"
+      stroke={COLORS.chart5}
+      strokeWidth={3}
+      dot={{ r: 4, fill: COLORS.chart5 }}
+      activeDot={{ r: 7 }}
+      filter="url(#lineGlow)"
+    />
+  </LineChart>
+</ResponsiveContainer>
+
           </CardContent>
         </Card>
 
@@ -338,82 +333,84 @@ export function InsightsView() {
             <CardDescription>Top expense categories</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={true}
-                  label={({
-                    cx,
-                    cy,
-                    midAngle,
-                    innerRadius,
-                    outerRadius,
-                    percent,
-                    name,
-                  }) => {
-                    const radius =
-                      innerRadius + (outerRadius - innerRadius) * 0.5;
-                    const x =
-                      cx + radius * Math.cos((-midAngle * Math.PI) / 180);
-                    const y =
-                      cy + radius * Math.sin((-midAngle * Math.PI) / 180);
-                    return (
-                      <text
-                        x={x}
-                        y={y}
-                        fill="hsl(var(--foreground))"
-                        textAnchor={x > cx ? "start" : "end"}
-                        dominantBaseline="central"
-                        style={{ fontWeight: "bold", fontSize: "12px" }}
-                      >
-                        {`${(percent * 100).toFixed(0)}%`}
-                      </text>
-                    );
-                  }}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  strokeWidth={2}
-                  stroke="hsl(var(--background))"
-                >
-                  {categoryChartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={
-                        [
-                          COLORS.chart1,
-                          COLORS.chart2,
-                          COLORS.chart3,
-                          COLORS.chart4,
-                          COLORS.chart5,
-                          COLORS.accent,
-                        ][index % 6]
-                      }
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    color: "hsl(var(--foreground))",
-                  }}
-                  formatter={(value: number) => [
-                    `KES ${value.toFixed(2)}`,
-                    "Amount",
-                  ]}
-                  labelStyle={{
-                    color: "hsl(var(--foreground))",
-                    fontWeight: "bold",
-                  }}
-                />
-                <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
-              </PieChart>
-            </ResponsiveContainer>
+<ResponsiveContainer width="100%" height={300}>
+  <PieChart>
+    <defs>
+      <filter id="pieGlow">
+        <feDropShadow
+          dx="0"
+          dy="0"
+          stdDeviation="8"
+          floodColor="white"
+          floodOpacity="0.18"
+        />
+      </filter>
+    </defs>
+
+    <Pie
+      data={categoryChartData}
+      cx="50%"
+      cy="50%"
+      outerRadius={110}
+      dataKey="value"
+      stroke="transparent"
+      strokeWidth={0}
+      filter="url(#pieGlow)"
+      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+        const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+        const x = cx + r * Math.cos((-midAngle * Math.PI) / 180);
+        const y = cy + r * Math.sin((-midAngle * Math.PI) / 180);
+
+        return (
+          <text
+            x={x}
+            y={y}
+            fill="hsl(var(--foreground))"
+            textAnchor={x > cx ? "start" : "end"}
+            dominantBaseline="central"
+            style={{ fontWeight: 600, fontSize: 12 }}
+          >
+            {`${(percent * 100).toFixed(0)}%`}
+          </text>
+        );
+      }}
+    >
+      {categoryChartData.map((_, index) => (
+        <Cell
+          key={index}
+          fill={
+            [
+              COLORS.chart1,
+              COLORS.chart2,
+              COLORS.chart3,
+              COLORS.chart4,
+              COLORS.chart5,
+              COLORS.accent,
+            ][index % 6]
+          }
+        />
+      ))}
+    </Pie>
+
+    <Tooltip
+      contentStyle={{
+        backgroundColor: "hsl(var(--card))",
+        border: "1px solid hsl(var(--border))",
+        borderRadius: "8px",
+      }}
+      formatter={(v: number) => `KES ${v.toFixed(2)}`}
+    />
+
+    <Legend
+      formatter={(value) => (
+        <span style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
+          {value}
+        </span>
+      )}
+    />
+  </PieChart>
+</ResponsiveContainer>
+
           </CardContent>
         </Card>
       </div>
