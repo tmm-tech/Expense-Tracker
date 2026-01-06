@@ -129,7 +129,9 @@ export function InsightsView() {
     transactions
       .filter((t) => t.type === "expense")
       .reduce<Record<string, number>>((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        if (t.categoryId) {
+          acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
+        }
         return acc;
       }, {}),
   )
@@ -137,53 +139,72 @@ export function InsightsView() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  // Last 6 months
-  const monthlyData = Array.from({ length: 6 }, (_, i) => {
+  // Income vs Expenses over last 6 months
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
     const date = subMonths(new Date(), 5 - i);
-    const start = startOfMonth(date).getTime();
-    const end = endOfMonth(date).getTime();
-
-    const monthTx = transactions.filter(
-      (t) => t.date >= start && t.date <= end,
-    );
-
     return {
       month: format(date, "MMM"),
-      Income: monthTx
-        .filter((t) => t.type === "income")
-        .reduce((s, t) => s + t.amount, 0),
-      Expenses: monthTx
-        .filter((t) => t.type === "expense")
-        .reduce((s, t) => s + t.amount, 0),
+      startDate: startOfMonth(date).getTime(),
+      endDate: endOfMonth(date).getTime(),
+    };
+  });
+  const monthlyData = last6Months.map((month) => {
+    const monthTransactions = transactions.filter(
+      (t) => t.date >= month.startDate && t.date <= month.endDate,
+    );
+
+    const income = monthTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const expenses = monthTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+      month: month.month,
+      Income: income,
+      Expenses: expenses,
     };
   });
 
-  // Investment allocation
-  const investmentChartData = Object.entries(
-    investments.reduce<Record<string, number>>((acc, i) => {
-      acc[i.type] = (acc[i.type] || 0) + i.quantity * i.currentPrice;
+  // Investment breakdown by type
+  const investmentsByType = investments.reduce(
+    (acc, inv) => {
+      const currentValue = inv.quantity * inv.currentPrice;
+      acc[inv.type] = (acc[inv.type] || 0) + currentValue;
       return acc;
-    }, {}),
-  ).map(([name, value]) => ({ name, value }));
+    },
+    {} as Record<string, number>,
+  );
+
+  const investmentChartData = Object.entries(investmentsByType).map(
+    ([name, value]) => ({
+      name,
+      value,
+    }),
+  );
 
   // Budget utilization
-  const budgetUtilization = budgets.map((b) => {
-    const spent = transactions
+  const now = Date.now();
+  const budgetUtilization = budgets.map((budget) => {
+    const categoryExpenses = transactions
       .filter(
         (t) =>
           t.type === "expense" &&
-          b.categoryId.includes(t.category) &&
-          t.date >= b.startDate,
+          t.categoryId === budget.categoryId &&
+          t.date >= budget.startDate,
       )
-      .reduce((s, t) => s + t.amount, 0);
+      .reduce((sum, t) => sum + t.amount, 0);
 
+    const percentage = (categoryExpenses / budget.limit) * 100;
     return {
-      categoryId: b.categoryId,
-      used: spent,
-      limit: b.limit,
+      category: budget.categoryId,
+      used: categoryExpenses,
+      limit: budget.limit,
+      percentage: Math.min(percentage, 100),
     };
   });
-
   /* ---------- UI ---------- */
 
   return (
@@ -211,8 +232,260 @@ export function InsightsView() {
       </div>
 
       {/* Charts */}
-      {/* (Your existing chart JSX stays unchanged below this point) */}
-      {/* KEEP everything else as-is */}
+    {/* Charts Row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Income vs Expenses */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Income vs Expenses</CardTitle>
+            <CardDescription>Last 6 months trend</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData}>
+                <defs>
+                  <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.chart2} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={COLORS.chart2} stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.chart5} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={COLORS.chart5} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) => `KES ${value.toFixed(2)}`}
+                  labelStyle={{ color: "hsl(var(--foreground))" }}
+                />
+                <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
+                <Line
+                  type="monotone"
+                  dataKey="Income"
+                  stroke={COLORS.chart2}
+                  strokeWidth={3}
+                  dot={{ fill: COLORS.chart2, r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Expenses"
+                  stroke={COLORS.chart5}
+                  strokeWidth={3}
+                  dot={{ fill: COLORS.chart5, r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Spending by Category */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Spending by Category</CardTitle>
+            <CardDescription>Top expense categories</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categoryChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={true}
+                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+                    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        fill="white"
+                        textAnchor={x > cx ? 'start' : 'end'}
+                        dominantBaseline="central"
+                        style={{ fontWeight: 'bold', fontSize: '12px' }}
+                      >
+                        {`${(percent * 100).toFixed(0)}%`}
+                      </text>
+                    );
+                  }}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  strokeWidth={2}
+                  stroke="hsl(var(--background))"
+                >
+                  {categoryChartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={[COLORS.chart1, COLORS.chart2, COLORS.chart3, COLORS.chart4, COLORS.chart5, COLORS.accent][index % 6]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    color: "hsl(var(--foreground))",
+                  }}
+                  formatter={(value: number) => [`KES ${value.toFixed(2)}`, "Amount"]}
+                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
+                />
+                <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Budget Utilization */}
+        {budgetUtilization.length > 0 && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Budget Utilization</CardTitle>
+              <CardDescription>Current spending vs limits</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={budgetUtilization}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis
+                    dataKey="category"
+                    stroke="hsl(var(--muted-foreground))"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
+                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      color: "hsl(var(--foreground))",
+                    }}
+                    formatter={(value: number) => `KES ${value.toFixed(2)}`}
+                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
+                  />
+                  <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
+                  <Bar dataKey="used" fill={COLORS.chart5} name="Spent" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="limit" fill={COLORS.chart1} name="Budget" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Investment Allocation */}
+        {investmentChartData.length > 0 && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Investment Allocation</CardTitle>
+              <CardDescription>Portfolio distribution by type</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={investmentChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+                      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                      const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+                      const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+                      return (
+                        <text
+                          x={x}
+                          y={y}
+                          fill="white"
+                          textAnchor={x > cx ? 'start' : 'end'}
+                          dominantBaseline="central"
+                          style={{ fontWeight: 'bold', fontSize: '12px' }}
+                        >
+                          {`${(percent * 100).toFixed(0)}%`}
+                        </text>
+                      );
+                    }}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="hsl(var(--background))"
+                  >
+                    {investmentChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={[COLORS.chart3, COLORS.chart1, COLORS.chart2, COLORS.chart4, COLORS.chart5, COLORS.primary, COLORS.accent][index % 7]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      color: "hsl(var(--foreground))",
+                    }}
+                    formatter={(value: number) => [`KES ${value.toFixed(2)}`, "Value"]}
+                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
+                  />
+                  <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Financial Summary */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Financial Summary</CardTitle>
+          <CardDescription>Overview of your financial health</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Total Income</p>
+              <p className="text-2xl font-bold text-accent">KES {totalIncome.toFixed(2)}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Total Expenses</p>
+              <p className="text-2xl font-bold text-destructive">KES {totalExpenses.toFixed(2)}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Total Invested</p>
+              <p className="text-2xl font-bold">KES {totalInvested.toFixed(2)}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Active Budgets</p>
+              <p className="text-2xl font-bold">{budgets.length}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Total Transactions</p>
+              <p className="text-2xl font-bold">{transactions.length}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Investment Holdings</p>
+              <p className="text-2xl font-bold">{investments.length}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

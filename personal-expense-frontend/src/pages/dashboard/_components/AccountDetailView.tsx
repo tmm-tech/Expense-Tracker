@@ -186,7 +186,7 @@ export default function AccountDetailView({
                     <div>
                       <p className="font-medium">{t.description}</p>
                       <p className="text-sm text-muted-foreground">
-                        {t.category}
+                        {t.categoryId}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(t.date), "MMM dd, yyyy")}

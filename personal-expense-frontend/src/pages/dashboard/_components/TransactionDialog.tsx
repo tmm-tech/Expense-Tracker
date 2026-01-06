@@ -67,7 +67,7 @@ export function TransactionDialog({
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type);
-      setCategoryId(editingTransaction.category);
+      setCategoryId(editingTransaction.categoryId ?? "");
       setAmount(editingTransaction.amount.toString() || "0");
       setDescription(editingTransaction.description);
 

@@ -2,7 +2,7 @@
     id: string;
     type: "income" | "expense";
     amount: number;
-    category: string;
+    categoryId?: string;
     description: string;
     date: number;
     accountId?: string | null;
