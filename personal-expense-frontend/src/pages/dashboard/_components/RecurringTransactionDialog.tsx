@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-
+import type { RecurringTransaction } from "@/types/recurring-transacction";
 /* ---------------- Schema ---------------- */
 
 const recurringSchema = z.object({
@@ -47,7 +47,7 @@ type RecurringFormData = z.infer<typeof recurringSchema>;
 interface RecurringTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  transaction?: any | null;
+  transaction?: RecurringTransaction | null;
 }
 
 /* ---------------- Component ---------------- */
@@ -82,9 +82,7 @@ export function RecurringTransactionDialog({
         amount: transaction.amount,
         description: transaction.description,
         frequency: transaction.frequency,
-        startDate: new Date(transaction.startDate)
-          .toISOString()
-          .split("T")[0],
+        startDate: new Date(transaction.startDate).toISOString().split("T")[0],
         endDate: transaction.endDate
           ? new Date(transaction.endDate).toISOString().split("T")[0]
           : "",
@@ -105,34 +103,78 @@ export function RecurringTransactionDialog({
   /* ---------------- Mutations ---------------- */
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) =>
-      apiFetch("/recurring-transactions", {
+    mutationFn: (payload: Omit<RecurringTransaction, "id">) =>
+      apiFetch<RecurringTransaction>("/recurring-transactions", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => {
-      toast.success("Recurring transaction created");
-      qc.invalidateQueries({ queryKey: ["recurring-transactions"] });
-      onOpenChange(false);
+
+    onMutate: async (newTx) => {
+      await qc.cancelQueries({ queryKey: ["recurring-transactions"] });
+
+      const previous =
+        qc.getQueryData<RecurringTransaction[]>(["recurring-transactions"]) ??
+        [];
+
+      const optimisticTx: RecurringTransaction = {
+        id: `temp-${Date.now()}`,
+        ...newTx,
+      };
+
+      qc.setQueryData<RecurringTransaction[]>(
+        ["recurring-transactions"],
+        [optimisticTx, ...previous],
+      );
+
+      return { previous };
     },
-    onError: () => {
+
+    onError: (_err, _newTx, ctx) => {
+      qc.setQueryData(["recurring-transactions"], ctx?.previous);
       toast.error("Failed to create recurring transaction");
+    },
+
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["recurring-transactions"] });
+      toast.success("Recurring transaction created");
+      form.reset();
+      onOpenChange(false);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...payload }: any) =>
-      apiFetch(`/recurring-transactions/${id}`, {
+    mutationFn: (payload: RecurringTransaction) =>
+      apiFetch<RecurringTransaction>(`/recurring-transactions/${payload.id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => {
-      toast.success("Recurring transaction updated");
-      qc.invalidateQueries({ queryKey: ["recurring-transactions"] });
-      onOpenChange(false);
+
+    onMutate: async (updatedTx) => {
+      await qc.cancelQueries({ queryKey: ["recurring-transactions"] });
+
+      const previous =
+        qc.getQueryData<RecurringTransaction[]>(["recurring-transactions"]) ??
+        [];
+
+      qc.setQueryData<RecurringTransaction[]>(
+        ["recurring-transactions"],
+        (old = []) =>
+          old.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx)),
+      );
+
+      return { previous };
     },
-    onError: () => {
+
+    onError: (_err, _updatedTx, ctx) => {
+      qc.setQueryData(["recurring-transactions"], ctx?.previous);
       toast.error("Failed to update recurring transaction");
+    },
+
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["recurring-transactions"] });
+      toast.success("Recurring transaction created");
+      form.reset();
+      onOpenChange(false);
     },
   });
 
@@ -142,9 +184,7 @@ export function RecurringTransactionDialog({
     setIsSubmitting(true);
 
     const startDate = new Date(data.startDate).getTime();
-    const endDate = data.endDate
-      ? new Date(data.endDate).getTime()
-      : undefined;
+    const endDate = data.endDate ? new Date(data.endDate).getTime() : undefined;
 
     if (endDate && endDate < startDate) {
       toast.error("End date must be after start date");
@@ -153,16 +193,23 @@ export function RecurringTransactionDialog({
     }
 
     const payload = {
-      ...data,
+      type: data.type,
+      category: data.category,
+      amount: data.amount,
+      description: data.description,
+      frequency: data.frequency,
       startDate,
       endDate,
     };
 
     try {
       if (transaction) {
-        await updateMutation.mutateAsync({ id: transaction.id, ...payload });
+        updateMutation.mutate({
+          id: transaction.id,
+          ...payload,
+        });
       } else {
-        await createMutation.mutateAsync(payload);
+        createMutation.mutate(payload);
       }
     } finally {
       setIsSubmitting(false);
@@ -311,11 +358,7 @@ export function RecurringTransactionDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? "Saving..."
-                  : transaction
-                  ? "Update"
-                  : "Create"}
+                {isSubmitting ? "Saving..." : transaction ? "Update" : "Create"}
               </Button>
             </div>
           </form>

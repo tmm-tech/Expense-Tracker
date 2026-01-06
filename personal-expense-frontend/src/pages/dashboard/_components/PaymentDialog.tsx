@@ -27,6 +27,8 @@ import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import type { Debt } from "@/types/debt";
 
+/* ---------------- Schema ---------------- */
+
 const paymentSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   paymentDate: z.string().min(1, "Payment date is required"),
@@ -41,12 +43,14 @@ interface PaymentDialogProps {
   debt: Debt | null;
 }
 
+/* ---------------- Component ---------------- */
+
 export default function PaymentDialog({
   open,
   onClose,
   debt,
 }: PaymentDialogProps) {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -67,15 +71,46 @@ export default function PaymentDialog({
           notes: data.notes,
         }),
       }),
+
+    /* ---------- OPTIMISTIC UPDATE ---------- */
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: ["debts"] });
+
+      const previousDebts = queryClient.getQueryData<Debt[]>(["debts"]) ?? [];
+
+      queryClient.setQueryData<Debt[]>(["debts"], (old = []) =>
+        old.map((d) => {
+          if (d.id !== debt!.id) return d;
+
+          const newBalance = Math.max(d.currentBalance - data.amount, 0);
+
+          return {
+            ...d,
+            currentBalance: newBalance,
+            status: newBalance === 0 ? "paid-off" : d.status,
+          };
+        }),
+      );
+
+      return { previousDebts };
+    },
+
+    /* ---------- ROLLBACK ---------- */
+    onError: (_err, _data, ctx) => {
+      queryClient.setQueryData(["debts"], ctx?.previousDebts);
+      toast.error("Failed to record payment");
+    },
+
+    /* ---------- FINAL SYNC ---------- */
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      queryClient.invalidateQueries({
+        queryKey: ["debt", debt?.id],
+      });
+
       toast.success("Payment recorded successfully");
-      qc.invalidateQueries({ queryKey: ["debts"] });
-      qc.invalidateQueries({ queryKey: ["debt", debt?.id] });
       form.reset();
       onClose();
-    },
-    onError: () => {
-      toast.error("Failed to record payment");
     },
   });
 
@@ -94,7 +129,7 @@ export default function PaymentDialog({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((data) =>
-              makePaymentMutation.mutate(data)
+              makePaymentMutation.mutate(data),
             )}
             className="space-y-4"
           >
