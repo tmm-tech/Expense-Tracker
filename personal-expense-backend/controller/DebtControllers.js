@@ -25,11 +25,11 @@ module.exports = {
 
       // 2️⃣ Fetch debts + total count
       const debts = await prisma.debt.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        });
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      });
       const debtCount = await prisma.debt.count({ where: { userId } });
 
       if (debtCount === 0) {
@@ -84,7 +84,7 @@ module.exports = {
           .status(400)
           .json({ message: "Missing required debt fields" });
       }
-
+      const status = "active"
       const debt = await prisma.debt.create({
         data: {
           userId,
@@ -98,6 +98,7 @@ module.exports = {
           dueDay: dueDay ?? 1,
           startDate: new Date(startDate),
           notes,
+          status,
         },
       });
 
