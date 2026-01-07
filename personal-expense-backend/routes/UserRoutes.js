@@ -15,7 +15,7 @@ UserRoutes.post("/sync", requireAuth, createSession);
 UserRoutes.get("/current", requireAuth, getCurrentUser);
 UserRoutes.put("/settings", requireAuth, updateSettings);
 UserRoutes.get("/me/", requireAuth, getMe);
-UserRoutes.get("/me/preferences", requireAuth, getPreferences);
-UserRoutes.get("/me/notifications", requireAuth, getNotifications);
+UserRoutes.put("/me/preferences", requireAuth, getPreferences);
+UserRoutes.put("/me/notifications", requireAuth, getNotifications);
 
 module.exports = UserRoutes;
