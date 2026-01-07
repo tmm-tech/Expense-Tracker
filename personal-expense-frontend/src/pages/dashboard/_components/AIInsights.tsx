@@ -209,12 +209,10 @@ export function AIInsights() {
                 AI-powered analysis and recommendations
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3 text-sm leading-relaxed">
-                {insights.map((i, idx) => (
-                  <p key={idx}>{i.message}</p>
-                ))}
-              </div>
+            <CardContent className="space-y-4">
+              {insights.map((i, idx) => (
+                <InsightCard key={idx} {...i} />
+              ))}
             </CardContent>
           </Card>
 
@@ -270,5 +268,20 @@ function SummaryCard({
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+function InsightCard({ message, type }: AIInsightMessage) {
+  const styles = {
+    ai: "border-primary/40 bg-primary/5",
+    warning: "border-destructive/40 bg-destructive/5",
+    info: "border-muted bg-muted/30",
+    success: "border-accent/40 bg-accent/5",
+  };
+
+  return (
+    <div className={`rounded-lg border p-4 ${styles[type]}`}>
+      <p className="text-sm leading-relaxed">{message}</p>
+    </div>
   );
 }

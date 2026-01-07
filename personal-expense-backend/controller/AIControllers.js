@@ -1,83 +1,143 @@
 const { prisma } = require("../src/lib/prism");
 const { openai } = require("../src/lib/openai.js");
-/**
- * NOTE:
- * req.user.id is assumed to be set by auth middleware
- */
 
 module.exports = {
   getInsights: async (req, res) => {
     try {
       const userId = req.user.sub;
 
-      // 1️⃣ Fetch minimal financial data
-      const [transactions, budgets, accounts] = await Promise.all([
+      /* ---------------- FETCH DATA ---------------- */
+      const [transactions, budgets, accounts, investments] = await Promise.all([
         prisma.transaction.findMany({
           where: { userId },
-          take: 50,
           orderBy: { date: "desc" },
         }),
         prisma.budget.findMany({ where: { userId } }),
         prisma.account.findMany({ where: { userId } }),
+        prisma.investment.findMany({ where: { userId } }),
       ]);
 
-      if (!transactions.length) {
+      /* ---------------- GUARD: NOT ENOUGH DATA ---------------- */
+      if (transactions.length < 5) {
         return res.json({
           success: true,
           insights: [
             {
               type: "info",
               message:
-                "You don’t have enough data yet. Add transactions to unlock AI insights.",
+                "Add at least a few more transactions to unlock meaningful AI insights.",
             },
           ],
         });
       }
 
-      // 2️⃣ Prepare compact prompt (VERY IMPORTANT)
+      /* ---------------- COMPUTE SUMMARY (NO AI) ---------------- */
+      const totalIncome = transactions
+        .filter((t) => t.type === "income")
+        .reduce((s, t) => s + t.amount, 0);
+
+      const totalExpense = transactions
+        .filter((t) => t.type === "expense")
+        .reduce((s, t) => s + t.amount, 0);
+
+      const balance = totalIncome - totalExpense;
+
+      const totalInvested = investments.reduce(
+        (s, i) => s + i.quantity * i.purchasePrice,
+        0,
+      );
+
+      const currentValue = investments.reduce(
+        (s, i) => s + i.quantity * i.currentPrice,
+        0,
+      );
+
+      const investmentReturn = currentValue - totalInvested;
+      const returnPercentage =
+        totalInvested > 0
+          ? ((investmentReturn / totalInvested) * 100).toFixed(2)
+          : "0.00";
+
+      /* ---------------- COMPACT DATA FOR AI ---------------- */
+      const compactTransactions = transactions.slice(0, 40).map((t) => ({
+        type: t.type,
+        amount: t.amount,
+      }));
+
+      const compactAccounts = accounts.map((a) => ({
+        name: a.name,
+        balance: a.balance,
+      }));
+
+      /* ---------------- AI PROMPT (STRICT JSON) ---------------- */
       const prompt = `
 You are a personal finance assistant.
 
-Analyze the user's financial data and give 3–5 concise insights.
-Focus on:
-- Spending patterns
-- Budget risks
-- Cash flow health
-- Actionable advice
+Analyze the data and return 3–5 insights.
 
-Transactions:
-${transactions.map((t) => `• ${t.type} - ${t.amount}`).join("\n")}
+RULES:
+- Output MUST be valid JSON
+- NO markdown
+- NO explanations outside JSON
+- Keep each message concise (1–2 sentences)
+- Use types: "ai" | "warning" | "success"
 
-Budgets:
-${budgets.map((b) => `• Limit: ${b.limit}`).join("\n")}
+JSON FORMAT:
+{
+  "insights": [
+    { "type": "ai", "message": "..." }
+  ]
+}
 
-Accounts:
-${accounts.map((a) => `• ${a.name}: ${a.balance}`).join("\n")}
-
-Respond as bullet points.
+DATA:
+Transactions: ${JSON.stringify(compactTransactions)}
+Accounts: ${JSON.stringify(compactAccounts)}
+Budgets: ${budgets.length}
+Investments: ${investments.length}
 `;
 
-      // 3️⃣ Call OpenAI
+      /* ---------------- OPENAI CALL ---------------- */
       const completion = await openai.chat.completions.create({
         model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        temperature: 0.3,
         messages: [
-          { role: "system", content: "You are a financial advisor." },
+          { role: "system", content: "You are a careful financial analyst." },
           { role: "user", content: prompt },
         ],
-        temperature: 0.4,
       });
 
-      const content = completion.choices[0].message.content;
+      let parsed;
+      try {
+        parsed = JSON.parse(completion.choices[0].message.content);
+      } catch {
+        return res.json({
+          success: true,
+          insights: [
+            {
+              type: "info",
+              message:
+                "We couldn’t generate structured insights this time. Try again later.",
+            },
+          ],
+        });
+      }
 
+      /* ---------------- FINAL RESPONSE ---------------- */
       res.json({
         success: true,
-        insights: content
-          .split("\n")
-          .filter(Boolean)
-          .map((msg) => ({
-            type: "ai",
-            message: msg.replace(/^[-•]\s*/, ""),
-          })),
+        insights: parsed.insights,
+        summary: {
+          totalIncome,
+          totalExpense,
+          balance,
+          totalInvested,
+          currentValue,
+          investmentReturn,
+          returnPercentage,
+          transactionCount: transactions.length,
+          budgetCount: budgets.length,
+          investmentCount: investments.length,
+        },
       });
     } catch (error) {
       console.error("AI Insights error:", error);
