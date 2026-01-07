@@ -151,7 +151,7 @@ export default function DebtList({
                     <MoreVerticalIcon className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="glass">
+                <DropdownMenuContent align="end">
                   {debt.status === "active" && (
                     <DropdownMenuItem
                       onClick={(e) => {
