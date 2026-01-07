@@ -231,7 +231,7 @@ export default function DebtDialog({
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="glass">
+                      <SelectContent>
                         <SelectItem value="Credit Card">Credit Card</SelectItem>
                         <SelectItem value="Personal Loan">
                           Personal Loan
@@ -410,7 +410,7 @@ export default function DebtDialog({
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="glass">
+                    <SelectContent>
                       <SelectItem value="none">No account</SelectItem>
                       {accounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
