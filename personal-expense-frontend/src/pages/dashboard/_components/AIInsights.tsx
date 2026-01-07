@@ -155,49 +155,51 @@ export function AIInsights() {
       )}
 
       {/* Results */}
-      {insights && summary && (
+      {insights && (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SummaryCard
-              title="Data Analyzed"
-              rows={[
-                ["Transactions", summary.transactionCount],
-                ["Budgets", summary.budgetCount],
-                ["Investments", summary.investmentCount],
-              ]}
-            />
+          {/* Summary Cards (optional) */}
+          {summary && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SummaryCard
+                title="Data Analyzed"
+                rows={[
+                  ["Transactions", summary.transactionCount],
+                  ["Budgets", summary.budgetCount],
+                  ["Investments", summary.investmentCount],
+                ]}
+              />
 
-            <SummaryCard
-              title="Cash Flow"
-              rows={[
-                ["Income", `KES ${summary.totalIncome.toFixed(2)}`],
-                ["Expenses", `KES ${summary.totalExpense.toFixed(2)}`],
-                [
-                  "Net",
-                  `KES ${summary.balance.toFixed(2)}`,
-                  summary.balance >= 0 ? "text-accent" : "text-destructive",
-                ],
-              ]}
-            />
+              <SummaryCard
+                title="Cash Flow"
+                rows={[
+                  ["Income", `KES ${summary.totalIncome.toFixed(2)}`],
+                  ["Expenses", `KES ${summary.totalExpense.toFixed(2)}`],
+                  [
+                    "Net",
+                    `KES ${summary.balance.toFixed(2)}`,
+                    summary.balance >= 0 ? "text-accent" : "text-destructive",
+                  ],
+                ]}
+              />
 
-            <SummaryCard
-              title="Investment Performance"
-              rows={[
-                ["Invested", `KES ${summary.totalInvested.toFixed(2)}`],
-                ["Current", `KES ${summary.currentValue.toFixed(2)}`],
-                [
-                  "Return",
-                  `${summary.investmentReturn >= 0 ? "+" : ""}KES ${summary.investmentReturn.toFixed(
-                    2,
-                  )} (${summary.returnPercentage}%)`,
-                  summary.investmentReturn >= 0
-                    ? "text-accent"
-                    : "text-destructive",
-                ],
-              ]}
-            />
-          </div>
+              <SummaryCard
+                title="Investment Performance"
+                rows={[
+                  ["Invested", `KES ${summary.totalInvested.toFixed(2)}`],
+                  ["Current", `KES ${summary.currentValue.toFixed(2)}`],
+                  [
+                    "Return",
+                    `${summary.investmentReturn >= 0 ? "+" : ""}KES ${summary.investmentReturn.toFixed(
+                      2,
+                    )} (${summary.returnPercentage}%)`,
+                    summary.investmentReturn >= 0
+                      ? "text-accent"
+                      : "text-destructive",
+                  ],
+                ]}
+              />
+            </div>
+          )}
 
           {/* Insights */}
           <Card>
@@ -208,14 +210,10 @@ export function AIInsights() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                <div className="space-y-3">
-                  {insights.map((i, idx) => (
-                    <p key={idx} className="text-sm leading-relaxed">
-                      {i.message}
-                    </p>
-                  ))}
-                </div>
+              <div className="space-y-3 text-sm leading-relaxed">
+                {insights.map((i, idx) => (
+                  <p key={idx}>{i.message}</p>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -233,7 +231,7 @@ export function AIInsights() {
       )}
 
       {/* Empty State */}
-      {!insights && !infoMessage && !isGenerating && (
+      {insights && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center py-16 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mb-4" />
