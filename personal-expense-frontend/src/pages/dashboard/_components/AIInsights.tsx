@@ -26,7 +26,7 @@ interface InsightsSummary {
 }
 
 interface AIInsightMessage {
-  type: "info" | "warning" | "success";
+  type: "ai" | "info" | "warning" | "success";
   message: string;
 }
 
@@ -36,7 +36,8 @@ interface AIInsightsResponse {
 }
 
 export function AIInsights() {
-  const [insights, setInsights] = useState<string | null>(null);
+  const [insights, setInsights] = useState<AIInsightMessage[] | null>(null);
+
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -52,19 +53,27 @@ export function AIInsights() {
         method: "POST",
       });
 
-      // CASE 1: Not enough data (info message)
-      if (Array.isArray(result.insights)) {
-        const info = result.insights.find((i) => i.type === "info");
-        setInfoMessage(info?.message ?? "No insights available yet.");
+      // CASE 1: Not enough data (info-only insights)
+      if (
+        Array.isArray(result.insights) &&
+        result.insights.length > 0 &&
+        result.insights.every((i) => i.type === "info")
+      ) {
+        setInfoMessage(result.insights[0].message);
         toast.info("Add more data to unlock AI insights");
         return;
       }
 
-      // CASE 2: Full AI insights
-      setInsights(result.insights);
+      // CASE 2: real AI insights
+      if (Array.isArray(result.insights)) {
+        setInsights(result.insights);
+      }
+
       if (result.summary) {
         setSummary(result.summary);
       }
+
+      toast.success("AI insights generated successfully");
 
       toast.success("AI insights generated successfully");
     } catch (error) {
@@ -200,7 +209,13 @@ export function AIInsights() {
             </CardHeader>
             <CardContent>
               <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {insights}
+                <div className="space-y-3">
+                  {insights.map((i, idx) => (
+                    <p key={idx} className="text-sm leading-relaxed">
+                      {i.message}
+                    </p>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -218,7 +233,7 @@ export function AIInsights() {
       )}
 
       {/* Empty State */}
-      {!insights && !isGenerating && (
+      {!insights && !infoMessage && !isGenerating && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center py-16 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mb-4" />
