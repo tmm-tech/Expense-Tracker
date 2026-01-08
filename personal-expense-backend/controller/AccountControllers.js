@@ -96,30 +96,46 @@ module.exports = {
   /* ===========================
             GET ACCOUNT BY ID
     ============================ */
-  getAccountById: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const account = await prisma.account.findFirst({
-        where: { id: Number(id), userId: req.user.id },
-      });
-      if (!account) {
-        return res.status(404).json({
-          success: false,
-          message: "Account not found",
-        });
-      }
-      res.json({
-        success: true,
-        data: account,
-      });
-    } catch (error) {
-      console.error("Get account by ID error:", error);
-      res.status(500).json({
+getAccountById: async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.sub;
+    const includeTransactions = req.query.includeTransactions === "true";
+
+    const account = await prisma.account.findFirst({
+      where: {
+        id,       // UUID (string)
+        userId,
+      },
+      include: includeTransactions
+        ? {
+            transactions: {
+              orderBy: { date: "desc" },
+            },
+          }
+        : undefined,
+    });
+
+    if (!account) {
+      return res.status(404).json({
         success: false,
-        message: `Get Account By ID Error: ${error.message}`,
+        message: "Account not found",
       });
     }
-  },
+
+    res.json({
+      success: true,
+      data: account,
+    });
+  } catch (error) {
+    console.error("Get account error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch account",
+    });
+  }
+},
+
   /* ===========================
             UPDATE ACCOUNT             
     ============================ */

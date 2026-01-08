@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
+import type { Category } from "@/types/category";
 
 /* ---------------- ICON MAP ---------------- */
 
@@ -25,7 +26,7 @@ const ACCOUNT_ICONS: Record<Account["type"], any> = {
   MMF: TrendingUp,
   SACCO: Landmark,
   Cash: Banknote,
-  "Mpesa": Smartphone,
+  Mpesa: Smartphone,
   "Credit Card": CreditCard,
   "Debit Card": CreditCard,
   Other: Wallet,
@@ -33,9 +34,13 @@ const ACCOUNT_ICONS: Record<Account["type"], any> = {
 
 /* ---------------- PROPS ---------------- */
 
+interface AccountWithTransactions extends Account {
+  transactions?: Transaction[];
+}
+
 interface AccountDetailViewProps {
   accountId: string;
-  account: Account;
+  categories: Category[];
   onBack: () => void;
 }
 
@@ -43,16 +48,13 @@ interface AccountDetailViewProps {
 
 export default function AccountDetailView({
   accountId,
-  account,
+  categories,
   onBack,
 }: AccountDetailViewProps) {
-  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
-    queryKey: ["account-transactions", accountId],
-    queryFn: () =>
-      apiFetch(`/accounts/${accountId}/transactions`),
+  const { data, isLoading } = useQuery<AccountWithTransactions>({
+    queryKey: ["account", accountId],
+    queryFn: () => apiFetch(`/accounts/${accountId}?includeTransactions=true`),
   });
-
-  const Icon = ACCOUNT_ICONS[account.type];
 
   if (isLoading) {
     return (
@@ -65,6 +67,13 @@ export default function AccountDetailView({
       </div>
     );
   }
+
+  if (!data) return null;
+
+  const account = data;
+  const transactions = data.transactions ?? [];
+
+  const Icon = ACCOUNT_ICONS[account.type];
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -111,8 +120,7 @@ export default function AccountDetailView({
                 Current Balance
               </p>
               <p className="text-3xl font-bold text-primary">
-                {account.currency || "KES"}{" "}
-                {account.balance.toFixed(2)}
+                {account.currency || "KES"} {account.balance.toFixed(2)}
               </p>
             </div>
           </div>
@@ -163,49 +171,57 @@ export default function AccountDetailView({
             </div>
           ) : (
             <div className="space-y-3">
-              {transactions.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between p-3 rounded-lg glass hover:bg-primary/5 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        t.type === "income"
-                          ? "bg-accent/10 text-accent"
-                          : "bg-destructive/10 text-destructive"
+              {transactions.map((t) => {
+                const category = t.categoryId
+                  ? categories.find((c) => c.id === t.categoryId)
+                  : null;
+
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between p-3 rounded-lg glass hover:bg-primary/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${
+                          t.type === "income"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-destructive/10 text-destructive"
+                        }`}
+                      >
+                        {t.type === "income" ? (
+                          <ArrowUpCircle className="h-4 w-4" />
+                        ) : (
+                          <ArrowDownCircle className="h-4 w-4" />
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="font-medium">{t.description}</p>
+
+                        {category && (
+                          <p className="text-sm text-muted-foreground">
+                            {category.name}
+                          </p>
+                        )}
+
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(t.date), "MMM dd, yyyy")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p
+                      className={`text-lg font-semibold ${
+                        t.type === "income" ? "text-accent" : "text-destructive"
                       }`}
                     >
-                      {t.type === "income" ? (
-                        <ArrowUpCircle className="h-4 w-4" />
-                      ) : (
-                        <ArrowDownCircle className="h-4 w-4" />
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="font-medium">{t.description}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {t.categoryId}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(t.date), "MMM dd, yyyy")}
-                      </p>
-                    </div>
+                      {t.type === "income" ? "+" : "-"}
+                      {account.currency || "KES"} {t.amount.toFixed(2)}
+                    </p>
                   </div>
-
-                  <p
-                    className={`text-lg font-semibold ${
-                      t.type === "income"
-                        ? "text-accent"
-                        : "text-destructive"
-                    }`}
-                  >
-                    {t.type === "income" ? "+" : "-"}
-                    {account.currency || "KES"} {t.amount.toFixed(2)}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

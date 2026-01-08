@@ -694,7 +694,7 @@ export function DashboardContent() {
             accounts.find((a) => a.id === selectedAccountId) ? (
               <AccountDetailView
                 accountId={selectedAccountId}
-                account={accounts.find((a) => a.id === selectedAccountId)!}
+                categories={categories}
                 onBack={handleBackFromAccount}
               />
             ) : (
