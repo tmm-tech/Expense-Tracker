@@ -179,7 +179,7 @@ export default function AccountDetailView({
                 return (
                   <div
                     key={t.id}
-                    className="flex items-center justify-between p-3 rounded-lg glass hover:bg-primary/5 transition-colors"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg glass hover:bg-primary/5 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div
