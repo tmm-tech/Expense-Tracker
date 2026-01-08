@@ -236,6 +236,22 @@ model Investment {
 
   @@map("investments")
 }
+model Investment {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  type          String
+  provider      String?
+  principal     Float
+  currentValue  Float
+  contribution  Float?
+  startDate     DateTime
+  notes         String?
+
+  user User @relation(fields: [userId], references: [id])
+  
+  @@map("investments")
+}
 
 model Recurring {
   id          String   @id @default(uuid())

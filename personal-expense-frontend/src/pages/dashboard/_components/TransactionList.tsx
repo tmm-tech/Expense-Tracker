@@ -88,11 +88,11 @@ export function TransactionList({
             return (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-primary/50 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border border-border/50 hover:border-primary/50 transition-colors"
               >
                 {/* Left */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap sm:flex-nowrap">
                     <Badge
                       variant={
                         transaction.type === "income"
@@ -114,7 +114,7 @@ export function TransactionList({
                       </Badge>
                     )}
 
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs text-muted-foreground sm:text-sm">
                       {format(txDate, "MMM dd, yyyy")}
                     </span>
                   </div>
@@ -125,7 +125,7 @@ export function TransactionList({
                 </div>
 
                 {/* Right */}
-                <div className="flex items-center gap-4 ml-4">
+                <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-3">
                   <span
                     className={`text-lg font-bold ${
                       transaction.type === "income"

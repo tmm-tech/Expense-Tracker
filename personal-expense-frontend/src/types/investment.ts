@@ -1,4 +1,7 @@
 export interface Investment {
+  maturityDate: any;
+  sumAssured: any;
+  premium: any;
   id: string;
   name: string;
   type: string;

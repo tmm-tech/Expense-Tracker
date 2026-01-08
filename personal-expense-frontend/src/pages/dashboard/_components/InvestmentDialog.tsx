@@ -40,6 +40,7 @@ const INVESTMENT_TYPES = [
   "Real Estate",
   "Mutual Funds",
   "ETFs",
+  "Insurance (With-Profit)",
   "Other",
 ] as const;
 
@@ -60,6 +61,10 @@ export function InvestmentDialog({
     : null;
 
   const [type, setType] = useState<InvestmentType>("Stocks");
+  const [premium, setPremium] = useState("");
+  const [sumAssured, setSumAssured] = useState("");
+  const [maturityDate, setMaturityDate] = useState("");
+
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -68,6 +73,7 @@ export function InvestmentDialog({
   const [purchaseDate, setPurchaseDate] = useState(
     format(new Date(), "yyyy-MM-dd"),
   );
+  const isInsurance = type === "Insurance (With-Profit)";
 
   /* ---------- Sync form ---------- */
 
@@ -76,11 +82,17 @@ export function InvestmentDialog({
       setType(editingInvestment.type as InvestmentType);
       setName(editingInvestment.name);
       setSymbol(editingInvestment.symbol || "");
-      setQuantity(editingInvestment.quantity.toString());
+      setQuantity(editingInvestment.quantity?.toString() || "");
       setPurchasePrice(editingInvestment.purchasePrice.toString());
       setCurrentPrice(editingInvestment.currentPrice.toString());
-      setPurchaseDate(
-        format(editingInvestment.purchaseDate, "yyyy-MM-dd"),
+      setPurchaseDate(format(editingInvestment.purchaseDate, "yyyy-MM-dd"));
+
+      setPremium(editingInvestment.premium?.toString() || "");
+      setSumAssured(editingInvestment.sumAssured?.toString() || "");
+      setMaturityDate(
+        editingInvestment.maturityDate
+          ? format(editingInvestment.maturityDate, "yyyy-MM-dd")
+          : "",
       );
     } else {
       resetForm();
@@ -117,10 +129,10 @@ export function InvestmentDialog({
         ...newInvestment,
       };
 
-      queryClient.setQueryData<Investment[]>(["investments"], [
-        optimistic,
-        ...previous,
-      ]);
+      queryClient.setQueryData<Investment[]>(
+        ["investments"],
+        [optimistic, ...previous],
+      );
 
       return { previous };
     },
@@ -184,11 +196,16 @@ export function InvestmentDialog({
     const payload = {
       type,
       name,
-      symbol: symbol || undefined,
-      quantity: Number(quantity),
+      symbol: isInsurance ? undefined : symbol || undefined,
+      quantity: isInsurance ? 1 : Number(quantity),
       purchasePrice: Number(purchasePrice),
       currentPrice: Number(currentPrice),
       purchaseDate: new Date(purchaseDate).getTime(),
+
+      // Insurance-only fields
+      premium: isInsurance ? Number(premium || 0) : undefined,
+      sumAssured: isInsurance ? Number(sumAssured || 0) : undefined,
+      maturityDate: maturityDate ? new Date(maturityDate).getTime() : undefined,
     };
 
     if (editingInvestment) {
@@ -219,7 +236,10 @@ export function InvestmentDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Type *</Label>
-              <Select value={type} onValueChange={(v) => setType(v as InvestmentType)}>
+              <Select
+                value={type}
+                onValueChange={(v) => setType(v as InvestmentType)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -233,14 +253,16 @@ export function InvestmentDialog({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Symbol</Label>
-              <Input
-                placeholder="AAPL, BTC"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              />
-            </div>
+            {!isInsurance && (
+              <div className="space-y-2">
+                <Label>Symbol</Label>
+                <Input
+                  placeholder="AAPL, BTC"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                />
+              </div>
+            )}
           </div>
 
           {/* Name */}
@@ -255,15 +277,17 @@ export function InvestmentDialog({
 
           {/* Quantity / Date */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Quantity *</Label>
-              <Input
-                type="number"
-                step="0.00000001"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-            </div>
+            {!isInsurance && (
+              <div className="space-y-2">
+                <Label>Quantity *</Label>
+                <Input
+                  type="number"
+                  step="0.00000001"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Purchase Date *</Label>
@@ -297,13 +321,47 @@ export function InvestmentDialog({
               />
             </div>
           </div>
+          {isInsurance && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Premium (KES)</Label>
+                <Input
+                  type="number"
+                  value={premium}
+                  onChange={(e) => setPremium(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Sum Assured (KES)</Label>
+                <Input
+                  type="number"
+                  value={sumAssured}
+                  onChange={(e) => setSumAssured(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2 col-span-2">
+                <Label>Maturity Date</Label>
+                <Input
+                  type="date"
+                  value={maturityDate}
+                  onChange={(e) => setMaturityDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             <Button type="submit" className="flex-1">
               {editingId ? "Update" : "Add"}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
           </div>

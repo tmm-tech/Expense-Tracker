@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import {
@@ -21,32 +27,32 @@ import { apiFetch } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
 import type { Investment } from "@/types/investment";
 
-
 interface InvestmentListProps {
   investments: Investment[];
   onEdit: (id: string) => void;
 }
 
-
 export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
   const removeInvestment = useMutation({
-  mutationFn: async (id: string) => {
-    return apiFetch(`/investments/${id}`, {
-      method: "DELETE",
-    });
-  },
-});
+    mutationFn: async (id: string) => {
+      return apiFetch(`/investments/${id}`, {
+        method: "DELETE",
+      });
+    },
+  });
+  const isInsurance = (inv: Investment) =>
+    inv.type === "Insurance (With-Profit)";
 
-const handleDelete = async (id: string) => {
-  if (!confirm("Are you sure you want to delete this investment?")) return;
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this investment?")) return;
 
-  try {
-    await removeInvestment.mutateAsync(id);
-    toast.success("Investment deleted");
-  } catch {
-    toast.error("Failed to delete investment");
-  }
-};
+    try {
+      await removeInvestment.mutateAsync(id);
+      toast.success("Investment deleted");
+    } catch {
+      toast.error("Failed to delete investment");
+    }
+  };
 
   if (investments.length === 0) {
     return (
@@ -68,15 +74,15 @@ const handleDelete = async (id: string) => {
     );
   }
 
-  const totalInvested = investments.reduce(
-    (sum, inv) => sum + inv.quantity * inv.purchasePrice,
-    0
-  );
+  const totalInvested = investments.reduce((sum, inv) => {
+    if (isInsurance(inv)) return sum + inv.purchasePrice;
+    return sum + inv.quantity * inv.purchasePrice;
+  }, 0);
 
-  const currentValue = investments.reduce(
-    (sum, inv) => sum + inv.quantity * inv.currentPrice,
-    0
-  );
+  const currentValue = investments.reduce((sum, inv) => {
+    if (isInsurance(inv)) return sum + inv.currentPrice;
+    return sum + inv.quantity * inv.currentPrice;
+  }, 0);
 
   const totalGainLoss = currentValue - totalInvested;
   const totalGainLossPercentage =
@@ -110,9 +116,7 @@ const handleDelete = async (id: string) => {
 
         <Card
           className={
-            totalGainLoss >= 0
-              ? "border-accent/20"
-              : "border-destructive/20"
+            totalGainLoss >= 0 ? "border-accent/20" : "border-destructive/20"
           }
         >
           <CardHeader className="pb-3">
@@ -127,9 +131,7 @@ const handleDelete = async (id: string) => {
               )}
               <CardTitle
                 className={`text-2xl ${
-                  totalGainLoss >= 0
-                    ? "text-accent"
-                    : "text-destructive"
+                  totalGainLoss >= 0 ? "text-accent" : "text-destructive"
                 }`}
               >
                 {totalGainLoss >= 0 ? "+" : ""}
@@ -137,9 +139,7 @@ const handleDelete = async (id: string) => {
               </CardTitle>
               <span
                 className={`text-sm ${
-                  totalGainLoss >= 0
-                    ? "text-accent"
-                    : "text-destructive"
+                  totalGainLoss >= 0 ? "text-accent" : "text-destructive"
                 }`}
               >
                 ({totalGainLossPercentage.toFixed(2)}%)
@@ -152,11 +152,13 @@ const handleDelete = async (id: string) => {
       {/* Investment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {investments.map((investment) => {
-          const invested =
-            investment.quantity * investment.purchasePrice;
+          const invested = isInsurance(investment)
+            ? investment.purchasePrice
+            : investment.quantity * investment.purchasePrice;
 
-          const currentVal =
-            investment.quantity * investment.currentPrice;
+          const currentVal = isInsurance(investment)
+            ? investment.currentPrice
+            : investment.quantity * investment.currentPrice;
 
           const gainLoss = currentVal - invested;
 
@@ -169,9 +171,7 @@ const handleDelete = async (id: string) => {
             <Card
               key={investment.id}
               className={
-                isPositive
-                  ? "border-accent/20"
-                  : "border-destructive/20"
+                isPositive ? "border-accent/20" : "border-destructive/20"
               }
             >
               <CardHeader className="pb-3">
@@ -181,18 +181,11 @@ const handleDelete = async (id: string) => {
                       <CardTitle className="text-lg">
                         {investment.name}
                       </CardTitle>
-                      {investment.symbol && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {investment.symbol}
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {investment.type}
+                      </Badge>
                     </div>
-                    <CardDescription>
-                      {investment.type}
-                    </CardDescription>
+                    <CardDescription>{investment.type}</CardDescription>
                   </div>
                   <div className="flex gap-1">
                     <Button
@@ -207,9 +200,7 @@ const handleDelete = async (id: string) => {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8"
-                      onClick={() =>
-                        handleDelete(investment.id)
-                      }
+                      onClick={() => handleDelete(investment.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -219,41 +210,67 @@ const handleDelete = async (id: string) => {
 
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">
-                      Quantity
-                    </p>
-                    <p className="font-medium">
-                      {investment.quantity}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">
-                      Purchase Price
-                    </p>
-                    <p className="font-medium">
-                      KES{" "}
-                      {investment.purchasePrice.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">
-                      Current Price
-                    </p>
-                    <p className="font-medium">
-                      KES{" "}
-                      {investment.currentPrice.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">
-                      Purchase Date
-                    </p>
-                    <p className="font-medium">
-                      {format(
-                        investment.purchaseDate,
-                        "MMM dd, yyyy"
+                  {!isInsurance(investment) ? (
+                    <>
+                      <div>
+                        <p className="text-muted-foreground">Quantity</p>
+                        <p className="font-medium">{investment.quantity}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-muted-foreground">Purchase Price</p>
+                        <p className="font-medium">
+                          KES {investment.purchasePrice.toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-muted-foreground">Current Price</p>
+                        <p className="font-medium">
+                          KES {investment.currentPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-muted-foreground">Policy Value</p>
+                        <p className="font-medium">
+                          KES {investment.currentPrice.toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-muted-foreground">Total Paid</p>
+                        <p className="font-medium">
+                          KES {investment.purchasePrice.toFixed(2)}
+                        </p>
+                      </div>
+
+                      {investment.premium && (
+                        <div>
+                          <p className="text-muted-foreground">Premium</p>
+                          <p className="font-medium">
+                            KES {investment.premium.toFixed(2)}
+                          </p>
+                        </div>
                       )}
+
+                      {investment.sumAssured && (
+                        <div>
+                          <p className="text-muted-foreground">Sum Assured</p>
+                          <p className="font-medium">
+                            KES {investment.sumAssured.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div>
+                    <p className="text-muted-foreground">Start Date</p>
+                    <p className="font-medium">
+                      {format(investment.purchaseDate, "MMM dd, yyyy")}
                     </p>
                   </div>
                 </div>
@@ -271,9 +288,7 @@ const handleDelete = async (id: string) => {
                       )}
                       <span
                         className={`font-bold ${
-                          isPositive
-                            ? "text-accent"
-                            : "text-destructive"
+                          isPositive ? "text-accent" : "text-destructive"
                         }`}
                       >
                         {isPositive ? "+" : ""}
@@ -281,9 +296,7 @@ const handleDelete = async (id: string) => {
                       </span>
                       <span
                         className={`text-sm ${
-                          isPositive
-                            ? "text-accent"
-                            : "text-destructive"
+                          isPositive ? "text-accent" : "text-destructive"
                         }`}
                       >
                         ({gainLossPercentage.toFixed(2)}%)
