@@ -18,6 +18,7 @@ import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
+import { useMemo } from "react";
 
 /* ---------------- ICON MAP ---------------- */
 
@@ -83,6 +84,11 @@ export default function AccountDetailView({
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories],
+  );
+
   return (
     <div className="space-y-6">
       <Button variant="outline" onClick={onBack} className="gap-2">
@@ -120,7 +126,7 @@ export default function AccountDetailView({
                 Current Balance
               </p>
               <p className="text-3xl font-bold text-primary">
-                {account.currency || "KES"} {account.balance.toFixed(2)}
+                {account.currency || "KES"} {(account.balance ?? 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -138,7 +144,7 @@ export default function AccountDetailView({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-accent">
-              {account.currency || "KES"} {totalIncome.toFixed(2)}
+              {account.currency || "KES"} {(totalIncome ?? 0).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -152,7 +158,7 @@ export default function AccountDetailView({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-destructive">
-              {account.currency || "KES"} {totalExpense.toFixed(2)}
+              {account.currency || "KES"} {(totalExpense ?? 0).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -173,13 +179,13 @@ export default function AccountDetailView({
             <div className="space-y-3">
               {transactions.map((t) => {
                 const category = t.categoryId
-                  ? categories.find((c) => c.id === t.categoryId)
+                  ? categoryMap.get(t.categoryId)
                   : null;
 
                 return (
                   <div
                     key={t.id}
-                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg glass hover:bg-primary/5 transition-colors"
+                    className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg glass hover:bg-primary/5 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -198,10 +204,9 @@ export default function AccountDetailView({
 
                       <div>
                         <p className="font-medium">{t.description}</p>
-
                         {category && (
                           <p className="text-sm text-muted-foreground">
-                            {category.name}
+                            {category}
                           </p>
                         )}
 
@@ -217,7 +222,7 @@ export default function AccountDetailView({
                       }`}
                     >
                       {t.type === "income" ? "+" : "-"}
-                      {account.currency || "KES"} {t.amount.toFixed(2)}
+                      {account.currency || "KES"} {(t.amount ?? 0).toFixed(2)}
                     </p>
                   </div>
                 );
