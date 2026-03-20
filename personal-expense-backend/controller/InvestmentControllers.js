@@ -78,6 +78,7 @@ module.exports = {
 
           principal,
           currentValue,
+          startDate: purchaseDate ? new Date(purchaseDate) : new Date(),
         },
       });
 
