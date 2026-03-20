@@ -24,6 +24,8 @@ module.exports = {
         premium,
         sumAssured,
         maturityDate,
+        principal,
+        currentValue
       } = req.body;
 
       if (!type || !name || purchasePrice == null || currentPrice == null) {
@@ -32,7 +34,11 @@ module.exports = {
           message: "Missing required fields",
         });
       }
-
+      if (principal === undefined || currentValue === undefined) {
+        return res.status(400).json({
+          error: "Principal and currentValue are required",
+        });
+      }
       const isInsurance = type === "Life Insurance";
 
       const investment = await prisma.investment.create({
