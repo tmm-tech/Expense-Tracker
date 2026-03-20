@@ -237,6 +237,7 @@ model Investment {
   startDate     DateTime
   notes         String?
   createdAt     DateTime @default(now())
+  symbol        String?
 
   user User @relation(fields: [userId], references: [id])
 
