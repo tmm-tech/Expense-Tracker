@@ -64,10 +64,6 @@ module.exports = {
 
           purchasePrice: Number(purchasePrice),
           currentPrice: Number(currentPrice),
-          purchaseDate: purchaseDate
-            ? new Date(purchaseDate)
-            : new Date(),
-
           // Insurance-specific
           premium: isInsurance ? Number(premium || 0) : null,
           sumAssured: isInsurance ? Number(sumAssured || 0) : null,
