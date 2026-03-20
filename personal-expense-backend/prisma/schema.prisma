@@ -224,18 +224,7 @@ model Alert {
   user User @relation(fields: [userId], references: [id])
 }
 
-model Investment {
-  id        String   @id @default(uuid())
-  userId    String
-  name      String
-  amount    Float
-  type      String
-  createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("investments")
-}
 model Investment {
   id            String   @id @default(uuid())
   userId        String
@@ -247,9 +236,10 @@ model Investment {
   contribution  Float?
   startDate     DateTime
   notes         String?
+  createdAt     DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
-  
+
   @@map("investments")
 }
 
