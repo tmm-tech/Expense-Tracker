@@ -238,6 +238,9 @@ model Investment {
   notes         String?
   createdAt     DateTime @default(now())
   symbol        String?
+  quantity       Float?
+  purchasePrice  Float?
+  currentPrice   Float?
 
   user User @relation(fields: [userId], references: [id])
 
