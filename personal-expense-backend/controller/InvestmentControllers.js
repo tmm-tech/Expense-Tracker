@@ -23,7 +23,13 @@ module.exports = {
         sumAssured,
         maturityDate,
       } = req.body;
-
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
       // ✅ compute safely
       let principal = 0;
       let currentValue = 0;
@@ -72,7 +78,7 @@ module.exports = {
 
       const investment = await prisma.investment.create({
         data: {
-          userId: req.user.sub,
+          userId,
           type,
           name,
 
