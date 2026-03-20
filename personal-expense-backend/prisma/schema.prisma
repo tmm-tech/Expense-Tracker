@@ -241,6 +241,9 @@ model Investment {
   quantity       Float?
   purchasePrice  Float?
   currentPrice   Float?
+  premium        Float?
+  sumAssured     Float?
+  maturityDate   DateTime
 
   user User @relation(fields: [userId], references: [id])
 
