@@ -10,7 +10,7 @@ const {
 } = require('../controller/InvestmentControllers');
 
 // Create a new investment
-InvestmentRoutes.post('/create', createInvestment);
+InvestmentRoutes.post('/', createInvestment);
 
 // Get all investments
 InvestmentRoutes.get('/', getInvestments);
