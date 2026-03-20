@@ -83,9 +83,14 @@ export function InvestmentDialog({
       setName(editingInvestment.name);
       setSymbol(editingInvestment.symbol || "");
       setQuantity(editingInvestment.quantity?.toString() || "");
-      setPurchasePrice(editingInvestment.purchasePrice.toString());
-      setCurrentPrice(editingInvestment.currentPrice.toString());
-      setPurchaseDate(format(editingInvestment.purchaseDate, "yyyy-MM-dd"));
+      setPurchasePrice(editingInvestment.purchasePrice?.toString() || "");
+      setCurrentPrice(editingInvestment.currentPrice?.toString() || "");
+
+      setPurchaseDate(
+        editingInvestment.purchaseDate
+          ? format(new Date(editingInvestment.purchaseDate), "yyyy-MM-dd")
+          : format(new Date(), "yyyy-MM-dd"),
+      );
 
       setPremium(editingInvestment.premium?.toString() || "");
       setSumAssured(editingInvestment.sumAssured?.toString() || "");
@@ -110,9 +115,13 @@ export function InvestmentDialog({
   };
 
   /* ---------- Mutations ---------- */
-
+  type InvestmentPayload = Omit<Investment, "id"> & {
+    quantity?: number;
+    purchasePrice?: number;
+    currentPrice?: number;
+  };
   const createInvestment = useMutation({
-    mutationFn: (payload: Omit<Investment, "id">) =>
+    mutationFn: (payload: InvestmentPayload) =>
       apiFetch<Investment>("/investments", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -193,23 +202,39 @@ export function InvestmentDialog({
       return;
     }
 
+    const qty = Number(quantity) || 0;
+    const buyPrice = Number(purchasePrice) || 0;
+    const currPrice = Number(currentPrice) || 0;
+
+    const principal = qty * buyPrice;
+    const currentValue = qty * currPrice;
+
     const payload = {
       type,
       name,
       symbol: isInsurance ? undefined : symbol || undefined,
-      quantity: isInsurance ? 1 : Number(quantity),
-      purchasePrice: Number(purchasePrice),
-      currentPrice: Number(currentPrice),
+
+      // ✅ CORE FIELDS (REQUIRED)
+      principal,
+      currentValue,
+
+      // ✅ OPTIONAL UI FIELDS
+      quantity: isInsurance ? 1 : qty,
+      purchasePrice: buyPrice,
+      currentPrice: currPrice,
+
       purchaseDate: new Date(purchaseDate).getTime(),
 
-      // Insurance-only fields
       premium: isInsurance ? Number(premium || 0) : undefined,
       sumAssured: isInsurance ? Number(sumAssured || 0) : undefined,
       maturityDate: maturityDate ? new Date(maturityDate).getTime() : undefined,
     };
 
     if (editingInvestment) {
-      updateInvestment.mutate({ id: editingInvestment.id, ...payload });
+      updateInvestment.mutate({
+        id: editingInvestment.id,
+        ...payload,
+      });
     } else {
       createInvestment.mutate(payload);
     }

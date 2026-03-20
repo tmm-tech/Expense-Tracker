@@ -37,7 +37,7 @@ const formatKES = (value: number) =>
     style: "currency",
     currency: "KES",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(isNaN(value) ? 0 : value);
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -84,13 +84,10 @@ export function InsightsView() {
 
   const cashBalance = totalIncome - totalExpenses;
 
-  const totalInvested = investments.reduce(
-    (s, i) => s + i.quantity * i.purchasePrice,
-    0,
-  );
+  const totalInvested = investments.reduce((s, i) => s + (i.principal || 0), 0);
 
   const currentInvestmentValue = investments.reduce(
-    (s, i) => s + i.quantity * i.currentPrice,
+    (s, i) => s + (i.currentValue || 0),
     0,
   );
 
@@ -132,7 +129,7 @@ export function InsightsView() {
     const cash = income - expenses;
 
     const investmentsValue = investments.reduce(
-      (s, i) => s + i.quantity * i.currentPrice,
+      (s, i) => s + (i.currentValue || 0),
       0,
     );
 
@@ -170,7 +167,11 @@ export function InsightsView() {
     .slice(0, 6);
 
   const topCategory = categoryChartData[0];
-
+  const COLORS = {
+    cash: "#22c55e", // green
+    investments: "#6366f1", // indigo
+    pie: ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#14b8a6"],
+  };
   /* ---------- UI ---------- */
 
   return (
@@ -251,8 +252,9 @@ export function InsightsView() {
                 type="monotone"
                 dataKey="Cash"
                 stackId="1"
-                stroke="hsl(var(--chart-2))"
-                fill="url(#cashGradient)"
+                stroke={COLORS.cash}
+                fill={COLORS.cash}
+                fillOpacity={0.2}
                 strokeWidth={2}
                 isAnimationActive
               />
@@ -262,8 +264,9 @@ export function InsightsView() {
                 type="monotone"
                 dataKey="Investments"
                 stackId="1"
-                stroke="hsl(var(--primary))"
-                fill="url(#investGradient)"
+                stroke={COLORS.investments}
+                fill={COLORS.investments}
+                fillOpacity={0.2}
                 strokeWidth={2}
                 isAnimationActive
               />
@@ -302,11 +305,19 @@ export function InsightsView() {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={categoryChartData} dataKey="value" outerRadius={110}>
+                <Pie
+                  data={categoryChartData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={110}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                >
                   {categoryChartData.map((_, i) => (
-                    <Cell key={i} fill="hsl(var(--chart-1))" />
+                    <Cell key={i} fill={COLORS.pie[i % COLORS.pie.length]} />
                   ))}
                 </Pie>
+
+                <Tooltip formatter={(value: number) => formatKES(value)} />
               </PieChart>
             </ResponsiveContainer>
           )}

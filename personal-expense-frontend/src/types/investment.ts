@@ -1,13 +1,21 @@
 export interface Investment {
-  maturityDate: any;
-  sumAssured: any;
-  premium: any;
   id: string;
   name: string;
   type: string;
+
+  // ✅ CORE (source of truth)
+  principal: number;
+  currentValue: number;
+
+  // ✅ OPTIONAL (for UI only)
+  quantity?: number;
+  purchasePrice?: number;
+  currentPrice?: number;
   symbol?: string;
-  quantity: number;
-  purchasePrice: number;
-  currentPrice: number;
-  purchaseDate: number;
+
+  // other optional fields
+  maturityDate?: any;
+  sumAssured?: any;
+  premium?: any;
+  purchaseDate?: number;
 }
