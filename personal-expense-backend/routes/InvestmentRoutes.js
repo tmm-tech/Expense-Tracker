@@ -22,7 +22,7 @@ InvestmentRoutes.get('/summary', getPortfolioSummary);
 InvestmentRoutes.get('/:id', getInvestmentById);
 
 // Update an investment
-InvestmentRoutes.put('/update/:id', updateInvestment);
+InvestmentRoutes.put('/:id', updateInvestment);
 
 // Delete an investment
 InvestmentRoutes.delete('/delete/:id', deleteInvestment);

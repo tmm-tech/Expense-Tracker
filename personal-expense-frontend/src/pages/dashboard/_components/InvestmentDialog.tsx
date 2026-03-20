@@ -39,6 +39,7 @@ const INVESTMENT_TYPES = [
   "Crypto",
   "Real Estate",
   "Mutual Funds",
+  "Money Market Fund",
   "ETFs",
   "Insurance (With-Profit)",
   "Other",
@@ -74,7 +75,7 @@ export function InvestmentDialog({
     format(new Date(), "yyyy-MM-dd"),
   );
   const isInsurance = type === "Insurance (With-Profit)";
-
+  const isMMF = type === "Money Market Fund";
   /* ---------- Sync form ---------- */
 
   useEffect(() => {
@@ -187,7 +188,7 @@ export function InvestmentDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !quantity || !purchasePrice || !currentPrice) {
+    if (!name || !purchasePrice || !currentPrice) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -196,11 +197,19 @@ export function InvestmentDialog({
     const buyPrice = Number(purchasePrice) || 0;
     const currPrice = Number(currentPrice) || 0;
 
-    // ✅ CORE VALUES (source of truth)
-    const principal = isInsurance ? Number(premium || 0) : qty * buyPrice;
-    const currentValue = isInsurance
-      ? Number(sumAssured || 0)
-      : qty * currPrice;
+    let principal = 0;
+    let currentValue = 0;
+
+    if (isInsurance) {
+      principal = Number(premium || 0);
+      currentValue = Number(sumAssured || 0);
+    } else if (isMMF) {
+      principal = Number(purchasePrice || 0); // deposit
+      currentValue = Number(currentPrice || 0); // current balance
+    } else {
+      principal = qty * buyPrice;
+      currentValue = qty * currPrice;
+    }
 
     const payload = {
       type,
@@ -212,7 +221,7 @@ export function InvestmentDialog({
       currentValue,
 
       // ✅ OPTIONAL UI fields (safe)
-      quantity: isInsurance ? 1 : qty,
+      quantity: isInsurance || isMMF ? 1 : qty,
       purchasePrice: buyPrice,
       currentPrice: currPrice,
 
@@ -295,7 +304,7 @@ export function InvestmentDialog({
 
           {/* Quantity / Date */}
           <div className="grid grid-cols-2 gap-4">
-            {!isInsurance && (
+            {!isInsurance && !isMMF && (
               <div className="space-y-2">
                 <Label>Quantity *</Label>
                 <Input
@@ -320,7 +329,10 @@ export function InvestmentDialog({
           {/* Prices */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Purchase Price *</Label>
+              <Label>
+                {" "}
+                {isMMF ? "Deposit Amount (KES)" : "Purchase Price *"}
+              </Label>
               <Input
                 type="number"
                 step="0.01"
@@ -330,7 +342,10 @@ export function InvestmentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Current Price *</Label>
+              <Label>
+                {" "}
+                {isMMF ? "Current Value (KES)" : "Current Price *"}
+              </Label>
               <Input
                 type="number"
                 step="0.01"
@@ -368,6 +383,17 @@ export function InvestmentDialog({
                 />
               </div>
             </div>
+          )}
+          {isMMF && (
+            <p className="text-xs text-muted-foreground">
+              Interest Earned:{" "}
+              <span className="text-accent font-medium">
+                KES{" "}
+                {(
+                  Number(currentPrice || 0) - Number(purchasePrice || 0)
+                ).toFixed(2)}
+              </span>
+            </p>
           )}
 
           {/* Actions */}
