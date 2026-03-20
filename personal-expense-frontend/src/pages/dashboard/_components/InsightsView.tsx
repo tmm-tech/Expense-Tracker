@@ -5,54 +5,44 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TrendingUp, Wallet, PiggyBank, DollarSign } from "lucide-react";
 import {
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  PiggyBank,
-  DollarSign,
-} from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
   LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
 } from "recharts";
 import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+
 import type { Transaction } from "@/types/transaction";
 import type { Budget } from "@/types/budget";
 import type { Investment } from "@/types/investment";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
-/* ---------------- COLORS ---------------- */
 
-const COLORS = {
-  primary: "hsl(var(--primary))",
-  accent: "hsl(var(--accent))",
-  secondary: "hsl(var(--secondary))",
-  destructive: "hsl(var(--destructive))",
-  chart1: "hsl(var(--chart-1))",
-  chart2: "hsl(var(--chart-2))",
-  chart3: "hsl(var(--chart-3))",
-  chart4: "hsl(var(--chart-4))",
-  chart5: "hsl(var(--chart-5))",
-};
+/* ---------------- HELPERS ---------------- */
+
+const formatKES = (value: number) =>
+  new Intl.NumberFormat("en-KE", {
+    style: "currency",
+    currency: "KES",
+    maximumFractionDigits: 0,
+  }).format(value);
 
 /* ---------------- COMPONENT ---------------- */
 
 export function InsightsView() {
-  const { data: transactions = [], isLoading: txLoading } = useQuery({
+  const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["transactions"],
     queryFn: () => apiFetch<Transaction[]>("/transactions"),
   });
@@ -66,33 +56,23 @@ export function InsightsView() {
     queryKey: ["investments"],
     queryFn: () => apiFetch<Investment[]>("/investments"),
   });
+
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: () => apiFetch<Category[]>("/categories"),
   });
-  const accountsQuery = useQuery<Account[]>({
+
+  const { data: accounts = [] } = useQuery({
     queryKey: ["accounts"],
-    queryFn: () => apiFetch<Account[]>(`/accounts`),
+    queryFn: () => apiFetch<Account[]>("/accounts"),
   });
-  /* ---------- Loading ---------- */
-  if (txLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-80 bg-muted animate-pulse rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
+
+  /* ---------- LOADING ---------- */
+  if (isLoading) {
+    return <div className="h-40 animate-pulse bg-muted rounded-xl" />;
   }
 
-  /* ---------- Metrics ---------- */
+  /* ---------- METRICS ---------- */
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -113,21 +93,65 @@ export function InsightsView() {
     (s, i) => s + i.quantity * i.currentPrice,
     0,
   );
-  const accounts = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
 
-  const totalBalance = accounts.reduce(
-    (sum, account) => sum + account.balance,
-    0,
-  );
+  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+
   const investmentGains = currentInvestmentValue - totalInvested;
   const netWorth = totalBalance + currentInvestmentValue;
 
   const savingsRate =
     totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-  /* ---------- Charts ---------- */
+  const healthScore = Math.min(
+    100,
+    Math.max(0, savingsRate * 1.2 + (investmentGains > 0 ? 10 : 0)),
+  );
 
-  // Spending by category
+  /* ---------- NET WORTH TREND ---------- */
+
+  const getDateTs = (date: string | number) =>
+    typeof date === "string" ? new Date(date).getTime() : date;
+
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const date = subMonths(new Date(), 5 - i);
+    return {
+      label: format(date, "MMM"),
+      end: endOfMonth(date).getTime(),
+    };
+  });
+
+  const netWorthData = last6Months.map((month) => {
+    const income = transactions
+      .filter((t) => getDateTs(t.date) <= month.end && t.type === "income")
+      .reduce((s, t) => s + t.amount, 0);
+
+    const expenses = transactions
+      .filter((t) => getDateTs(t.date) <= month.end && t.type === "expense")
+      .reduce((s, t) => s + t.amount, 0);
+
+    const cash = income - expenses;
+
+    const investmentsValue = investments.reduce(
+      (s, i) => s + i.quantity * i.currentPrice,
+      0,
+    );
+
+    return {
+      month: month.label,
+      Cash: cash,
+      Investments: investmentsValue,
+      NetWorth: cash + investmentsValue,
+    };
+  });
+
+  const netWorthGrowth =
+    netWorthData.length > 1
+      ? netWorthData[netWorthData.length - 1].NetWorth -
+        netWorthData[0].NetWorth
+      : 0;
+
+  /* ---------- CATEGORY ---------- */
+
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
 
   const categoryTotals = transactions
@@ -138,91 +162,23 @@ export function InsightsView() {
     }, {});
 
   const categoryChartData = Object.entries(categoryTotals)
-    .map(([categoryId, value]) => ({
-      name: categoryMap[categoryId] ?? "Unknown",
+    .map(([id, value]) => ({
+      name: categoryMap[id] ?? "Unknown",
       value,
     }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  const getDateTs = (date: string | number) =>
-    typeof date === "string" ? new Date(date).getTime() : date;
+  const topCategory = categoryChartData[0];
 
-  // Income vs Expenses over last 6 months
-  const last6Months = Array.from({ length: 6 }, (_, i) => {
-    const date = subMonths(new Date(), 5 - i);
-    return {
-      month: format(date, "MMM"),
-      startDate: startOfMonth(date).getTime(),
-      endDate: endOfMonth(date).getTime(),
-    };
-  });
-  const monthlyData = last6Months.map((month) => {
-    const monthTransactions = transactions.filter((t) => {
-      const ts = getDateTs(t.date);
-      return ts >= month.startDate && ts <= month.endDate;
-    });
-
-    return {
-      month: month.month,
-      Income: monthTransactions
-        .filter((t) => t.type === "income")
-        .reduce((s, t) => s + t.amount, 0),
-      Expenses: monthTransactions
-        .filter((t) => t.type === "expense")
-        .reduce((s, t) => s + t.amount, 0),
-    };
-  });
-
-  // Investment breakdown by type
-  const investmentsByType = investments.reduce(
-    (acc, inv) => {
-      const currentValue = inv.quantity * inv.currentPrice;
-      acc[inv.type] = (acc[inv.type] || 0) + currentValue;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  const investmentChartData = Object.entries(investmentsByType).map(
-    ([name, value]) => ({
-      name,
-      value,
-    }),
-  );
-
-  // Budget utilization
-  const now = Date.now();
-  const budgetUtilization = budgets.map((budget) => {
-    const categoryExpenses = transactions
-      .filter(
-        (t) =>
-          t.type === "expense" &&
-          t.categoryId === budget.categoryId &&
-          getDateTs(t.date) >= budget.startDate,
-      )
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const percentage = (categoryExpenses / budget.limit) * 100;
-    return {
-      category: budget.categoryId,
-      used: categoryExpenses,
-      limit: budget.limit,
-      percentage: Math.min(percentage, 100),
-    };
-  });
   /* ---------- UI ---------- */
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics */}
+      {/* METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={Wallet} label="Net Worth" value={netWorth} />
-        <MetricCard
-          icon={DollarSign}
-          label="Cash Balance"
-          value={cashBalance}
-        />
+        <MetricCard icon={DollarSign} label="Cash" value={cashBalance} />
         <MetricCard
           icon={TrendingUp}
           label="Investments"
@@ -237,417 +193,164 @@ export function InsightsView() {
         />
       </div>
 
-      {/* Charts */}
-      {monthlyData.some((d) => d.Income > 0 || d.Expenses > 0) && (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={monthlyData}>...</LineChart>
-        </ResponsiveContainer>
-      )}
-
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Income vs Expenses */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Income vs Expenses</CardTitle>
-            <CardDescription>Last 6 months trend</CardDescription>
-          </CardHeader>
-          <CardContent>
-<ResponsiveContainer width="100%" height={300}>
-  <LineChart data={monthlyData}>
-    <defs>
-      <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%" stopColor={COLORS.chart2} stopOpacity={0.6} />
-        <stop offset="95%" stopColor={COLORS.chart2} stopOpacity={0.05} />
-      </linearGradient>
-
-      <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%" stopColor={COLORS.chart5} stopOpacity={0.6} />
-        <stop offset="95%" stopColor={COLORS.chart5} stopOpacity={0.05} />
-      </linearGradient>
-
-      {/* subtle glow */}
-      <filter id="lineGlow">
-        <feDropShadow
-          dx="0"
-          dy="0"
-          stdDeviation="6"
-          floodColor="white"
-          floodOpacity="0.2"
-        />
-      </filter>
-    </defs>
-
-    <CartesianGrid stroke="hsl(var(--border))" opacity={0.25} />
-    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-    <YAxis stroke="hsl(var(--muted-foreground))" />
-
-    <Tooltip
-      contentStyle={{
-        backgroundColor: "hsl(var(--card))",
-        border: "1px solid hsl(var(--border))",
-        borderRadius: "8px",
-      }}
-      formatter={(v: number) => `KES ${v.toFixed(2)}`}
-    />
-
-    <Legend
-      formatter={(value) => (
-        <span style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
-          {value}
-        </span>
-      )}
-    />
-
-    {/* INCOME */}
-    <Line
-      type="monotone"
-      dataKey="Income"
-      stroke={COLORS.chart2}
-      strokeWidth={3}
-      dot={{ r: 4, fill: COLORS.chart2 }}
-      activeDot={{ r: 7 }}
-      filter="url(#lineGlow)"
-    />
-
-    {/* EXPENSES */}
-    <Line
-      type="monotone"
-      dataKey="Expenses"
-      stroke={COLORS.chart5}
-      strokeWidth={3}
-      dot={{ r: 4, fill: COLORS.chart5 }}
-      activeDot={{ r: 7 }}
-      filter="url(#lineGlow)"
-    />
-  </LineChart>
-</ResponsiveContainer>
-
-          </CardContent>
-        </Card>
-
-        {/* Spending by Category */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Spending by Category</CardTitle>
-            <CardDescription>Top expense categories</CardDescription>
-          </CardHeader>
-          <CardContent>
-<ResponsiveContainer width="100%" height={300}>
-  <PieChart>
-    <defs>
-      <filter id="pieGlow">
-        <feDropShadow
-          dx="0"
-          dy="0"
-          stdDeviation="8"
-          floodColor="white"
-          floodOpacity="0.18"
-        />
-      </filter>
-    </defs>
-
-    <Pie
-      data={categoryChartData}
-      cx="50%"
-      cy="50%"
-      outerRadius={110}
-      dataKey="value"
-      stroke="transparent"
-      strokeWidth={0}
-      filter="url(#pieGlow)"
-      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-        const r = innerRadius + (outerRadius - innerRadius) * 0.55;
-        const x = cx + r * Math.cos((-midAngle * Math.PI) / 180);
-        const y = cy + r * Math.sin((-midAngle * Math.PI) / 180);
-
-        return (
-          <text
-            x={x}
-            y={y}
-            fill="hsl(var(--foreground))"
-            textAnchor={x > cx ? "start" : "end"}
-            dominantBaseline="central"
-            style={{ fontWeight: 600, fontSize: 12 }}
-          >
-            {`${(percent * 100).toFixed(0)}%`}
-          </text>
-        );
-      }}
-    >
-      {categoryChartData.map((_, index) => (
-        <Cell
-          key={index}
-          fill={
-            [
-              COLORS.chart1,
-              COLORS.chart2,
-              COLORS.chart3,
-              COLORS.chart4,
-              COLORS.chart5,
-              COLORS.accent,
-            ][index % 6]
-          }
-        />
-      ))}
-    </Pie>
-
-    <Tooltip
-      contentStyle={{
-        backgroundColor: "hsl(var(--card))",
-        border: "1px solid hsl(var(--border))",
-        borderRadius: "8px",
-      }}
-      formatter={(v: number) => `KES ${v.toFixed(2)}`}
-    />
-
-    <Legend
-      formatter={(value) => (
-        <span style={{ color: "hsl(var(--foreground))", fontWeight: 500 }}>
-          {value}
-        </span>
-      )}
-    />
-  </PieChart>
-</ResponsiveContainer>
-
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Budget Utilization */}
-        {budgetUtilization.length > 0 && (
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Budget Utilization</CardTitle>
-              <CardDescription>Current spending vs limits</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={budgetUtilization}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                    opacity={0.3}
-                  />
-                  <XAxis
-                    dataKey="category"
-                    stroke="hsl(var(--muted-foreground))"
-                    angle={-45}
-                    textAnchor="end"
-                    height={100}
-                  />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                    formatter={(value: number) => `KES ${value.toFixed(2)}`}
-                    labelStyle={{
-                      color: "hsl(var(--foreground))",
-                      fontWeight: "bold",
-                    }}
-                  />
-                  <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
-                  <Bar
-                    dataKey="used"
-                    fill={COLORS.chart5}
-                    name="Spent"
-                    radius={[8, 8, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="limit"
-                    fill={COLORS.chart1}
-                    name="Budget"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Investment Allocation */}
-        {investmentChartData.length > 0 && (
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Investment Allocation</CardTitle>
-              <CardDescription>Portfolio distribution by type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={investmentChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({
-                      cx,
-                      cy,
-                      midAngle,
-                      innerRadius,
-                      outerRadius,
-                      percent,
-                      name,
-                    }) => {
-                      const radius =
-                        innerRadius + (outerRadius - innerRadius) * 0.5;
-                      const x =
-                        cx + radius * Math.cos((-midAngle * Math.PI) / 180);
-                      const y =
-                        cy + radius * Math.sin((-midAngle * Math.PI) / 180);
-                      return (
-                        <text
-                          x={x}
-                          y={y}
-                          fill="hsl(var(--foreground))"
-                          textAnchor={x > cx ? "start" : "end"}
-                          dominantBaseline="central"
-                          style={{ fontWeight: "bold", fontSize: "12px" }}
-                        >
-                          {`${(percent * 100).toFixed(0)}%`}
-                        </text>
-                      );
-                    }}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    strokeWidth={2}
-                    stroke="hsl(var(--background))"
-                  >
-                    {investmentChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={
-                          [
-                            COLORS.chart3,
-                            COLORS.chart1,
-                            COLORS.chart2,
-                            COLORS.chart4,
-                            COLORS.chart5,
-                            COLORS.primary,
-                            COLORS.accent,
-                          ][index % 7]
-                        }
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                    formatter={(value: number) => [
-                      `KES ${value.toFixed(2)}`,
-                      "Value",
-                    ]}
-                    labelStyle={{
-                      color: "hsl(var(--foreground))",
-                      fontWeight: "bold",
-                    }}
-                  />
-                  <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Financial Summary */}
+      {/* NET WORTH CHART */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Financial Summary</CardTitle>
-          <CardDescription>Overview of your financial health</CardDescription>
+          <CardTitle>Net Worth Breakdown</CardTitle>
+          <CardDescription>Cash vs Investments over time</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <ResponsiveContainer width="100%" height={320}>
+            <AreaChart data={netWorthData}>
+              <defs>
+                <linearGradient id="cashGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="hsl(var(--chart-2))"
+                    stopOpacity={0.6}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="hsl(var(--chart-2))"
+                    stopOpacity={0.05}
+                  />
+                </linearGradient>
+
+                <linearGradient id="investGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="hsl(var(--primary))"
+                    stopOpacity={0.6}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="hsl(var(--primary))"
+                    stopOpacity={0.05}
+                  />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid stroke="hsl(var(--border))" opacity={0.15} />
+
+              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+              <YAxis stroke="hsl(var(--muted-foreground))" />
+
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "10px",
+                  backdropFilter: "blur(10px)",
+                }}
+                formatter={(value: number) => formatKES(value)}
+              />
+
+              {/* CASH */}
+              <Area
+                type="monotone"
+                dataKey="Cash"
+                stackId="1"
+                stroke="hsl(var(--chart-2))"
+                fill="url(#cashGradient)"
+                strokeWidth={2}
+                isAnimationActive
+              />
+
+              {/* INVESTMENTS */}
+              <Area
+                type="monotone"
+                dataKey="Investments"
+                stackId="1"
+                stroke="hsl(var(--primary))"
+                fill="url(#investGradient)"
+                strokeWidth={2}
+                isAnimationActive
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* QUICK INSIGHTS */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <InsightCard
+          title="Top Spending"
+          value={topCategory?.name ?? "N/A"}
+          sub={formatKES(topCategory?.value ?? 0)}
+        />
+        <InsightCard
+          title="Savings Rate"
+          value={`${savingsRate.toFixed(1)}%`}
+        />
+        <InsightCard
+          title="Investment Growth"
+          value={formatKES(investmentGains)}
+        />
+      </div>
+
+      {/* CATEGORY CHART */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Spending by Category</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Total Income</p>
-              <p className="text-2xl font-bold text-accent">
-                KES {totalIncome.toFixed(2)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-2xl font-bold text-destructive">
-                KES {totalExpenses.toFixed(2)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Total Invested</p>
-              <p className="text-2xl font-bold">
-                KES {totalInvested.toFixed(2)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Active Budgets</p>
-              <p className="text-2xl font-bold">{budgets.length}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Total Transactions
-              </p>
-              <p className="text-2xl font-bold">{transactions.length}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Investment Holdings
-              </p>
-              <p className="text-2xl font-bold">{investments.length}</p>
-            </div>
-          </div>
+          {categoryChartData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-10">
+              No spending data
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={categoryChartData} dataKey="value" outerRadius={110}>
+                  {categoryChartData.map((_, i) => (
+                    <Cell key={i} fill="hsl(var(--chart-1))" />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-/* ---------------- SMALL HELPER ---------------- */
+/* ---------------- COMPONENTS ---------------- */
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  delta,
-  suffix = "",
-}: {
-  icon: any;
-  label: string;
-  value: number;
-  delta?: number;
-  suffix?: string;
-}) {
+function MetricCard({ icon: Icon, label, value, delta, suffix = "" }: any) {
   return (
     <Card className="glass-card">
-      <CardHeader className="pb-3">
+      <CardHeader>
         <CardDescription className="flex items-center gap-2">
-          <Icon className="w-4 h-4" />
-          {label}
+          <Icon className="w-4 h-4" /> {label}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <CardTitle className="text-3xl font-bold">
-          KES {value.toFixed(2)}
+        <CardTitle className="text-2xl font-bold">
+          {formatKES(value)}
           {suffix}
         </CardTitle>
         {delta !== undefined && (
-          <p
-            className={`text-sm mt-1 ${
-              delta >= 0 ? "text-accent" : "text-destructive"
-            }`}
-          >
-            {delta >= 0 ? "+" : ""}KES {delta.toFixed(2)}
+          <p className={delta >= 0 ? "text-green-400" : "text-red-400"}>
+            {delta >= 0 ? "+" : ""}
+            {formatKES(delta)}
           </p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InsightCard({ title, value, sub }: any) {
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-lg font-semibold">{value}</p>
+        {sub && <p className="text-sm text-muted-foreground">{sub}</p>}
       </CardContent>
     </Card>
   );
