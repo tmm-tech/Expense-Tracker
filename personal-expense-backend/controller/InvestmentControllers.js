@@ -19,14 +19,25 @@ module.exports = {
         purchasePrice,
         currentPrice,
         purchaseDate,
-
-        // Insurance-only
         premium,
         sumAssured,
         maturityDate,
-        principal,
-        currentValue
       } = req.body;
+
+      // ✅ compute safely
+      let principal = 0;
+      let currentValue = 0;
+
+      if (type === "Insurance (With-Profit)") {
+        principal = Number(premium) || 0;
+        currentValue = Number(sumAssured) || 0;
+      } else if (type === "Money Market Fund") {
+        principal = Number(purchasePrice) || 0;
+        currentValue = Number(currentPrice) || 0;
+      } else {
+        principal = (Number(quantity) || 0) * (Number(purchasePrice) || 0);
+        currentValue = (Number(quantity) || 0) * (Number(currentPrice) || 0);
+      }
 
       if (!type || !name || purchasePrice == null || currentPrice == null) {
         return res.status(400).json({
@@ -64,6 +75,9 @@ module.exports = {
             isInsurance && maturityDate
               ? new Date(maturityDate)
               : null,
+
+          principal,
+          currentValue,
         },
       });
 
