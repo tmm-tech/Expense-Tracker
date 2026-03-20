@@ -51,6 +51,24 @@ module.exports = {
         });
       }
       const isInsurance = type === "Life Insurance";
+      const parseDate = (value) => {
+        if (!value) return new Date();
+
+        // Handle weird Prisma-style object
+        if (typeof value === "object" && value.value) {
+          value = value.value;
+        }
+
+        const date = new Date(value);
+
+        if (isNaN(date.getTime())) {
+          console.warn("Invalid date received:", value);
+          return new Date(); // fallback
+        }
+
+        return date;
+      };
+      const parsedDate = parseDate(purchaseDate);
 
       const investment = await prisma.investment.create({
         data: {
@@ -67,14 +85,11 @@ module.exports = {
           // Insurance-specific
           premium: isInsurance ? Number(premium || 0) : null,
           sumAssured: isInsurance ? Number(sumAssured || 0) : null,
-          maturityDate:
-            isInsurance && maturityDate
-              ? new Date(maturityDate)
-              : null,
+          maturityDate: isInsurance && maturityDate ? parseDate(maturityDate) : null,
 
           principal,
           currentValue,
-          startDate: purchaseDate ? new Date(purchaseDate) : new Date(),
+          startDate: parsedDate,
         },
       });
 
