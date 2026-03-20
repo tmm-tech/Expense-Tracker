@@ -3,19 +3,20 @@ export interface Investment {
   name: string;
   type: string;
 
-  // ✅ CORE (source of truth)
+  // ✅ CORE
   principal: number;
   currentValue: number;
 
-  // ✅ OPTIONAL (for UI only)
+  // ✅ OPTIONAL UI FIELDS (fixes your error)
   quantity?: number;
   purchasePrice?: number;
   currentPrice?: number;
+  purchaseDate?: number;
+
   symbol?: string;
 
-  // other optional fields
-  maturityDate?: any;
-  sumAssured?: any;
-  premium?: any;
-  purchaseDate?: number;
+  // insurance
+  premium?: number;
+  sumAssured?: number;
+  maturityDate?: number;
 }

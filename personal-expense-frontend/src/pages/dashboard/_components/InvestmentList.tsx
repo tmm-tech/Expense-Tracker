@@ -74,15 +74,15 @@ export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
     );
   }
 
-  const totalInvested = investments.reduce((sum, inv) => {
-    if (isInsurance(inv)) return sum + inv.purchasePrice;
-    return sum + inv.quantity * inv.purchasePrice;
-  }, 0);
+  const totalInvested = investments.reduce(
+    (sum, inv) => sum + (inv.principal || 0),
+    0,
+  );
 
-  const currentValue = investments.reduce((sum, inv) => {
-    if (isInsurance(inv)) return sum + inv.currentPrice;
-    return sum + inv.quantity * inv.currentPrice;
-  }, 0);
+  const currentValue = investments.reduce(
+    (sum, inv) => sum + (inv.currentValue || 0),
+    0,
+  );
 
   const totalGainLoss = currentValue - totalInvested;
   const totalGainLossPercentage =
@@ -152,13 +152,8 @@ export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
       {/* Investment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {investments.map((investment) => {
-          const invested = isInsurance(investment)
-            ? investment.purchasePrice
-            : investment.quantity * investment.purchasePrice;
-
-          const currentVal = isInsurance(investment)
-            ? investment.currentPrice
-            : investment.quantity * investment.currentPrice;
+          const invested = investment.principal || 0;
+          const currentVal = investment.currentValue || 0;
 
           const gainLoss = currentVal - invested;
 
@@ -214,20 +209,22 @@ export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
                     <>
                       <div>
                         <p className="text-muted-foreground">Quantity</p>
-                        <p className="font-medium">{investment.quantity}</p>
+                        <p className="font-medium">
+                          {investment.quantity ?? "-"}
+                        </p>
                       </div>
 
                       <div>
                         <p className="text-muted-foreground">Purchase Price</p>
                         <p className="font-medium">
-                          KES {investment.purchasePrice.toFixed(2)}
+                          KES {(investment.purchasePrice ?? 0).toFixed(2)}
                         </p>
                       </div>
 
                       <div>
                         <p className="text-muted-foreground">Current Price</p>
                         <p className="font-medium">
-                          KES {investment.currentPrice.toFixed(2)}
+                          KES {(investment.currentPrice ?? 0).toFixed(2)}
                         </p>
                       </div>
                     </>
@@ -236,14 +233,14 @@ export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
                       <div>
                         <p className="text-muted-foreground">Policy Value</p>
                         <p className="font-medium">
-                          KES {investment.currentPrice.toFixed(2)}
+                          KES {(investment.currentValue ?? 0).toFixed(2)}
                         </p>
                       </div>
 
                       <div>
                         <p className="text-muted-foreground">Total Paid</p>
                         <p className="font-medium">
-                          KES {investment.purchasePrice.toFixed(2)}
+                          KES {(investment.principal ?? 0).toFixed(2)}
                         </p>
                       </div>
 
@@ -270,7 +267,8 @@ export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
                   <div>
                     <p className="text-muted-foreground">Start Date</p>
                     <p className="font-medium">
-                      {format(investment.purchaseDate, "MMM dd, yyyy")}
+                      format( new Date(investment.purchaseDate || Date.now()),
+                      "MMM dd, yyyy" )
                     </p>
                   </div>
                 </div>

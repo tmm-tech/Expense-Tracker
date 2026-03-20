@@ -81,8 +81,6 @@ export function InvestmentDialog({
     if (editingInvestment) {
       setType(editingInvestment.type as InvestmentType);
       setName(editingInvestment.name);
-      setSymbol(editingInvestment.symbol || "");
-      setQuantity(editingInvestment.quantity?.toString() || "");
       setPurchasePrice(editingInvestment.purchasePrice?.toString() || "");
       setCurrentPrice(editingInvestment.currentPrice?.toString() || "");
 
@@ -90,14 +88,6 @@ export function InvestmentDialog({
         editingInvestment.purchaseDate
           ? format(new Date(editingInvestment.purchaseDate), "yyyy-MM-dd")
           : format(new Date(), "yyyy-MM-dd"),
-      );
-
-      setPremium(editingInvestment.premium?.toString() || "");
-      setSumAssured(editingInvestment.sumAssured?.toString() || "");
-      setMaturityDate(
-        editingInvestment.maturityDate
-          ? format(editingInvestment.maturityDate, "yyyy-MM-dd")
-          : "",
       );
     } else {
       resetForm();
@@ -206,19 +196,22 @@ export function InvestmentDialog({
     const buyPrice = Number(purchasePrice) || 0;
     const currPrice = Number(currentPrice) || 0;
 
-    const principal = qty * buyPrice;
-    const currentValue = qty * currPrice;
+    // ✅ CORE VALUES (source of truth)
+    const principal = isInsurance ? Number(premium || 0) : qty * buyPrice;
+    const currentValue = isInsurance
+      ? Number(sumAssured || 0)
+      : qty * currPrice;
 
     const payload = {
       type,
       name,
       symbol: isInsurance ? undefined : symbol || undefined,
 
-      // ✅ CORE FIELDS (REQUIRED)
+      // ✅ REQUIRED (fixes your TS errors)
       principal,
       currentValue,
 
-      // ✅ OPTIONAL UI FIELDS
+      // ✅ OPTIONAL UI fields (safe)
       quantity: isInsurance ? 1 : qty,
       purchasePrice: buyPrice,
       currentPrice: currPrice,
