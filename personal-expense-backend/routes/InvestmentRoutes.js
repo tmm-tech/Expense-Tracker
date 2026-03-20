@@ -25,6 +25,6 @@ InvestmentRoutes.get('/:id', getInvestmentById);
 InvestmentRoutes.put('/:id', updateInvestment);
 
 // Delete an investment
-InvestmentRoutes.delete('/delete/:id', deleteInvestment);
+InvestmentRoutes.delete('/:id', deleteInvestment);
 
 module.exports = InvestmentRoutes;

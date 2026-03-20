@@ -84,10 +84,10 @@ export function InsightsView() {
 
   const cashBalance = totalIncome - totalExpenses;
 
-  const totalInvested = investments.reduce((s, i) => s + (i.principal || 0), 0);
+  const totalInvested = investments.reduce((s, i) => s + (i?.principal || 0), 0);
 
   const currentInvestmentValue = investments.reduce(
-    (s, i) => s + (i.currentValue || 0),
+    (s, i) => s + (i?.currentValue || 0),
     0,
   );
 
