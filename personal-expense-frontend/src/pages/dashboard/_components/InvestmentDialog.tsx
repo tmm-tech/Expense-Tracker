@@ -183,6 +183,7 @@ export function InvestmentDialog({
     },
   });
 
+  
   /* ---------- Submit ---------- */
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -224,8 +225,7 @@ export function InvestmentDialog({
       quantity: isInsurance || isMMF ? 1 : qty,
       purchasePrice: buyPrice,
       currentPrice: currPrice,
-
-      purchaseDate: new Date(purchaseDate).getTime(),
+      purchaseDate: purchaseDate ? new Date(purchaseDate).getTime() : undefined,
 
       premium: isInsurance ? Number(premium || 0) : undefined,
       sumAssured: isInsurance ? Number(sumAssured || 0) : undefined,
