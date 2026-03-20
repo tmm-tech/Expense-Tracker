@@ -267,8 +267,7 @@ export function InvestmentList({ investments, onEdit }: InvestmentListProps) {
                   <div>
                     <p className="text-muted-foreground">Start Date</p>
                     <p className="font-medium">
-                      format( new Date(investment.purchaseDate || Date.now()),
-                      "MMM dd, yyyy" )
+                      {format(new Date(investment.purchaseDate || Date.now()), "MMM dd, yyyy")}
                     </p>
                   </div>
                 </div>
