@@ -103,9 +103,7 @@ export function CSVImport({ accounts, categories }: Props) {
     <Card>
       <CardHeader>
         <CardTitle>Bank Statement Import</CardTitle>
-        <CardDescription>
-          Upload CSV or PDF bank statements
-        </CardDescription>
+        <CardDescription>Upload CSV or PDF bank statements</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -140,9 +138,7 @@ export function CSVImport({ accounts, categories }: Props) {
         <Input
           type="file"
           accept={fileType === "csv" ? ".csv" : ".pdf"}
-          onChange={(e) =>
-            setFile(e.target.files?.[0] || null)
-          }
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
 
         <Button onClick={handleParse} disabled={loading}>
@@ -153,10 +149,7 @@ export function CSVImport({ accounts, categories }: Props) {
           <>
             <div className="border rounded p-2 max-h-60 overflow-y-auto">
               {preview.map((r, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-4 text-sm py-1"
-                >
+                <div key={i} className="grid grid-cols-4 text-sm py-1">
                   <div>{r.date}</div>
                   <div>{r.description}</div>
                   <div>{r.amount}</div>
@@ -165,10 +158,7 @@ export function CSVImport({ accounts, categories }: Props) {
               ))}
             </div>
 
-            <Button
-              onClick={handleImport}
-              className="w-full"
-            >
+            <Button onClick={handleImport} className="w-full">
               Confirm Import
             </Button>
           </>
