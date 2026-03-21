@@ -79,6 +79,9 @@ module.exports = {
       const investment = await prisma.investment.create({
         data: {
           userId,
+          user: {
+            connect: { id: req.user.sub },
+          },
           type,
           name,
 
