@@ -1,5 +1,6 @@
 const TransactionRoutes = require('express').Router();
-
+const multer = require("multer");
+const upload = multer();
 const {
     createTransaction,
     getTransactions,
@@ -7,7 +8,9 @@ const {
     updateTransaction,
     deleteTransaction,
     getTransactionSummary,
-    importTransactions
+    previewImport,
+    confirmImport,
+    importStatement
 } = require('../controller/TransactionControllers');
 
 // Create and insert a new transaction
@@ -29,6 +32,6 @@ TransactionRoutes.delete('/transactions/:id', deleteTransaction);
 TransactionRoutes.get('/transactions/summary', getTransactionSummary);
 
 // Transaction Import
-TransactionRoutes.post('/import/transactions', importTransactions);
+TransactionRoutes.post('/import/transactions', upload.single('file'), importStatement);
 
 module.exports = TransactionRoutes;

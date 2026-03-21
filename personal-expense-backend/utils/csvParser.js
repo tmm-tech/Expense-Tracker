@@ -1,32 +1,30 @@
-const { parse } = require("csv-parse");
+exports.parseCSV = (text) => {
+  const lines = text.split("\n");
 
-module.exports.parseCSV = (buffer) => {
-  return new Promise((resolve, reject) => {
-    parse(
-      buffer,
-      {
-        columns: true,
-        trim: true,
-        skip_empty_lines: true,
-      },
-      (err, records) => {
-        if (err) return reject(err);
+  const rows = [];
 
-        const parsed = records.map((row, index) => {
-          if (!row.date || !row.amount || !row.name) {
-            throw new Error(`Invalid CSV format at row ${index + 1}`);
-          }
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",");
 
-          return {
-            name: row.name,
-            category: row.category || "Uncategorized",
-            amount: Number(row.amount),
-            date: new Date(row.date),
-          };
-        });
+    if (!cols[0]) continue;
 
-        resolve(parsed);
-      }
-    );
-  });
+    const description = cols[0];
+    const date = cols[1];
+
+    const credit = parseFloat(cols[2]) || 0;
+    const debit = parseFloat(cols[3]) || 0;
+
+    const amount = credit > 0 ? credit : debit;
+
+    const type = credit > 0 ? "income" : "expense";
+
+    rows.push({
+      description,
+      date,
+      amount,
+      type,
+    });
+  }
+
+  return rows;
 };

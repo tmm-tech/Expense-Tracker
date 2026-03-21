@@ -1,210 +1,179 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 import {
   Select,
-  SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectItem,
+  SelectContent,
 } from "@/components/ui/select";
 
-import { Upload, AlertCircle, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
 
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 
-/* ========================= */
-
-interface ImportResult {
-  imported: number;
-  total: number;
-  errors: string[];
-}
-
-interface CSVImportProps {
+interface Props {
   accounts: Account[];
   categories: Category[];
 }
 
-/* ========================= */
+interface ParsedRow {
+  date: string;
+  description: string;
+  amount: number;
+  type: "income" | "expense";
+  category?: string;
+}
 
-export function CSVImport({ accounts, categories }: CSVImportProps) {
+export function CSVImport({ accounts, categories }: Props) {
   const [accountId, setAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [fileType, setFileType] = useState<"csv" | "pdf">("csv");
+  const [file, setFile] = useState<File | null>(null);
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const [preview, setPreview] = useState<ParsedRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
-    if (!accountId) {
-      toast.error("Please select account");
+  /* parse only */
+  const handleParse = async () => {
+    if (!file || !accountId) {
+      toast.error("Select file and account");
       return;
     }
 
-    if (!file.name.endsWith(".csv")) {
-      toast.error("Upload CSV file");
-      return;
-    }
+    const form = new FormData();
+    form.append("file", file);
+    form.append("accountId", accountId);
+    form.append("fileType", fileType);
 
-    setIsImporting(true);
-    setResult(null);
+    setLoading(true);
 
     try {
-      const csvContent = await file.text();
-
-      const res = await apiFetch<ImportResult>("/import/transactions", {
+      const res = await fetch("/api/import/preview", {
         method: "POST",
+        body: form,
+      });
+
+      const data = await res.json();
+
+      setPreview(data.rows);
+    } catch {
+      toast.error("Parse failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* confirm import */
+  const handleImport = async () => {
+    setLoading(true);
+
+    try {
+      await fetch("/api/import/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           accountId,
-          defaultCategoryId: categoryId || null,
-          csvContent,
+          rows: preview,
         }),
       });
 
-      setResult(res);
-
-      toast.success(`Imported ${res.imported} transactions`);
-    } catch (error) {
+      toast.success("Imported successfully");
+      setPreview([]);
+    } catch {
       toast.error("Import failed");
     } finally {
-      setIsImporting(false);
-      event.target.value = "";
+      setLoading(false);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Import Transactions</CardTitle>
+        <CardTitle>Bank Statement Import</CardTitle>
         <CardDescription>
-          Import MPESA, Bank, SACCO, MMF statements
+          Upload CSV or PDF bank statements
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Account */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Account *
-          </label>
+        <Select value={accountId} onValueChange={setAccountId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Account" />
+          </SelectTrigger>
 
-          <Select
-            value={accountId}
-            onValueChange={(val) =>
-              setAccountId(val === "none" ? "" : val)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select account" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="none">Select account</SelectItem>
-
-              {accounts.map((acc) => (
-                <SelectItem key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.type})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Category (Optional) */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Default Category (optional)
-          </label>
-
-          <Select
-            value={categoryId}
-            onValueChange={(val) =>
-              setCategoryId(val === "none" ? "" : val)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Auto detect category" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="none">
-                Auto detect category
+          <SelectContent>
+            {accounts.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
               </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.name} ({cat.type})
-                </SelectItem>
+        <Select
+          value={fileType}
+          onValueChange={(v: "csv" | "pdf") => setFileType(v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="File Type" />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="csv">CSV</SelectItem>
+            <SelectItem value="pdf">PDF</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Input
+          type="file"
+          accept={fileType === "csv" ? ".csv" : ".pdf"}
+          onChange={(e) =>
+            setFile(e.target.files?.[0] || null)
+          }
+        />
+
+        <Button onClick={handleParse} disabled={loading}>
+          {loading ? "Parsing..." : "Preview Import"}
+        </Button>
+
+        {preview.length > 0 && (
+          <>
+            <div className="border rounded p-2 max-h-60 overflow-y-auto">
+              {preview.map((r, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-4 text-sm py-1"
+                >
+                  <div>{r.date}</div>
+                  <div>{r.description}</div>
+                  <div>{r.amount}</div>
+                  <div>{r.category}</div>
+                </div>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
+            </div>
 
-        {/* File */}
-        <div className="flex items-center gap-2">
-          <Input
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-            disabled={isImporting}
-          />
-
-          <Upload className="w-4 h-4 text-muted-foreground" />
-        </div>
-
-        {isImporting && (
-          <p className="text-sm text-muted-foreground">
-            Importing...
-          </p>
+            <Button
+              onClick={handleImport}
+              className="w-full"
+            >
+              Confirm Import
+            </Button>
+          </>
         )}
-
-        {result && <ImportResultView result={result} />}
       </CardContent>
     </Card>
-  );
-}
-
-/* ========================= */
-
-function ImportResultView({ result }: { result: ImportResult }) {
-  return (
-    <div className="space-y-3">
-      <div className="rounded border border-accent bg-accent/10 p-3">
-        <div className="flex items-center gap-2 text-sm text-accent">
-          <CheckCircle className="w-4 h-4" />
-          Imported {result.imported} of {result.total}
-        </div>
-      </div>
-
-      {result.errors.length > 0 && (
-        <div className="rounded border border-destructive bg-destructive/10 p-3">
-          <div className="flex items-center gap-2 text-sm text-destructive">
-            <AlertCircle className="w-4 h-4" />
-            Errors ({result.errors.length})
-          </div>
-
-          {result.errors.map((err, i) => (
-            <p key={i} className="text-xs text-destructive">
-              {err}
-            </p>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

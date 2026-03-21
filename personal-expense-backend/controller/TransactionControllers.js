@@ -1,5 +1,8 @@
 const { prisma } = require("../src/lib/prism");
 const { matchCategory } = require("../utils/categoryMatcher");
+const pdf = require("pdf-parse");
+const { parseCSV } = require("../utils/csvParser");
+const { parseEquityPDF } = require("../utils/pdfParser");
 /**
  * NOTE:
  * req.user.id is assumed to be set by auth middleware
@@ -247,16 +250,31 @@ module.exports = {
       });
     }
   },
-  importTransactions: async (req, res) => {
+  importStatement: async (req, res) => {
     try {
-      const { csvContent, accountId, defaultCategoryId } =
-        req.body;
+      const { accountId, fileType, defaultCategoryId } = req.body;
 
-      const rows = csvContent.split("\n");
-      const header = rows[0].split(",");
+      const file = req.file;
 
-      const data = rows.slice(1);
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
 
+      let rows = [];
+
+      /* CSV */
+      if (fileType === "csv") {
+        const text = file.buffer.toString();
+        rows = parseCSV(text);
+      }
+
+      /* PDF */
+      if (fileType === "pdf") {
+        const data = await pdf(file.buffer);
+        rows = parseEquityPDF(data.text);
+      }
+
+      /* categories */
       const categories = await prisma.category.findMany({
         where: { userId: req.user.sub },
       });
@@ -264,46 +282,140 @@ module.exports = {
       let imported = 0;
       const errors = [];
 
-      for (let i = 0; i < data.length; i++) {
+      for (const row of rows) {
         try {
-          const cols = data[i].split(",");
-
-          const description = cols[0];
-          const date = new Date(cols[1]);
-          const credit = parseFloat(cols[2]) || 0;
-          const debit = parseFloat(cols[3]) || 0;
-
-          const amount = credit > 0 ? credit : debit;
-          const type = credit > 0 ? "income" : "expense";
-
           const categoryId =
             defaultCategoryId ||
-            matchCategory(description, categories);
+            matchCategory(row.description, categories);
+
+          /* duplicate detection */
+          const exists = await prisma.transaction.findFirst({
+            where: {
+              userId: req.user.sub,
+              accountId,
+              amount: row.amount,
+              date: new Date(row.date),
+              description: row.description,
+            },
+          });
+
+          if (exists) continue;
 
           await prisma.transaction.create({
             data: {
               userId: req.user.sub,
               accountId,
               categoryId,
-              description,
-              amount,
-              type,
-              date,
+              description: row.description,
+              amount: row.amount,
+              type: row.type,
+              date: new Date(row.date),
             },
           });
 
           imported++;
         } catch (err) {
-          errors.push(`Row ${i + 1} failed`);
+          errors.push(row.description);
         }
       }
 
       res.json({
         imported,
-        total: data.length,
+        total: rows.length,
         errors,
       });
     } catch (err) {
+      console.error(err);
+      res.status(500).json({
+        error: "Import failed",
+      });
+    }
+  },
+  previewImport: async (req, res) => {
+    try {
+      const { accountId, fileType } = req.body;
+
+      const file = req.file;
+
+      let rows = [];
+
+      /* CSV */
+      if (fileType === "csv") {
+        const text = file.buffer.toString();
+        rows = parseCSV(text);
+      }
+
+      /* PDF */
+      if (fileType === "pdf") {
+        const data = await pdf(file.buffer);
+        rows = parseEquityPDF(data.text);
+      }
+
+      res.json({
+        rows,
+      });
+    } catch (err) {
+      console.error(err);
+
+      res.status(500).json({
+        error: "Preview failed",
+      });
+    }
+  },
+
+  /* ============================
+     CONFIRM IMPORT
+  ============================ */
+
+  confirmImport: async (req, res) => {
+    try {
+      const { rows, accountId, defaultCategoryId } = req.body;
+
+      const categories = await prisma.category.findMany({
+        where: { userId: req.user.sub },
+      });
+
+      let imported = 0;
+
+      for (const row of rows) {
+        const categoryId =
+          defaultCategoryId ||
+          matchCategory(row.description, categories);
+
+        /* duplicate detection */
+        const exists = await prisma.transaction.findFirst({
+          where: {
+            userId: req.user.sub,
+            accountId,
+            amount: row.amount,
+            description: row.description,
+            date: new Date(row.date),
+          },
+        });
+
+        if (exists) continue;
+
+        await prisma.transaction.create({
+          data: {
+            userId: req.user.sub,
+            accountId,
+            categoryId,
+            description: row.description,
+            amount: row.amount,
+            type: row.type,
+            date: new Date(row.date),
+          },
+        });
+
+        imported++;
+      }
+
+      res.json({
+        imported,
+      });
+    } catch (err) {
+      console.error(err);
+
       res.status(500).json({
         error: "Import failed",
       });
