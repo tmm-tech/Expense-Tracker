@@ -6,7 +6,8 @@ const {
     getTransactionById,
     updateTransaction,
     deleteTransaction,
-    getTransactionSummary
+    getTransactionSummary,
+    importTransactions
 } = require('../controller/TransactionControllers');
 
 // Create and insert a new transaction
@@ -26,5 +27,8 @@ TransactionRoutes.delete('/transactions/:id', deleteTransaction);
 
 // Transaction Summary
 TransactionRoutes.get('/transactions/summary', getTransactionSummary);
+
+// Transaction Import
+TransactionRoutes.post('/import/transactions', importTransactions);
 
 module.exports = TransactionRoutes;

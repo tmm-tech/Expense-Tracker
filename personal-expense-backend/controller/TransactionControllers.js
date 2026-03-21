@@ -1,5 +1,5 @@
 const { prisma } = require("../src/lib/prism");
-
+const { matchCategory } = require("../utils/categoryMatcher");
 /**
  * NOTE:
  * req.user.id is assumed to be set by auth middleware
@@ -244,6 +244,68 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: `Transaction Summary Error: ${error.message}`,
+      });
+    }
+  },
+  importTransactions: async (req, res) => {
+    try {
+      const { csvContent, accountId, defaultCategoryId } =
+        req.body;
+
+      const rows = csvContent.split("\n");
+      const header = rows[0].split(",");
+
+      const data = rows.slice(1);
+
+      const categories = await prisma.category.findMany({
+        where: { userId: req.user.sub },
+      });
+
+      let imported = 0;
+      const errors = [];
+
+      for (let i = 0; i < data.length; i++) {
+        try {
+          const cols = data[i].split(",");
+
+          const description = cols[0];
+          const date = new Date(cols[1]);
+          const credit = parseFloat(cols[2]) || 0;
+          const debit = parseFloat(cols[3]) || 0;
+
+          const amount = credit > 0 ? credit : debit;
+          const type = credit > 0 ? "income" : "expense";
+
+          const categoryId =
+            defaultCategoryId ||
+            matchCategory(description, categories);
+
+          await prisma.transaction.create({
+            data: {
+              userId: req.user.sub,
+              accountId,
+              categoryId,
+              description,
+              amount,
+              type,
+              date,
+            },
+          });
+
+          imported++;
+        } catch (err) {
+          errors.push(`Row ${i + 1} failed`);
+        }
+      }
+
+      res.json({
+        imported,
+        total: data.length,
+        errors,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error: "Import failed",
       });
     }
   },
