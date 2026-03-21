@@ -1,14 +1,8 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+"use client";
 
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectTrigger,
@@ -16,50 +10,67 @@ import {
   SelectItem,
   SelectContent,
 } from "@/components/ui/select";
-
-import { useState } from "react";
 import { toast } from "sonner";
+import { Upload } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
 
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 
-interface Props {
-  accounts: Account[];
-  categories: Category[];
-}
+/* =========================
+   Types
+========================= */
 
-interface ParsedRow {
+interface PreviewRow {
   date: string;
   description: string;
   amount: number;
   type: "income" | "expense";
-  category?: string;
+  categoryId?: string;
 }
 
-export function CSVImport({ accounts, categories }: Props) {
-  const [accountId, setAccountId] = useState("");
-  const [fileType, setFileType] = useState<"csv" | "pdf">("csv");
-  const [file, setFile] = useState<File | null>(null);
+/* =========================
+   Component
+========================= */
 
-  const [preview, setPreview] = useState<ParsedRow[]>([]);
+export function CSVImport({
+  accounts,
+  categories,
+}: {
+  accounts: Account[];
+  categories: Category[];
+}) {
+  const queryClient = useQueryClient();
+
+  const [file, setFile] = useState<File | null>(null);
+  const [accountId, setAccountId] = useState("");
+  const [preview, setPreview] = useState<PreviewRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  /* parse only */
-  const handleParse = async () => {
-    if (!file || !accountId) {
-      toast.error("Select file and account");
+  /* =========================
+     Preview Import
+  ========================= */
+
+  const handlePreview = async () => {
+    if (!file) {
+      toast.error("Select file");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("accountId", accountId);
-    formData.append("fileType", fileType);
+    if (!accountId) {
+      toast.error("Select account");
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const res = await fetch("https://expense-tracker-u6ge.onrender.com/api/import/preview", {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("accountId", accountId);
+
+      const res = await fetch("/api/import/preview", {
         method: "POST",
         body: formData,
       });
@@ -68,102 +79,163 @@ export function CSVImport({ accounts, categories }: Props) {
 
       setPreview(data.rows);
     } catch {
-      toast.error("Parse failed");
+      toast.error("Preview failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* confirm import */
-  const handleImport = async () => {
-    setLoading(true);
+  /* =========================
+     Update Category
+  ========================= */
 
-    try {
-      await fetch("https://expense-tracker-u6ge.onrender.com/api/import/confirm", {
+  const updateCategory = (index: number, categoryId: string) => {
+    const updated = [...preview];
+    updated[index].categoryId = categoryId;
+    setPreview(updated);
+  };
+
+  /* =========================
+     Confirm Import
+  ========================= */
+
+  const confirmImport = useMutation({
+    mutationFn: () =>
+      apiFetch("/import/confirm", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
-          accountId,
           rows: preview,
+          accountId,
         }),
-      });
+      }),
 
-      toast.success("Imported successfully");
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+
+      toast.success("Transactions imported");
+
       setPreview([]);
-    } catch {
+      setFile(null);
+    },
+
+    onError: () => {
       toast.error("Import failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
+
+  /* =========================
+     UI
+  ========================= */
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Bank Statement Import</CardTitle>
-        <CardDescription>Upload CSV or PDF bank statements</CardDescription>
-      </CardHeader>
+    <div className="space-y-4">
+      {/* Account selector */}
+      <Select value={accountId} onValueChange={setAccountId}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select account" />
+        </SelectTrigger>
 
-      <CardContent className="space-y-4">
-        <Select value={accountId} onValueChange={setAccountId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Account" />
-          </SelectTrigger>
+        <SelectContent>
+          {accounts.map((acc) => (
+            <SelectItem key={acc.id} value={acc.id}>
+              {acc.name} ({acc.type})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-          <SelectContent>
-            {accounts.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={fileType}
-          onValueChange={(v: "csv" | "pdf") => setFileType(v)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="File Type" />
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectItem value="csv">CSV</SelectItem>
-            <SelectItem value="pdf">PDF</SelectItem>
-          </SelectContent>
-        </Select>
-
+      {/* File upload */}
+      <div className="flex gap-2">
         <Input
           type="file"
-          accept={fileType === "csv" ? ".csv" : ".pdf"}
+          accept=".csv,.pdf"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
 
-        <Button onClick={handleParse} disabled={loading}>
-          {loading ? "Parsing..." : "Preview Import"}
+        <Button onClick={handlePreview} disabled={loading}>
+          <Upload className="w-4 h-4 mr-2" />
+          Preview
         </Button>
+      </div>
 
-        {preview.length > 0 && (
-          <>
-            <div className="border rounded p-2 max-h-60 overflow-y-auto">
-              {preview.map((r, i) => (
-                <div key={i} className="grid grid-cols-4 text-sm py-1">
-                  <div>{r.date}</div>
-                  <div>{r.description}</div>
-                  <div>{r.amount}</div>
-                  <div>{r.category}</div>
-                </div>
-              ))}
-            </div>
+      {/* Preview Table */}
+      {preview.length > 0 && (
+        <>
+          <div className="border rounded-lg overflow-auto max-h-[450px]">
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="p-2 text-left">Date</th>
+                  <th className="p-2 text-left">Description</th>
+                  <th className="p-2 text-left">Amount</th>
+                  <th className="p-2 text-left">Type</th>
+                  <th className="p-2 text-left">Category</th>
+                </tr>
+              </thead>
 
-            <Button onClick={handleImport} className="w-full">
-              Confirm Import
-            </Button>
-          </>
-        )}
-      </CardContent>
-    </Card>
+              <tbody>
+                {preview.map((row, i) => {
+                  const filtered = categories.filter(
+                    (c) =>
+                      c.type !== "goal" &&
+                      c.type === row.type
+                  );
+
+                  return (
+                    <tr key={i} className="border-t">
+                      <td className="p-2">{row.date}</td>
+
+                      <td className="p-2">{row.description}</td>
+
+                      <td className="p-2">
+                        {row.amount.toLocaleString()}
+                      </td>
+
+                      <td className="p-2">{row.type}</td>
+
+                      <td className="p-2">
+                        <Select
+                          value={row.categoryId || ""}
+                          onValueChange={(v) =>
+                            updateCategory(i, v)
+                          }
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            {filtered.map((c) => (
+                              <SelectItem
+                                key={c.id}
+                                value={c.id}
+                              >
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Confirm Import */}
+          <Button
+            onClick={() => confirmImport.mutate()}
+            disabled={confirmImport.isPending}
+            className="w-full"
+          >
+            {confirmImport.isPending
+              ? "Importing..."
+              : "Confirm Import"}
+          </Button>
+        </>
+      )}
+    </div>
   );
 }
