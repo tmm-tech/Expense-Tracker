@@ -51,17 +51,17 @@ export function CSVImport({ accounts, categories }: Props) {
       return;
     }
 
-    const form = new FormData();
-    form.append("file", file);
-    form.append("accountId", accountId);
-    form.append("fileType", fileType);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("accountId", accountId);
+    formData.append("fileType", fileType);
 
     setLoading(true);
 
     try {
       const res = await fetch("/api/import/preview", {
         method: "POST",
-        body: form,
+        body: formData,
       });
 
       const data = await res.json();
