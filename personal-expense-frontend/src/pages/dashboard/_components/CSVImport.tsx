@@ -14,13 +14,9 @@ import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
-
-/* =========================
-   Types
-========================= */
+import type { Transaction } from "@/types/transaction";
 
 interface PreviewRow {
   date: string;
@@ -29,10 +25,6 @@ interface PreviewRow {
   type: "income" | "expense";
   categoryId?: string;
 }
-
-/* =========================
-   Component
-========================= */
 
 export function CSVImport({
   accounts,
@@ -44,49 +36,39 @@ export function CSVImport({
   const queryClient = useQueryClient();
 
   const [file, setFile] = useState<File | null>(null);
-  const [accountId, setAccountId] = useState("");
   const [preview, setPreview] = useState<PreviewRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [accountId, setAccountId] = useState("");
 
   /* =========================
-     Preview Import
+     PREVIEW
   ========================= */
 
-  const handlePreview = async () => {
-    if (!file) {
-      toast.error("Select file");
-      return;
-    }
+  const previewImport = useMutation({
+    mutationFn: () => {
+      if (!file) throw new Error("Select file");
+      if (!accountId) throw new Error("Select account");
 
-    if (!accountId) {
-      toast.error("Select account");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("accountId", accountId);
 
-      const res = await fetch("/api/import/preview", {
+      return apiFetch<{ rows: PreviewRow[] }>("/import/preview", {
         method: "POST",
         body: formData,
       });
+    },
 
-      const data = await res.json();
-
+    onSuccess: (data) => {
       setPreview(data.rows);
-    } catch {
+    },
+
+    onError: () => {
       toast.error("Preview failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   /* =========================
-     Update Category
+     UPDATE CATEGORY
   ========================= */
 
   const updateCategory = (index: number, categoryId: string) => {
@@ -96,44 +78,67 @@ export function CSVImport({
   };
 
   /* =========================
-     Confirm Import
+     CONFIRM IMPORT
   ========================= */
 
   const confirmImport = useMutation({
-    mutationFn: () =>
+    mutationFn: (rows: PreviewRow[]) =>
       apiFetch("/import/confirm", {
         method: "POST",
         body: JSON.stringify({
-          rows: preview,
+          rows,
           accountId,
         }),
       }),
 
+    /* optimistic update */
+    onMutate: async (rows) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+
+      const previous =
+        queryClient.getQueryData<Transaction[]>(["transactions"]) ?? [];
+
+      const optimistic: Transaction[] = rows.map((r, i) => ({
+        id: `import-${Date.now()}-${i}`,
+        description: r.description,
+        amount: r.amount,
+        type: r.type,
+        categoryId: r.categoryId!,
+        accountId,
+        date: new Date(r.date).getTime(),
+      }));
+
+      queryClient.setQueryData<Transaction[]>(
+        ["transactions"],
+        [...optimistic, ...previous]
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _rows, ctx) => {
+      queryClient.setQueryData(["transactions"], ctx?.previous);
+      toast.error("Import failed");
+    },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
 
       toast.success("Transactions imported");
 
       setPreview([]);
       setFile(null);
     },
-
-    onError: () => {
-      toast.error("Import failed");
-    },
   });
-
-  /* =========================
-     UI
-  ========================= */
 
   return (
     <div className="space-y-4">
-      {/* Account selector */}
+      {/* ACCOUNT */}
       <Select value={accountId} onValueChange={setAccountId}>
         <SelectTrigger>
-          <SelectValue placeholder="Select account" />
+          <SelectValue placeholder="Select Account" />
         </SelectTrigger>
 
         <SelectContent>
@@ -145,7 +150,7 @@ export function CSVImport({
         </SelectContent>
       </Select>
 
-      {/* File upload */}
+      {/* FILE */}
       <div className="flex gap-2">
         <Input
           type="file"
@@ -153,45 +158,41 @@ export function CSVImport({
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
 
-        <Button onClick={handlePreview} disabled={loading}>
+        <Button
+          onClick={() => previewImport.mutate()}
+          disabled={previewImport.isPending}
+        >
           <Upload className="w-4 h-4 mr-2" />
-          Preview
+          {previewImport.isPending ? "Parsing..." : "Preview"}
         </Button>
       </div>
 
-      {/* Preview Table */}
+      {/* PREVIEW TABLE */}
       {preview.length > 0 && (
         <>
           <div className="border rounded-lg overflow-auto max-h-[450px]">
             <table className="w-full text-sm">
               <thead className="bg-muted">
                 <tr>
-                  <th className="p-2 text-left">Date</th>
-                  <th className="p-2 text-left">Description</th>
-                  <th className="p-2 text-left">Amount</th>
-                  <th className="p-2 text-left">Type</th>
-                  <th className="p-2 text-left">Category</th>
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Description</th>
+                  <th className="p-2">Amount</th>
+                  <th className="p-2">Type</th>
+                  <th className="p-2">Category</th>
                 </tr>
               </thead>
 
               <tbody>
                 {preview.map((row, i) => {
                   const filtered = categories.filter(
-                    (c) =>
-                      c.type !== "goal" &&
-                      c.type === row.type
+                    (c) => c.type === row.type
                   );
 
                   return (
                     <tr key={i} className="border-t">
                       <td className="p-2">{row.date}</td>
-
                       <td className="p-2">{row.description}</td>
-
-                      <td className="p-2">
-                        {row.amount.toLocaleString()}
-                      </td>
-
+                      <td className="p-2">{row.amount}</td>
                       <td className="p-2">{row.type}</td>
 
                       <td className="p-2">
@@ -207,10 +208,7 @@ export function CSVImport({
 
                           <SelectContent>
                             {filtered.map((c) => (
-                              <SelectItem
-                                key={c.id}
-                                value={c.id}
-                              >
+                              <SelectItem key={c.id} value={c.id}>
                                 {c.name}
                               </SelectItem>
                             ))}
@@ -224,9 +222,8 @@ export function CSVImport({
             </table>
           </div>
 
-          {/* Confirm Import */}
           <Button
-            onClick={() => confirmImport.mutate()}
+            onClick={() => confirmImport.mutate(preview)}
             disabled={confirmImport.isPending}
             className="w-full"
           >
