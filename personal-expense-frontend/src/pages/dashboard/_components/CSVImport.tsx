@@ -59,7 +59,7 @@ export function CSVImport({ accounts, categories }: Props) {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/import/preview", {
+      const res = await fetch("https://expense-tracker-u6ge.onrender.com/api/import/preview", {
         method: "POST",
         body: formData,
       });
@@ -79,7 +79,7 @@ export function CSVImport({ accounts, categories }: Props) {
     setLoading(true);
 
     try {
-      await fetch("/api/import/confirm", {
+      await fetch("https://expense-tracker-u6ge.onrender.com/api/import/confirm", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
