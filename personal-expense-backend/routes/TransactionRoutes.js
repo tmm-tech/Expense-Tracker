@@ -34,4 +34,10 @@ TransactionRoutes.get('/transactions/summary', getTransactionSummary);
 // Transaction Import
 TransactionRoutes.post('/import/transactions', upload.single('file'), importStatement);
 
+// Preview Import
+TransactionRoutes.post('/import/preview', upload.single('file'), previewImport);
+
+// Confirm Import
+TransactionRoutes.post('/import/confirm', confirmImport);
+
 module.exports = TransactionRoutes;
