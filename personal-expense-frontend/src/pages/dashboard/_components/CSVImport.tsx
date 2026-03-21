@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -6,17 +5,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { Upload, AlertCircle, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
-/* =========================
-   Types
-========================= */
+import type { Account } from "@/types/account";
+import type { Category } from "@/types/category";
 
-type ImportType = "transactions" | "budgets" | "investments";
+/* ========================= */
 
 interface ImportResult {
   imported: number;
@@ -24,69 +32,55 @@ interface ImportResult {
   errors: string[];
 }
 
-/* =========================
-   Component
-========================= */
+interface CSVImportProps {
+  accounts: Account[];
+  categories: Category[];
+}
 
-export function CSVImport() {
+/* ========================= */
+
+export function CSVImport({ accounts, categories }: CSVImportProps) {
+  const [accountId, setAccountId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [isImporting, setIsImporting] = useState(false);
-  const [importType, setImportType] = useState<ImportType | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-    type: ImportType
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate CSV
-    if (!file.name.endsWith(".csv")) {
-      toast.error("Please upload a CSV file");
-      event.target.value = "";
+    if (!accountId) {
+      toast.error("Please select account");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
-      event.target.value = "";
+    if (!file.name.endsWith(".csv")) {
+      toast.error("Upload CSV file");
       return;
     }
 
     setIsImporting(true);
-    setImportType(type);
     setResult(null);
 
     try {
       const csvContent = await file.text();
 
-      const importResult = await apiFetch<ImportResult>(
-        `/import/${type}`,
-        {
-          method: "POST",
-          body: JSON.stringify({ csvContent }),
-        }
-      );
+      const res = await apiFetch<ImportResult>("/import/transactions", {
+        method: "POST",
+        body: JSON.stringify({
+          accountId,
+          defaultCategoryId: categoryId || null,
+          csvContent,
+        }),
+      });
 
-      setResult(importResult);
+      setResult(res);
 
-      if (importResult.imported > 0) {
-        toast.success(
-          `Successfully imported ${importResult.imported} ${type}`
-        );
-      }
-
-      if (importResult.errors.length > 0) {
-        toast.warning(
-          `${importResult.errors.length} rows had errors`
-        );
-      }
+      toast.success(`Imported ${res.imported} transactions`);
     } catch (error) {
-      toast.error(
-        `Import failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+      toast.error("Import failed");
     } finally {
       setIsImporting(false);
       event.target.value = "";
@@ -94,149 +88,121 @@ export function CSVImport() {
   };
 
   return (
-    <div className="space-y-4">
-      <ImportCard
-        title="Import Transactions"
-        description={
-          <>
-            Upload CSV with columns: Date, Type, Category, Amount, Description
-            <br />
-            <span className="text-xs">
-              Date: yyyy-mm-dd, Type: income or expense
-            </span>
-          </>
-        }
-        type="transactions"
-        isImporting={isImporting}
-        importType={importType}
-        onFileChange={handleFileChange}
-        result={result}
-      />
-
-      <ImportCard
-        title="Import Budgets"
-        description={
-          <>
-            Upload CSV with columns: Category, Limit, Period, Start Date
-            <br />
-            <span className="text-xs">
-              Period: weekly, monthly, yearly
-            </span>
-          </>
-        }
-        type="budgets"
-        isImporting={isImporting}
-        importType={importType}
-        onFileChange={handleFileChange}
-        result={result}
-      />
-
-      <ImportCard
-        title="Import Investments"
-        description={
-          <>
-            Upload CSV with columns: Type, Name, Symbol, Quantity, Purchase Price,
-            Current Price, Purchase Date
-            <br />
-            <span className="text-xs">
-              Type: Stocks, Bonds, Crypto, Real Estate, ETFs, etc.
-            </span>
-          </>
-        }
-        type="investments"
-        isImporting={isImporting}
-        importType={importType}
-        onFileChange={handleFileChange}
-        result={result}
-      />
-    </div>
-  );
-}
-
-/* =========================
-   Sub Components
-========================= */
-
-function ImportCard({
-  title,
-  description,
-  type,
-  isImporting,
-  importType,
-  onFileChange,
-  result,
-}: {
-  title: string;
-  description: React.ReactNode;
-  type: ImportType;
-  isImporting: boolean;
-  importType: ImportType | null;
-  onFileChange: (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: ImportType
-  ) => void;
-  result: ImportResult | null;
-}) {
-  return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle>Import Transactions</CardTitle>
+        <CardDescription>
+          Import MPESA, Bank, SACCO, MMF statements
+        </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-4">
+        {/* Account */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Account *
+          </label>
+
+          <Select
+            value={accountId}
+            onValueChange={(val) =>
+              setAccountId(val === "none" ? "" : val)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select account" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="none">Select account</SelectItem>
+
+              {accounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>
+                  {acc.name} ({acc.type})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Category (Optional) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Default Category (optional)
+          </label>
+
+          <Select
+            value={categoryId}
+            onValueChange={(val) =>
+              setCategoryId(val === "none" ? "" : val)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Auto detect category" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="none">
+                Auto detect category
+              </SelectItem>
+
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name} ({cat.type})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* File */}
         <div className="flex items-center gap-2">
           <Input
             type="file"
             accept=".csv"
-            onChange={(e) => onFileChange(e, type)}
-            disabled={isImporting && importType === type}
-            className="flex-1"
+            onChange={handleFileChange}
+            disabled={isImporting}
           />
+
           <Upload className="w-4 h-4 text-muted-foreground" />
         </div>
 
-        {isImporting && importType === type && (
+        {isImporting && (
           <p className="text-sm text-muted-foreground">
-            Importing {type}...
+            Importing...
           </p>
         )}
 
-        {result && importType === type && (
-          <ImportResultView result={result} />
-        )}
+        {result && <ImportResultView result={result} />}
       </CardContent>
     </Card>
   );
 }
 
+/* ========================= */
+
 function ImportResultView({ result }: { result: ImportResult }) {
   return (
     <div className="space-y-3">
       <div className="rounded border border-accent bg-accent/10 p-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-accent">
-          <CheckCircle className="h-4 w-4" />
+        <div className="flex items-center gap-2 text-sm text-accent">
+          <CheckCircle className="w-4 h-4" />
           Imported {result.imported} of {result.total}
         </div>
       </div>
 
       {result.errors.length > 0 && (
         <div className="rounded border border-destructive bg-destructive/10 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
-            <AlertCircle className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="w-4 h-4" />
             Errors ({result.errors.length})
           </div>
-          <div className="max-h-40 space-y-1 overflow-y-auto">
-            {result.errors.slice(0, 10).map((err, i) => (
-              <p key={i} className="text-xs text-destructive">
-                {err}
-              </p>
-            ))}
-            {result.errors.length > 10 && (
-              <p className="text-xs text-muted-foreground">
-                …and {result.errors.length - 10} more
-              </p>
-            )}
-          </div>
+
+          {result.errors.map((err, i) => (
+            <p key={i} className="text-xs text-destructive">
+              {err}
+            </p>
+          ))}
         </div>
       )}
     </div>

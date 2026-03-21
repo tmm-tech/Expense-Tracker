@@ -35,7 +35,7 @@ import { CategoryDialog } from "./CategoryDialog.tsx";
 import { InsightsView } from "./InsightsView.tsx";
 // import { ReportsView } from "./ReportsView.tsx";
 // import { CSVExport } from "./CSVExport.tsx";
-// import { CSVImport } from "./CSVImport.tsx";
+import { CSVImport } from "./CSVImport.tsx";
 import { AIInsights } from "./AIInsights.tsx";
 import SettingsView from "./SettingsView.tsx";
 import AccountList from "./AccountList.tsx";
@@ -657,13 +657,13 @@ export function DashboardContent() {
               >
                 Alerts
               </TabsTrigger>
-              {/* <TabsTrigger
+               <TabsTrigger
                 value="import"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
                 Import
               </TabsTrigger>
-              <TabsTrigger
+             {/* <TabsTrigger
                 value="export"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
@@ -787,10 +787,13 @@ export function DashboardContent() {
           <TabsContent value="alerts" className="mt-6">
             <AlertsView />
           </TabsContent>
-          {/* <TabsContent value="import" className="mt-6">
-            <CSVImport />
+           <TabsContent value="import" className="mt-6">
+            <CSVImport  
+              accounts={accounts}
+              categories={categories} 
+            />
           </TabsContent>
-          <TabsContent value="export" className="mt-6">
+         {/* <TabsContent value="export" className="mt-6">
             <EnhancedExport />
           </TabsContent> */}
           {/* <TabsContent value="currency" className="mt-6">
