@@ -19,6 +19,8 @@ const CurrencyRoutes = require("./routes/CurrencyRoutes");
 const NetWorthRoutes = require("./routes/NetWorthRoutes");
 const express = require("express");
 const cors = require("cors");
+
+
 const app = express();
 // Middleware to parse cookies
 app.use(cookieParser());
@@ -46,8 +48,9 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
 
 // // Route handling
 app.use("/api", BudgetRoutes);
