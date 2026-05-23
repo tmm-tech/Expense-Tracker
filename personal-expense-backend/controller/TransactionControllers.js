@@ -3,6 +3,7 @@ const { matchCategory } = require("../utils/categoryMatcher");
 const pdf = require("pdf-parse");
 const { parseCSV } = require("../utils/csvParser");
 const { parseEquityPDF } = require("../utils/pdfParser");
+
 /**
  * NOTE:
  * req.user.id is assumed to be set by auth middleware

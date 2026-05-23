@@ -49,9 +49,13 @@ export function CSVImport({
       if (!accountId) throw new Error("Select account");
 
       const formData = new FormData();
+
       formData.append("file", file);
       formData.append("accountId", accountId);
 
+      const fileType = file.type === "application/pdf" ? "pdf" : "csv";
+
+      formData.append("fileType", fileType);
       return apiFetch<{ rows: PreviewRow[] }>("/import/preview", {
         method: "POST",
         body: formData,
@@ -110,7 +114,7 @@ export function CSVImport({
 
       queryClient.setQueryData<Transaction[]>(
         ["transactions"],
-        [...optimistic, ...previous]
+        [...optimistic, ...previous],
       );
 
       return { previous };
@@ -185,7 +189,7 @@ export function CSVImport({
               <tbody>
                 {preview.map((row, i) => {
                   const filtered = categories.filter(
-                    (c) => c.type === row.type
+                    (c) => c.type === row.type,
                   );
 
                   return (
@@ -198,9 +202,7 @@ export function CSVImport({
                       <td className="p-2">
                         <Select
                           value={row.categoryId || ""}
-                          onValueChange={(v) =>
-                            updateCategory(i, v)
-                          }
+                          onValueChange={(v) => updateCategory(i, v)}
                         >
                           <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Select" />
@@ -227,9 +229,7 @@ export function CSVImport({
             disabled={confirmImport.isPending}
             className="w-full"
           >
-            {confirmImport.isPending
-              ? "Importing..."
-              : "Confirm Import"}
+            {confirmImport.isPending ? "Importing..." : "Confirm Import"}
           </Button>
         </>
       )}
