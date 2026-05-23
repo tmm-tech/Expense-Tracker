@@ -238,9 +238,9 @@ module.exports = {
               ? Number(currentPrice)
               : existing.currentPrice,
 
-          purchaseDate: purchaseDate
+          startDate: purchaseDate
             ? new Date(purchaseDate)
-            : existing.purchaseDate,
+            : existing.startDate,
 
           premium: isInsurance
             ? Number(premium ?? existing.premium ?? 0)
