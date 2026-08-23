@@ -10,6 +10,16 @@ const { openai } = require("../src/lib/openai.js");
  * req.user.id is assumed to be set by auth middleware
  */
 
+const chunkText = (text, maxCharacters = 12000) => {
+  const chunks = [];
+
+  for (let i = 0; i < text.length; i += maxCharacters) {
+    chunks.push(text.slice(i, i + maxCharacters));
+  }
+
+  return chunks;
+};
+
 module.exports = {
   /* ===========================
      CREATE TRANSACTION
