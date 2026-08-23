@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.t
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   Calendar as CalendarIcon,
   DollarSign,
   Filter,
@@ -26,6 +26,12 @@ const eventTypeLabels = {
 };
 
 export default function CalendarView() {
+
+  type CalendarResponse = {
+    success: boolean;
+    data: CalendarEvent[];
+  };
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -37,6 +43,7 @@ export default function CalendarView() {
     debt: true,
     budget: true,
   });
+
 
   // Calculate month range
   const monthStart = useMemo(() => {
@@ -54,23 +61,27 @@ export default function CalendarView() {
     return date;
   }, [currentDate]);
 
- type CalendarEvent = {
-  id: string;
-  type: keyof typeof eventTypeLabels;
-  title: string;
-  date: number;
-  amount?: number;
-  category?: string;
-  color: string;
-};
+  type CalendarEvent = {
+    id: string;
+    type: keyof typeof eventTypeLabels;
+    title: string;
+    date: number;
+    amount?: number;
+    category?: string;
+    color: string;
+  };
 
-const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
-  queryKey: ["calendar-events", monthStart.getTime(), monthEnd.getTime()],
-  queryFn: () =>
-    apiFetch<CalendarEvent[]>(
-      `/calendar?startDate=${monthStart.getTime()}&endDate=${monthEnd.getTime()}`
-    ),
-});
+  const { data: eventsResponse, isLoading } = useQuery<CalendarResponse>({
+    queryKey: ["calendar-events", monthStart.getTime(), monthEnd.getTime()],
+    queryFn: () =>
+      apiFetch<CalendarResponse>(
+        `/calendar?startDate=${monthStart.getTime()}&endDate=${monthEnd.getTime()}`
+      ),
+  });
+
+  const events = Array.isArray(eventsResponse?.data)
+    ? eventsResponse.data
+    : [];
 
   // Filter events
   const filteredEvents = useMemo(() => {
@@ -339,10 +350,10 @@ const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
                 <span className="truncate">
                   {selectedDate
                     ? selectedDate.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
                     : "Select a date"}
                 </span>
                 {selectedDate && (
