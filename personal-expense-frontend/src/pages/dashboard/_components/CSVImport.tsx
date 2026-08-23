@@ -36,7 +36,6 @@ interface PreviewRow {
   // Original imported data
   originalRow?: number;
 }
-
 export function CSVImport({
   accounts,
   categories,
@@ -184,7 +183,7 @@ export function CSVImport({
           disabled={previewImport.isPending}
         >
           <Upload className="w-4 h-4 mr-2" />
-          {previewImport.isPending ? "Parsing..." : "Preview"}
+          {previewImport.isPending ? "Analyzing..." : "Analyze with AI"}
         </Button>
       </div>
 

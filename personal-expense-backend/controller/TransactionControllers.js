@@ -380,16 +380,24 @@ module.exports = {
       /* =========================
          AI TRANSACTION EXTRACTION
       ========================= */
+      const chunks = chunkText(text, 12000);
 
-      const response = await openai.responses.create({
-        model: "gpt-5-mini",
-        input: [
-          {
-            role: "system",
-            content: `
+      const allRows = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        console.log(
+          `AI processing import chunk ${i + 1}/${chunks.length}`
+        );
+
+        const response = await openai.responses.create({
+          model: "gpt-5-mini",
+          input: [
+            {
+              role: "system",
+              content: `
 You are AureX Finance's financial statement transaction extraction engine.
 
-Extract ONLY genuine financial transactions from the supplied statement.
+Extract ONLY genuine financial transactions from the supplied statement section.
 
 For every transaction return:
 
@@ -413,8 +421,10 @@ Rules:
 11. Preserve the transaction description as accurately as possible.
 12. If a row cannot confidently be interpreted as a transaction, exclude it.
 13. Return dates in YYYY-MM-DD format.
+14. DO NOT ask the user questions.
+15. If there are no transactions in this section, return an empty rows array.
 
-Return ONLY valid JSON in exactly this structure:
+Return ONLY valid JSON:
 
 {
   "rows": [
@@ -426,30 +436,27 @@ Return ONLY valid JSON in exactly this structure:
     }
   ]
 }
-          `,
-          },
-          {
-            role: "user",
-            content: text,
-          },
-        ],
-      });
-
-      /* =========================
-         VALIDATE AI RESPONSE
-      ========================= */
-
-      let result;
-
-      try {
-        result = JSON.parse(response.output_text);
-      } catch (parseError) {
-        console.error("Failed to parse AI response:", response.output_text);
-
-        return res.status(500).json({
-          success: false,
-          error: "AI returned an invalid response",
+        `,
+            },
+            {
+              role: "user",
+              content: chunks[i],
+            },
+          ],
         });
+
+        try {
+          const result = JSON.parse(response.output_text);
+
+          if (Array.isArray(result.rows)) {
+            allRows.push(...result.rows);
+          }
+        } catch (parseError) {
+          console.error(
+            `Failed to parse AI response for chunk ${i + 1}:`,
+            response.output_text
+          );
+        }
       }
 
       if (!result || !Array.isArray(result.rows)) {
@@ -462,14 +469,14 @@ Return ONLY valid JSON in exactly this structure:
       /* =========================
          RESPONSE
       ========================= */
-
       return res.json({
         success: true,
         data: {
-          rows: result.rows,
+          rows: allRows,
           accountId,
         },
       });
+
     } catch (err) {
       console.error("AI import preview error:", err);
 
