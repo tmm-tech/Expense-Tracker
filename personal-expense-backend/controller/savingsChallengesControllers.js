@@ -75,7 +75,7 @@ module.exports = {
         }
       );
       if (summary.length === 0) {
-        return res.json({ success: true, message: "No Summary to view" });
+         return res.json([]);
       }
 
       return res.json({

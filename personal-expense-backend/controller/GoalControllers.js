@@ -33,7 +33,7 @@ module.exports = {
       const goalCount = await prisma.goal.count({ where: { userId } });
 
       if (goalCount === 0) {
-        return res.json({ success: true, message: "No goals to check" });
+         return res.json([]);
       }
 
       // 3️⃣ Standard ApiResponse

@@ -140,7 +140,11 @@ module.exports = {
         }),
         prisma.investment.count({ where }),
       ]);
+      const investmentCount = await prisma.investmentCount.count({ where: { userId } });
 
+      if (investmentCount === 0) {
+        return res.json([]);
+      }
       res.json({
         success: true,
         data: investments,

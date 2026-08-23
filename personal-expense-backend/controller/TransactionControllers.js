@@ -113,9 +113,8 @@ module.exports = {
       });
 
       if (transactionCount === 0) {
-        return res.json({ success: true, message: "No transactions to check" });
+        return res.json([]);
       }
-
       res.json({
         success: true,
         data: transactions,

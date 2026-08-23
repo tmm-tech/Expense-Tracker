@@ -35,7 +35,7 @@ module.exports = {
       });
 
       if (categoriesCount === 0) {
-        return res.json({ success: true, message: "No category to check" });
+         return res.json([]);
       }
 
       // 3️⃣ Standard ApiResponse
