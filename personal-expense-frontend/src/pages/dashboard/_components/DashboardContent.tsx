@@ -70,70 +70,100 @@ import { UserMenu } from "./UserMenu.tsx";
 import { useAuth } from "../../../hooks/use-auth.ts";
 
 export function DashboardContent() {
+  type ApiResponse<T> = {
+    success: boolean;
+    data: T;
+    pagination?: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
   const navigate = useNavigate();
   const { session, loading } = useAuth();
 
   const queryClient = useQueryClient();
 
-  const transactionsQuery = useQuery<Transaction[]>({
+  const transactionsQuery = useQuery<ApiResponse<Transaction[]>>({
     queryKey: ["transactions"],
     enabled: !!session,
-    queryFn: () => apiFetch<Transaction[]>(`/transactions`),
+    queryFn: () => apiFetch<ApiResponse<Transaction[]>>(`/transactions`),
   });
 
-  const accountsQuery = useQuery<Account[]>({
+  const accountsQuery = useQuery<ApiResponse<Account[]>>({
     queryKey: ["accounts"],
     enabled: !!session,
-    queryFn: () => apiFetch<Account[]>(`/accounts`),
+    queryFn: () => apiFetch<ApiResponse<Account[]>>(`/accounts`),
   });
 
-  const billsQuery = useQuery<Bill[]>({
+  const billsQuery = useQuery<ApiResponse<Bill[]>>({
     queryKey: ["bills"],
     enabled: !!session,
-    queryFn: () => apiFetch<Bill[]>(`/bills`),
+    queryFn: () => apiFetch<ApiResponse<Bill[]>>(`/bills`),
   });
 
-  const debtsQuery = useQuery<Debt[]>({
+  const debtsQuery = useQuery<ApiResponse<Debt[]>>({
     queryKey: ["debts"],
     enabled: !!session,
-    queryFn: () => apiFetch<Debt[]>(`/debts`),
+    queryFn: () => apiFetch<ApiResponse<Debt[]>>(`/debts`),
   });
 
-  const budgetsQuery = useQuery<Budget[]>({
+  const budgetsQuery = useQuery<ApiResponse<Budget[]>>({
     queryKey: ["budgets"],
     enabled: !!session,
-    queryFn: () => apiFetch<Budget[]>(`/budgets`),
-  });
-  const goalsQuery = useQuery<Goal[]>({
-    queryKey: ["goals"],
-    enabled: !!session,
-    queryFn: () => apiFetch<Goal[]>(`/goals`),
-  });
-  const categoriesQuery = useQuery<Category[]>({
-    queryKey: ["categories"],
-    enabled: !!session,
-    queryFn: async () => apiFetch<Category[]>(`/categories`),
-  });
-  const investmentsQuery = useQuery<Investment[]>({
-    queryKey: ["investments"],
-    enabled: !!session,
-    queryFn: () => apiFetch<Investment[]>(`/investments`),
+    queryFn: () => apiFetch<ApiResponse<Budget[]>>(`/budgets`),
   });
 
-  const transactions = Array.isArray(transactionsQuery.data)
-    ? transactionsQuery.data
+  const goalsQuery = useQuery<ApiResponse<Goal[]>>({
+    queryKey: ["goals"],
+    enabled: !!session,
+    queryFn: () => apiFetch<ApiResponse<Goal[]>>(`/goals`),
+  });
+
+  const categoriesQuery = useQuery<ApiResponse<Category[]>>({
+    queryKey: ["categories"],
+    enabled: !!session,
+    queryFn: () => apiFetch<ApiResponse<Category[]>>(`/categories`),
+  });
+
+  const investmentsQuery = useQuery<ApiResponse<Investment[]>>({
+    queryKey: ["investments"],
+    enabled: !!session,
+    queryFn: () => apiFetch<ApiResponse<Investment[]>>(`/investments`),
+  });
+
+  const transactions = Array.isArray(transactionsQuery.data?.data)
+    ? transactionsQuery.data.data
     : [];
-  const accounts = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
-  const bills = Array.isArray(billsQuery.data) ? billsQuery.data : [];
-  const budgets = Array.isArray(budgetsQuery.data) ? budgetsQuery.data : [];
-  const categories = Array.isArray(categoriesQuery.data)
-    ? categoriesQuery.data
+
+  const accounts = Array.isArray(accountsQuery.data?.data)
+    ? accountsQuery.data.data
     : [];
-  const goals = Array.isArray(goalsQuery.data) ? goalsQuery.data : [];
-  const investments = Array.isArray(investmentsQuery.data)
-    ? investmentsQuery.data
+
+  const bills = Array.isArray(billsQuery.data?.data)
+    ? billsQuery.data.data
     : [];
-  const debts = Array.isArray(debtsQuery.data) ? debtsQuery.data : [];
+
+  const debts = Array.isArray(debtsQuery.data?.data)
+    ? debtsQuery.data.data
+    : [];
+
+  const budgets = Array.isArray(budgetsQuery.data?.data)
+    ? budgetsQuery.data.data
+    : [];
+
+  const categories = Array.isArray(categoriesQuery.data?.data)
+    ? categoriesQuery.data.data
+    : [];
+
+  const goals = Array.isArray(goalsQuery.data?.data)
+    ? goalsQuery.data.data
+    : [];
+
+  const investments = Array.isArray(investmentsQuery.data?.data)
+    ? investmentsQuery.data.data
+    : [];
 
   const deleteBill = useMutation({
     mutationFn: (id: string) => apiFetch(`/bills/${id}`, { method: "DELETE" }),
@@ -657,13 +687,13 @@ export function DashboardContent() {
               >
                 Alerts
               </TabsTrigger>
-               <TabsTrigger
+              <TabsTrigger
                 value="import"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
                 Import
               </TabsTrigger>
-             {/* <TabsTrigger
+              {/* <TabsTrigger
                 value="export"
                 className="text-xs sm:text-sm px-2 sm:px-3 py-2 hidden xl:inline-flex"
               >
@@ -691,7 +721,7 @@ export function DashboardContent() {
           </TabsContent>
           <TabsContent value="accounts" className="mt-6">
             {selectedAccountId &&
-            accounts.find((a) => a.id === selectedAccountId) ? (
+              accounts.find((a) => a.id === selectedAccountId) ? (
               <AccountDetailView
                 accountId={selectedAccountId}
                 categories={categories}
@@ -787,13 +817,13 @@ export function DashboardContent() {
           <TabsContent value="alerts" className="mt-6">
             <AlertsView />
           </TabsContent>
-           <TabsContent value="import" className="mt-6">
-            <CSVImport  
+          <TabsContent value="import" className="mt-6">
+            <CSVImport
               accounts={accounts}
-              categories={categories} 
+              categories={categories}
             />
           </TabsContent>
-         {/* <TabsContent value="export" className="mt-6">
+          {/* <TabsContent value="export" className="mt-6">
             <EnhancedExport />
           </TabsContent> */}
           {/* <TabsContent value="currency" className="mt-6">
