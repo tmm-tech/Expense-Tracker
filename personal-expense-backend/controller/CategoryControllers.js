@@ -34,10 +34,6 @@ module.exports = {
         where: { userId },
       });
 
-      if (categoriesCount === 0) {
-         return res.json([]);
-      }
-
       // 3️⃣ Standard ApiResponse
       res.json({
         success: true,

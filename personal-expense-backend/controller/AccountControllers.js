@@ -68,10 +68,6 @@ module.exports = {
 
       const accountCount = await prisma.account.count({ where: { userId } });
 
-      if (accountCount === 0) {
-         return res.json([]);
-      }
-
       // 3️⃣ Send ApiResponse-compliant payload
       res.json({
         success: true,

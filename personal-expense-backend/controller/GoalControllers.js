@@ -32,9 +32,6 @@ module.exports = {
       });
       const goalCount = await prisma.goal.count({ where: { userId } });
 
-      if (goalCount === 0) {
-         return res.json([]);
-      }
 
       // 3️⃣ Standard ApiResponse
       res.json({

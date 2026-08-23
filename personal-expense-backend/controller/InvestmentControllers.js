@@ -140,9 +140,7 @@ module.exports = {
         }),
         prisma.investment.count({ where }),
       ]);
-      if (total === 0) {
-        return res.json([]);
-      }
+
       res.json({
         success: true,
         data: investments,
