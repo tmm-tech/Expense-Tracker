@@ -31,8 +31,14 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { RecurringTransactionDialog } from "./RecurringTransactionDialog";
+import type { RecurringTransaction } from "@/types/recurring-transacction";
 
-export function RecurringTransactionList() {
+interface RecurringTransactionListProps {
+  recurringTransactions: RecurringTransaction[];
+}
+export function RecurringTransactionList({
+  recurringTransactions,
+}: RecurringTransactionListProps) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<any | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -86,7 +92,7 @@ export function RecurringTransactionList() {
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!recurringTransactions || recurringTransactions.length === 0) {
     return (
       <Empty>
         <EmptyHeader>
@@ -102,8 +108,8 @@ export function RecurringTransactionList() {
     );
   }
 
-  const active = data.filter((r: any) => r.isActive);
-  const inactive = data.filter((r: any) => !r.isActive);
+  const active = recurringTransactions.filter((r: any) => r.isActive);
+  const inactive = recurringTransactions.filter((r: any) => !r.isActive);
 
   return (
     <>

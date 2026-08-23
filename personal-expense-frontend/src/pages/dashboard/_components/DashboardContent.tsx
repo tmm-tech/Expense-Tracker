@@ -66,6 +66,7 @@ import type { Goal } from "@/types/goal";
 import type { Category } from "@/types/category";
 import type { Investment } from "@/types/investment";
 import type { Transaction } from "@/types/transaction";
+import type { RecurringTransaction } from "@/types/recurring-transacction.ts";
 import { UserMenu } from "./UserMenu.tsx";
 import { useAuth } from "../../../hooks/use-auth.ts";
 
@@ -132,6 +133,22 @@ export function DashboardContent() {
     enabled: !!session,
     queryFn: () => apiFetch<ApiResponse<Investment[]>>(`/investments`),
   });
+
+  const recurringTransactionsQuery = useQuery<ApiResponse<RecurringTransaction[]>>({
+    queryKey: ["recurring-transactions"],
+    enabled: !!session,
+    queryFn: () =>
+      apiFetch<ApiResponse<RecurringTransaction[]>>(
+        "/recurring-transactions"
+      ),
+  });
+
+const recurringTransactions = Array.isArray(
+  recurringTransactionsQuery.data?.data
+)
+  ? recurringTransactionsQuery.data.data
+  : [];
+
 
   const transactions = Array.isArray(transactionsQuery.data?.data)
     ? transactionsQuery.data.data
@@ -752,7 +769,9 @@ export function DashboardContent() {
           </TabsContent>
 
           <TabsContent value="recurring" className="mt-6">
-            <RecurringTransactionList />
+            <RecurringTransactionList  
+            recurringTransactions={recurringTransactions} 
+            />
           </TabsContent>
           <TabsContent value="bills" className="mt-6">
             <BillList
