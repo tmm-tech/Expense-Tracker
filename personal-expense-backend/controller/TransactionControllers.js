@@ -3,6 +3,7 @@ const { matchCategory } = require("../utils/categoryMatcher");
 const pdf = require("pdf-parse");
 const { parseCSV } = require("../utils/csvParser");
 const { parseEquityPDF } = require("../utils/pdfParser");
+const { openai } = require("../src/lib/openai.js");
 
 /**
  * NOTE:
@@ -337,28 +338,144 @@ module.exports = {
 
       const file = req.file;
 
-      let rows = [];
+      if (!file) {
+        return res.status(400).json({
+          success: false,
+          error: "No file uploaded",
+        });
+      }
 
-      /* CSV */
+      if (!accountId) {
+        return res.status(400).json({
+          success: false,
+          error: "Account is required",
+        });
+      }
+
+      let text = "";
+
+      /* =========================
+         EXTRACT FILE CONTENT
+      ========================= */
+
       if (fileType === "csv") {
-        const text = file.buffer.toString();
-        rows = parseCSV(text);
-      }
-
-      /* PDF */
-      if (fileType === "pdf") {
+        text = file.buffer.toString("utf-8");
+      } else if (fileType === "pdf") {
         const data = await pdf(file.buffer);
-        rows = parseEquityPDF(data.text);
+        text = data.text;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: "Unsupported file type",
+        });
       }
 
-      res.json({
-        rows,
+      if (!text.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "Could not extract any text from the file",
+        });
+      }
+
+      /* =========================
+         AI TRANSACTION EXTRACTION
+      ========================= */
+
+      const response = await openai.responses.create({
+        model: "gpt-5-mini",
+        input: [
+          {
+            role: "system",
+            content: `
+You are AureX Finance's financial statement transaction extraction engine.
+
+Extract ONLY genuine financial transactions from the supplied statement.
+
+For every transaction return:
+
+- date
+- description
+- amount
+- type
+
+Rules:
+
+1. type MUST be either "income" or "expense".
+2. amount MUST always be a positive number.
+3. Withdrawals, debits, purchases and payments are "expense".
+4. Deposits, credits, salary and received money are "income".
+5. Use the actual transaction date.
+6. Do not include opening balance.
+7. Do not include closing balance.
+8. Do not include statement totals.
+9. Do not include subtotals.
+10. Do not invent transactions.
+11. Preserve the transaction description as accurately as possible.
+12. If a row cannot confidently be interpreted as a transaction, exclude it.
+13. Return dates in YYYY-MM-DD format.
+
+Return ONLY valid JSON in exactly this structure:
+
+{
+  "rows": [
+    {
+      "date": "YYYY-MM-DD",
+      "description": "string",
+      "amount": 0,
+      "type": "income"
+    }
+  ]
+}
+          `,
+          },
+          {
+            role: "user",
+            content: text,
+          },
+        ],
+      });
+
+      /* =========================
+         VALIDATE AI RESPONSE
+      ========================= */
+
+      let result;
+
+      try {
+        result = JSON.parse(response.output_text);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", response.output_text);
+
+        return res.status(500).json({
+          success: false,
+          error: "AI returned an invalid response",
+        });
+      }
+
+      if (!result || !Array.isArray(result.rows)) {
+        return res.status(500).json({
+          success: false,
+          error: "AI did not return transaction rows",
+        });
+      }
+
+      /* =========================
+         RESPONSE
+      ========================= */
+
+      return res.json({
+        success: true,
+        data: {
+          rows: result.rows,
+          accountId,
+        },
       });
     } catch (err) {
-      console.error(err);
+      console.error("AI import preview error:", err);
 
-      res.status(500).json({
-        error: "Preview failed",
+      return res.status(500).json({
+        success: false,
+        error: "AI import preview failed",
       });
     }
   },

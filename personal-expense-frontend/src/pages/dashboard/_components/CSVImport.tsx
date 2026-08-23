@@ -23,7 +23,18 @@ interface PreviewRow {
   description: string;
   amount: number;
   type: "income" | "expense";
+
   categoryId?: string;
+
+  // Import validation
+  valid?: boolean;
+  error?: string;
+
+  // Duplicate detection
+  duplicate?: boolean;
+
+  // Original imported data
+  originalRow?: number;
 }
 
 export function CSVImport({
@@ -56,15 +67,21 @@ export function CSVImport({
       const fileType = file.type === "application/pdf" ? "pdf" : "csv";
 
       formData.append("fileType", fileType);
-      return apiFetch<{ rows: PreviewRow[] }>("/import/preview", {
+      return apiFetch<{
+        success: boolean;
+        data: {
+          rows: PreviewRow[];
+          accountId: string;
+        };
+      }>("/import/preview", {
         method: "POST",
         body: formData,
       });
     },
 
-    onSuccess: (data) => {
-      setPreview(data.rows);
-    },
+ onSuccess: (response) => {
+  setPreview(response.data.rows);
+},
 
     onError: () => {
       toast.error("Preview failed");
