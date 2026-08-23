@@ -42,31 +42,63 @@ const formatKES = (value: number) =>
 /* ---------------- COMPONENT ---------------- */
 
 export function InsightsView() {
-  const { data: transactions = [], isLoading } = useQuery({
+  type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+const { data: transactionsResponse, isLoading } =
+  useQuery<ApiResponse<Transaction[]>>({
     queryKey: ["transactions"],
-    queryFn: () => apiFetch<Transaction[]>("/transactions"),
+    queryFn: () => apiFetch<ApiResponse<Transaction[]>>("/transactions"),
   });
 
-  const { data: budgets = [] } = useQuery({
-    queryKey: ["budgets"],
-    queryFn: () => apiFetch<Budget[]>("/budgets"),
-  });
+const { data: budgetsResponse } = useQuery<ApiResponse<Budget[]>>({
+  queryKey: ["budgets"],
+  queryFn: () => apiFetch<ApiResponse<Budget[]>>("/budgets"),
+});
 
-  const { data: investments = [] } = useQuery({
-    queryKey: ["investments"],
-    queryFn: () => apiFetch<Investment[]>("/investments"),
-  });
+const { data: investmentsResponse } = useQuery<ApiResponse<Investment[]>>({
+  queryKey: ["investments"],
+  queryFn: () => apiFetch<ApiResponse<Investment[]>>("/investments"),
+});
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => apiFetch<Category[]>("/categories"),
-  });
+const { data: categoriesResponse } = useQuery<ApiResponse<Category[]>>({
+  queryKey: ["categories"],
+  queryFn: () => apiFetch<ApiResponse<Category[]>>("/categories"),
+});
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: () => apiFetch<Account[]>("/accounts"),
-  });
+const { data: accountsResponse } = useQuery<ApiResponse<Account[]>>({
+  queryKey: ["accounts"],
+  queryFn: () => apiFetch<ApiResponse<Account[]>>("/accounts"),
+});
 
+const transactions = Array.isArray(transactionsResponse?.data)
+  ? transactionsResponse.data
+  : [];
+
+const budgets = Array.isArray(budgetsResponse?.data)
+  ? budgetsResponse.data
+  : [];
+
+const investments = Array.isArray(investmentsResponse?.data)
+  ? investmentsResponse.data
+  : [];
+
+const categories = Array.isArray(categoriesResponse?.data)
+  ? categoriesResponse.data
+  : [];
+
+const accounts = Array.isArray(accountsResponse?.data)
+  ? accountsResponse.data
+  : [];
+  
   /* ---------- LOADING ---------- */
   if (isLoading) {
     return <div className="h-40 animate-pulse bg-muted rounded-xl" />;
