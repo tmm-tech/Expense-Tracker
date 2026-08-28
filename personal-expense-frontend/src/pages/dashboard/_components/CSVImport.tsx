@@ -96,11 +96,11 @@ export function CSVImport({
       current.map((row, i) =>
         i === index
           ? {
-              ...row,
-              categoryId,
-              categoryName: category?.name,
-              error: undefined,
-            }
+            ...row,
+            categoryId,
+            categoryName: category?.name,
+            error: undefined,
+          }
           : row,
       ),
     );
@@ -165,11 +165,11 @@ export function CSVImport({
         current.map((row, i) =>
           i === index
             ? {
-                ...row,
-                categoryId: category.id,
-                categoryName: category.name,
-                error: undefined,
-              }
+              ...row,
+              categoryId: category.id,
+              categoryName: category.name,
+              error: undefined,
+            }
             : row,
         ),
       );
@@ -241,35 +241,25 @@ export function CSVImport({
       }
 
       toast.success(
-        `${rows.length} transaction${
-          rows.length === 1 ? "" : "s"
+        `${rows.length} transaction${rows.length === 1 ? "" : "s"
         } found`,
       );
     },
 
     onError: (error: any) => {
-      const message =
-        error?.message ||
-        error?.error ||
-        "Unable to analyze the statement.";
+      const message = error?.message || "";
 
-      /*
-       * Detect password-protected PDF.
-       */
       if (
         message.toLowerCase().includes("password") ||
         message.toLowerCase().includes("protected")
       ) {
         setRequiresPassword(true);
 
-        toast.error(
-          "This PDF is password protected. Enter the password and try again.",
-        );
-
+        toast.error("This PDF is password protected");
         return;
       }
 
-      toast.error(message);
+      toast.error("Preview failed");
     },
   });
 
@@ -430,80 +420,55 @@ export function CSVImport({
           <Input
             type="file"
             accept=".csv,.pdf"
-            onChange={handleFileChange}
+            onChange={(e) => {
+              setFile(e.target.files?.[0] || null);
+              setPdfPassword("");
+              setRequiresPassword(false);
+              setPreview([]);
+            }}
           />
+          <Button
+            onClick={() => previewImport.mutate()}
+            disabled={
+              previewImport.isPending ||
+              !file ||
+              !accountId ||
+              (requiresPassword && !pdfPassword)
+            }
+          >
+            <Upload className="mr-2 h-4 w-4" />
 
-          {file && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <FileUp className="h-4 w-4" />
-              {file.name}
-            </div>
-          )}
+            {previewImport.isPending
+              ? "Analyzing..."
+              : requiresPassword
+                ? "Unlock & Analyze"
+                : "Analyze with AI"}
+          </Button>
+
         </div>
 
-        {/* PDF PASSWORD */}
-
         {requiresPassword && (
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
-
-            <div className="flex gap-2">
-              <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5" />
-
-              <div>
-                <p className="text-sm font-medium">
-                  Password-protected PDF
-                </p>
-
-                <p className="text-xs text-muted-foreground">
-                  Enter the statement password so AureX
-                  can read the PDF.
-                </p>
-              </div>
-            </div>
+          <div className="rounded-lg border p-4 space-y-2">
+            <label className="text-sm font-medium">
+              Statement Password
+            </label>
 
             <Input
               type="password"
-              placeholder="PDF password"
+              placeholder="Enter PDF password"
               value={pdfPassword}
-              onChange={(event) =>
-                setPdfPassword(event.target.value)
-              }
+              onChange={(e) => setPdfPassword(e.target.value)}
+              autoFocus
             />
 
             <p className="text-xs text-muted-foreground">
-              The password is used only for this import
-              and is not stored.
+              Your password is used only to unlock this PDF for import and is not
+              stored by AureX.
             </p>
           </div>
         )}
-
-        {/* ANALYZE */}
-
-        <Button
-          className="w-full"
-          onClick={() =>
-            previewImport.mutate()
-          }
-          disabled={
-            previewImport.isPending ||
-            !file ||
-            !accountId ||
-            (requiresPassword && !pdfPassword)
-          }
-        >
-          {previewImport.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing statement...
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Analyze with AI
-            </>
-          )}
-        </Button>
       </div>
+
 
       {/* ======================================================
           PREVIEW
@@ -590,11 +555,10 @@ export function CSVImport({
                     return (
                       <tr
                         key={`${row.date}-${index}`}
-                        className={`border-t ${
-                          needsCategory
-                            ? "bg-yellow-500/5"
-                            : ""
-                        }`}
+                        className={`border-t ${needsCategory
+                          ? "bg-yellow-500/5"
+                          : ""
+                          }`}
                       >
 
                         {/* DATE */}
@@ -641,7 +605,7 @@ export function CSVImport({
                           <Badge
                             variant={
                               row.type ===
-                              "income"
+                                "income"
                                 ? "default"
                                 : "secondary"
                             }
@@ -802,7 +766,6 @@ export function CSVImport({
               </>
             )}
           </Button>
-
         </div>
       )}
 

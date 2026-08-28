@@ -444,45 +444,43 @@ module.exports = {
         text = file.buffer.toString("utf-8");
       }
 
+ /* =========================
+      PDF
+ ========================= */
+
       if (fileType === "pdf") {
         try {
-          const options = {};
+          const pdfOptions = {};
 
           if (pdfPassword) {
-            options.password = pdfPassword;
+            pdfOptions.password = pdfPassword;
           }
 
-          const data = await pdf(file.buffer, options);
+          const data = await pdf(file.buffer, pdfOptions);
 
           text = data.text;
         } catch (error) {
           console.error("PDF extraction error:", error);
 
-          /*
-           * Password protected PDF
-           */
           if (
             error?.code === 1 ||
             error?.message?.includes("No password given")
           ) {
             return res.status(400).json({
               success: false,
-              error: "PDF_PASSWORD_REQUIRED",
-              message: "This PDF is password protected. Please enter the correct password.",
+              error: "This PDF is password protected. Please enter the PDF password.",
+              requiresPassword: true,
             });
           }
 
-          /*
-           * Wrong password
-           */
           if (
-            error?.message?.toLowerCase()?.includes("incorrect password") ||
-            error?.message?.toLowerCase()?.includes("password")
+            error?.message?.toLowerCase().includes("incorrect password") ||
+            error?.message?.toLowerCase().includes("invalid password")
           ) {
             return res.status(400).json({
               success: false,
-              error: "INVALID_PDF_PASSWORD",
-              message: "The PDF password is incorrect.",
+              error: "Incorrect PDF password.",
+              requiresPassword: true,
             });
           }
 
@@ -492,7 +490,6 @@ module.exports = {
           });
         }
       }
-
       if (!text || !text.trim()) {
         return res.status(400).json({
           success: false,
