@@ -505,6 +505,7 @@ module.exports = {
       ========================= */
 
       const chunks = chunkText(text, 12000);
+      const failedChunks = [];
 
       const allRows = [];
 
@@ -671,6 +672,10 @@ Do not ask questions.
                 categoryId = category.id;
               }
             }
+            const confidence =
+              categoryId
+                ? row.categoryConfidence || "high"
+                : "none";
 
             allRows.push({
               date: row.date,
@@ -678,10 +683,11 @@ Do not ask questions.
               amount: Math.abs(row.amount),
               type: row.type,
               categoryId,
-              categoryConfidence:
-                categoryId
-                  ? row.categoryConfidence || "high"
-                  : "none",
+              categoryConfidence: confidence,
+              needsCategoryReview:
+                !categoryId ||
+                confidence === "low" ||
+                confidence === "none",
             });
           }
         } catch (parseError) {
@@ -689,6 +695,8 @@ Do not ask questions.
             `Failed to parse AI response for chunk ${i + 1}:`,
             response.output_text
           );
+
+          failedChunks.push(i + 1);
         }
       }
 
@@ -731,6 +739,7 @@ Do not ask questions.
           uncategorizedRows: uniqueRows.filter(
             (row) => !row.categoryId
           ).length,
+          failedChunks,
         },
       });
     } catch (err) {
@@ -817,10 +826,15 @@ Do not ask questions.
       ========================= */
 
       for (const row of rows) {
+        const transactionDate = new Date(row.date);
+
         if (
           !row.date ||
           !row.description ||
           typeof row.amount !== "number" ||
+          !Number.isFinite(row.amount) ||
+          row.amount <= 0 ||
+          Number.isNaN(transactionDate.getTime()) ||
           !["income", "expense"].includes(row.type)
         ) {
           skipped++;
@@ -873,9 +887,6 @@ Do not ask questions.
         /* =========================
            DUPLICATE DETECTION
         ========================= */
-
-        const transactionDate = new Date(row.date);
-
         const startOfDay = new Date(transactionDate);
         startOfDay.setHours(0, 0, 0, 0);
 
