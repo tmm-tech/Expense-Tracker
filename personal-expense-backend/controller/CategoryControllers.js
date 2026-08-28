@@ -57,6 +57,12 @@ module.exports = {
   // POST /api/categories
   createCategory: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { name, type, color, icon } = req.body;
 
@@ -99,6 +105,12 @@ module.exports = {
   // PUT /api/categories/:id
   updateCategory: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
       const { name, color, icon } = req.body;
@@ -126,6 +138,12 @@ module.exports = {
   // DELETE /api/categories/:id
   deleteCategory: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 

@@ -4,7 +4,13 @@ const { openai } = require("../src/lib/openai.js");
 module.exports = {
   getInsights: async (req, res) => {
     try {
-      const userId = req.user.sub;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
 
       /* ---------------- FETCH DATA ---------------- */
       const [transactions, budgets, accounts, investments] = await Promise.all([

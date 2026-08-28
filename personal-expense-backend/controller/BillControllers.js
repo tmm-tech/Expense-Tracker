@@ -23,11 +23,11 @@ module.exports = {
       const skip = (page - 1) * limit;
 
       const bills = await prisma.bill.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        })
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      })
       const billsCount = await prisma.bill.count({ where: { userId } });
 
 
@@ -54,7 +54,14 @@ module.exports = {
   // POST /api/bills
   createBill: async (req, res) => {
     try {
-      const userId = req.user.sub;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
       const {
         name,
         amount,
@@ -88,7 +95,13 @@ module.exports = {
   // PUT /api/bills/:id
   updateBill: async (req, res) => {
     try {
-      const userId = req.user.sub;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
       const { id } = req.params;
 
       const bill = await prisma.bill.updateMany({
@@ -110,7 +123,14 @@ module.exports = {
   // DELETE /api/bills/:id
   deleteBill: async (req, res) => {
     try {
-      const userId = req.user.sub;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
       const { id } = req.params;
 
       const bill = await prisma.bill.deleteMany({
@@ -131,7 +151,14 @@ module.exports = {
   // POST /api/bills/:id/pay
   markBillPaid: async (req, res) => {
     try {
-      const userId = req.user.sub;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
       const { id } = req.params;
 
       const bill = await prisma.bill.updateMany({

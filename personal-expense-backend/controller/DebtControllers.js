@@ -56,6 +56,12 @@ module.exports = {
   // POST /api/debts
   createDebt: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const {
         name,
@@ -109,6 +115,12 @@ module.exports = {
   // PUT /api/debts/:id
   updateDebt: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 
@@ -131,6 +143,12 @@ module.exports = {
   // DELETE /api/debts/:id
   deleteDebt: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 
@@ -152,6 +170,12 @@ module.exports = {
   // POST /api/debts/:id/payment
   makePayment: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
       const { amount } = req.body;
@@ -188,6 +212,12 @@ module.exports = {
   // GET /api/debts/summary
   getDebtSummary: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
 
       const debts = await prisma.debt.findMany({

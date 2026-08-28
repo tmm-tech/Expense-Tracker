@@ -8,6 +8,12 @@ module.exports = {
   // GET /api/currencies
   getCurrencies: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const response = await axios.get(CURRENCIES_URL, {
         params: { output: "json", key: API_KEY },
       });
@@ -26,6 +32,12 @@ module.exports = {
   // GET /api/currencies/exchange-rate?from=KES&to=USD
   getExchangeRate: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const { from, to } = req.query;
 
       const response = await axios.get(RATES_URL, {
@@ -44,6 +56,12 @@ module.exports = {
   // GET /api/currencies/convert?amount=1000&from=KES&to=USD
   convertCurrency: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const { amount, from, to } = req.query;
 
       const response = await axios.get(RATES_URL, {

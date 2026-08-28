@@ -24,12 +24,12 @@ module.exports = {
       const skip = (page - 1) * limit;
 
       // 2️⃣ Fetch budgets + total count
-       const budgets = await prisma.budget.findMany({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        });
+      const budgets = await prisma.budget.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      });
       const budgetsCount = await prisma.budget.count({ where: { userId } });
 
 
@@ -56,6 +56,12 @@ module.exports = {
   // POST /api/budgets
   createBudget: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { categoryId, limit, period, startDate, endDate } = req.body;
 
@@ -84,6 +90,12 @@ module.exports = {
   // PUT /api/budgets/:id
   updateBudget: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 
@@ -106,6 +118,12 @@ module.exports = {
   // DELETE /api/budgets/:id
   deleteBudget: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 

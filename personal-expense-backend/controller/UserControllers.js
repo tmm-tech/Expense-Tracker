@@ -134,6 +134,12 @@ module.exports = {
   // GET /api/users/me/notifications
   getNotifications: async (req, res) => {
     try {
+            if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.id;
       const notifications = await prisma.notification.findMany({
         where: { userId },

@@ -14,6 +14,12 @@ const {
 module.exports = {
   // GET /api/debts
   FetchCalendar: async (req, res) => {
+    if (!req.user?.sub) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
@@ -65,8 +71,8 @@ module.exports = {
             bill.status === "paid"
               ? "#10b981"
               : bill.status === "overdue"
-              ? "#ef4444"
-              : "#f59e0b",
+                ? "#ef4444"
+                : "#f59e0b",
         });
       }
     }

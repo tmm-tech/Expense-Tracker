@@ -120,6 +120,12 @@ module.exports = {
   ============================ */
   getInvestments: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
 
       const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -165,6 +171,12 @@ module.exports = {
   ============================ */
   getInvestmentById: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const investment = await prisma.investment.findFirst({
         where: {
           id: req.params.id,
@@ -194,6 +206,12 @@ module.exports = {
   ============================ */
   updateInvestment: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const {
         name,
         symbol,
@@ -276,6 +294,12 @@ module.exports = {
   ============================ */
   deleteInvestment: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const deleted = await prisma.investment.deleteMany({
         where: {
           id: req.params.id,
@@ -308,6 +332,12 @@ module.exports = {
   ============================ */
   getPortfolioSummary: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const investments = await prisma.investment.findMany({
         where: { userId: req.user.sub },
       });

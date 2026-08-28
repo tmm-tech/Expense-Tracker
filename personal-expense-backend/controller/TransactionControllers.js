@@ -150,6 +150,14 @@ module.exports = {
   ============================ */
   getTransactionById: async (req, res) => {
     try {
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
       const transaction = await prisma.transaction.findFirst({
         where: {
           id: req.params.id,
@@ -176,6 +184,14 @@ module.exports = {
   ============================ */
   updateTransaction: async (req, res) => {
     try {
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
       const { name, category, amount, date } = req.body;
 
       const updated = await prisma.transaction.updateMany({
@@ -215,6 +231,13 @@ module.exports = {
   ============================ */
   deleteTransaction: async (req, res) => {
     try {
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
       const deleted = await prisma.transaction.deleteMany({
         where: {
           id: req.params.id,
@@ -246,6 +269,13 @@ module.exports = {
   ============================ */
   getTransactionSummary: async (req, res) => {
     try {
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
       const summary = await prisma.transaction.groupBy({
         by: ["category"],
         where: { userId: req.user.id },
@@ -263,6 +293,13 @@ module.exports = {
   },
   importStatement: async (req, res) => {
     try {
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
       const { accountId, fileType, defaultCategoryId } = req.body;
 
       const file = req.file;
@@ -344,9 +381,19 @@ module.exports = {
   },
   previewImport: async (req, res) => {
     try {
-      const { accountId, fileType } = req.body;
-
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+      const { accountId, fileType, pdfPassword } = req.body;
       const file = req.file;
+
+      /* =========================
+         VALIDATION
+      ========================= */
 
       if (!file) {
         return res.status(400).json({
@@ -362,37 +409,118 @@ module.exports = {
         });
       }
 
-      let text = "";
-
-      /* =========================
-         EXTRACT FILE CONTENT
-      ========================= */
-
-      if (fileType === "csv") {
-        text = file.buffer.toString("utf-8");
-      } else if (fileType === "pdf") {
-        const data = await pdf(file.buffer);
-        text = data.text;
-      } else {
+      if (!["csv", "pdf"].includes(fileType)) {
         return res.status(400).json({
           success: false,
           error: "Unsupported file type",
         });
       }
 
-      if (!text.trim()) {
+      /* =========================
+         GET USER CATEGORIES
+      ========================= */
+
+      const categories = await prisma.category.findMany({
+        where: {
+          userId: req.user.sub,
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      /* =========================
+         EXTRACT FILE CONTENT
+      ========================= */
+
+      let text = "";
+
+      if (fileType === "csv") {
+        text = file.buffer.toString("utf-8");
+      }
+
+      if (fileType === "pdf") {
+        try {
+          const options = {};
+
+          if (pdfPassword) {
+            options.password = pdfPassword;
+          }
+
+          const data = await pdf(file.buffer, options);
+
+          text = data.text;
+        } catch (error) {
+          console.error("PDF extraction error:", error);
+
+          /*
+           * Password protected PDF
+           */
+          if (
+            error?.code === 1 ||
+            error?.message?.includes("No password given")
+          ) {
+            return res.status(400).json({
+              success: false,
+              error: "PDF_PASSWORD_REQUIRED",
+              message: "This PDF is password protected. Please enter the correct password.",
+            });
+          }
+
+          /*
+           * Wrong password
+           */
+          if (
+            error?.message?.toLowerCase()?.includes("incorrect password") ||
+            error?.message?.toLowerCase()?.includes("password")
+          ) {
+            return res.status(400).json({
+              success: false,
+              error: "INVALID_PDF_PASSWORD",
+              message: "The PDF password is incorrect.",
+            });
+          }
+
+          return res.status(400).json({
+            success: false,
+            error: "Unable to read the PDF statement.",
+          });
+        }
+      }
+
+      if (!text || !text.trim()) {
         return res.status(400).json({
           success: false,
-          error: "Could not extract any text from the file",
+          error: "Could not extract any text from the file.",
         });
       }
 
       /* =========================
-         AI TRANSACTION EXTRACTION
+         CHUNK DOCUMENT
       ========================= */
+
       const chunks = chunkText(text, 12000);
 
       const allRows = [];
+
+      /*
+       * Only send the category information
+       * needed by the AI.
+       */
+      const categoryList = categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        type: category.type,
+      }));
+
+      /* =========================
+         AI EXTRACTION
+      ========================= */
 
       for (let i = 0; i < chunks.length; i++) {
         console.log(
@@ -401,40 +529,18 @@ module.exports = {
 
         const response = await openai.responses.create({
           model: "gpt-5-mini",
+
           input: [
             {
               role: "system",
               content: `
 You are AureX Finance's financial statement transaction extraction engine.
 
-Extract ONLY genuine financial transactions from the supplied statement section.
+Your job is to extract genuine financial transactions from the supplied bank statement section.
 
-For every transaction return:
+Return ONLY valid JSON.
 
-- date
-- description
-- amount
-- type
-
-Rules:
-
-1. type MUST be either "income" or "expense".
-2. amount MUST always be a positive number.
-3. Withdrawals, debits, purchases and payments are "expense".
-4. Deposits, credits, salary and received money are "income".
-5. Use the actual transaction date.
-6. Do not include opening balance.
-7. Do not include closing balance.
-8. Do not include statement totals.
-9. Do not include subtotals.
-10. Do not invent transactions.
-11. Preserve the transaction description as accurately as possible.
-12. If a row cannot confidently be interpreted as a transaction, exclude it.
-13. Return dates in YYYY-MM-DD format.
-14. DO NOT ask the user questions.
-15. If there are no transactions in this section, return an empty rows array.
-
-Return ONLY valid JSON:
+EXPECTED FORMAT:
 
 {
   "rows": [
@@ -442,11 +548,72 @@ Return ONLY valid JSON:
       "date": "YYYY-MM-DD",
       "description": "string",
       "amount": 0,
-      "type": "income"
+      "type": "income",
+      "categoryId": "category-id-or-null",
+      "categoryConfidence": "high"
     }
   ]
 }
-        `,
+
+TRANSACTION RULES:
+
+1. Extract ONLY genuine financial transactions.
+2. Do NOT extract opening balances.
+3. Do NOT extract closing balances.
+4. Do NOT extract statement totals.
+5. Do NOT extract subtotals.
+6. Do NOT invent transactions.
+7. Preserve descriptions as accurately as possible.
+8. Use the actual transaction date.
+9. Date MUST be YYYY-MM-DD.
+10. Amount MUST be a positive number.
+11. Withdrawals, debits, purchases and payments are "expense".
+12. Deposits, credits, salary and received money are "income".
+13. If a line is not clearly a transaction, exclude it.
+14. Do not ask the user questions.
+
+CATEGORY MATCHING:
+
+The user's existing AureX categories are provided below.
+
+${JSON.stringify(categoryList)}
+
+For each transaction:
+
+- Try to match it to ONE existing category.
+- categoryId MUST be the ID of an existing category.
+- Never invent a category ID.
+- Only assign a category when the match is reasonably confident.
+- If there is no reasonable match, use:
+  "categoryId": null
+  "categoryConfidence": "none"
+
+The category type must correspond to the transaction type.
+
+For example:
+
+Income transaction:
+- Salary
+- Freelance Income
+- Business Income
+
+Expense transaction:
+- Food
+- Transport
+- Rent
+- Utilities
+
+If uncertain, leave categoryId as null.
+
+IMPORTANT:
+
+Return JSON only.
+
+Do not use markdown.
+Do not use code fences.
+Do not explain your answer.
+Do not ask questions.
+            `,
             },
             {
               role: "user",
@@ -455,11 +622,67 @@ Return ONLY valid JSON:
           ],
         });
 
+        /* =========================
+           PARSE AI RESPONSE
+        ========================= */
+
         try {
           const result = JSON.parse(response.output_text);
 
-          if (Array.isArray(result.rows)) {
-            allRows.push(...result.rows);
+          if (!result || !Array.isArray(result.rows)) {
+            console.error(
+              `AI returned invalid rows for chunk ${i + 1}`
+            );
+
+            continue;
+          }
+
+          for (const row of result.rows) {
+            /*
+             * Basic server-side validation.
+             */
+
+            if (!row.date) continue;
+            if (!row.description) continue;
+            if (typeof row.amount !== "number") continue;
+
+            if (
+              row.type !== "income" &&
+              row.type !== "expense"
+            ) {
+              continue;
+            }
+
+            /*
+             * Validate category ID against user's
+             * actual categories.
+             */
+
+            let categoryId = null;
+
+            if (row.categoryId) {
+              const category = categories.find(
+                (c) =>
+                  c.id === row.categoryId &&
+                  c.type === row.type
+              );
+
+              if (category) {
+                categoryId = category.id;
+              }
+            }
+
+            allRows.push({
+              date: row.date,
+              description: row.description,
+              amount: Math.abs(row.amount),
+              type: row.type,
+              categoryId,
+              categoryConfidence:
+                categoryId
+                  ? row.categoryConfidence || "high"
+                  : "none",
+            });
           }
         } catch (parseError) {
           console.error(
@@ -469,24 +692,47 @@ Return ONLY valid JSON:
         }
       }
 
-      if (!result || !Array.isArray(result.rows)) {
-        return res.status(500).json({
-          success: false,
-          error: "AI did not return transaction rows",
-        });
+      /* =========================
+         REMOVE DUPLICATES
+         ========================= */
+
+      const uniqueRows = [];
+      const seen = new Set();
+
+      for (const row of allRows) {
+        const key = [
+          row.date,
+          row.description.trim().toLowerCase(),
+          row.amount,
+          row.type,
+        ].join("|");
+
+        if (seen.has(key)) {
+          continue;
+        }
+
+        seen.add(key);
+        uniqueRows.push(row);
       }
 
       /* =========================
          RESPONSE
       ========================= */
+
       return res.json({
         success: true,
         data: {
-          rows: allRows,
+          rows: uniqueRows,
           accountId,
+          totalRows: uniqueRows.length,
+          categorizedRows: uniqueRows.filter(
+            (row) => row.categoryId
+          ).length,
+          uncategorizedRows: uniqueRows.filter(
+            (row) => !row.categoryId
+          ).length,
         },
       });
-
     } catch (err) {
       console.error("AI import preview error:", err);
 
@@ -503,54 +749,196 @@ Return ONLY valid JSON:
 
   confirmImport: async (req, res) => {
     try {
-      const { rows, accountId, defaultCategoryId } = req.body;
+      const userId = req.user?.id || req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+      const {
+        rows,
+        accountId,
+      } = req.body;
+
+      /* =========================
+         VALIDATION
+      ========================= */
+
+      if (!accountId) {
+        return res.status(400).json({
+          success: false,
+          error: "Account is required",
+        });
+      }
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No transactions to import",
+        });
+      }
+
+      const userId = req.user.sub;
+
+      /* =========================
+         GET USER CATEGORIES
+      ========================= */
 
       const categories = await prisma.category.findMany({
-        where: { userId: req.user.sub },
+        where: {
+          userId,
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
       });
 
+      /* =========================
+         VALIDATE CATEGORIES
+      ========================= */
+
+      const categoryMap = new Map(
+        categories.map((category) => [
+          category.id,
+          category,
+        ])
+      );
+
       let imported = 0;
+      let skipped = 0;
+      let duplicates = 0;
+      let uncategorized = 0;
+
+      /* =========================
+         IMPORT TRANSACTIONS
+      ========================= */
 
       for (const row of rows) {
-        const categoryId =
-          defaultCategoryId ||
-          matchCategory(row.description, categories);
+        if (
+          !row.date ||
+          !row.description ||
+          typeof row.amount !== "number" ||
+          !["income", "expense"].includes(row.type)
+        ) {
+          skipped++;
+          continue;
+        }
 
-        /* duplicate detection */
-        const exists = await prisma.transaction.findFirst({
+        /*
+         * Category selected by the user
+         * during preview.
+         */
+
+        let categoryId = row.categoryId || null;
+
+        /*
+         * Make sure the category actually
+         * belongs to this user.
+         */
+
+        if (categoryId) {
+          const category = categoryMap.get(categoryId);
+
+          if (!category || category.type !== row.type) {
+            categoryId = null;
+          }
+        }
+
+        /*
+         * If no category was selected,
+         * try the existing category matcher.
+         */
+
+        if (!categoryId) {
+          categoryId = matchCategory(
+            row.description,
+            categories.filter(
+              (category) => category.type === row.type
+            )
+          );
+        }
+
+        /*
+         * If still no category exists,
+         * do not create a fake category.
+         */
+
+        if (!categoryId) {
+          uncategorized++;
+        }
+
+        /* =========================
+           DUPLICATE DETECTION
+        ========================= */
+
+        const transactionDate = new Date(row.date);
+
+        const startOfDay = new Date(transactionDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(transactionDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existing = await prisma.transaction.findFirst({
           where: {
-            userId: req.user.sub,
+            userId,
             accountId,
             amount: row.amount,
+            type: row.type,
             description: row.description,
-            date: new Date(row.date),
+            date: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
           },
         });
 
-        if (exists) continue;
+        if (existing) {
+          duplicates++;
+          continue;
+        }
+
+        /* =========================
+           CREATE TRANSACTION
+        ========================= */
 
         await prisma.transaction.create({
           data: {
-            userId: req.user.sub,
+            userId,
             accountId,
             categoryId,
-            description: row.description,
-            amount: row.amount,
+            description: row.description.trim(),
+            amount: Math.abs(row.amount),
             type: row.type,
-            date: new Date(row.date),
+            date: transactionDate,
           },
         });
 
         imported++;
       }
 
-      res.json({
-        imported,
+      /* =========================
+         RESPONSE
+      ========================= */
+
+      return res.json({
+        success: true,
+        data: {
+          imported,
+          skipped,
+          duplicates,
+          uncategorized,
+          total: rows.length,
+        },
       });
     } catch (err) {
-      console.error(err);
+      console.error("Confirm import error:", err);
 
-      res.status(500).json({
+      return res.status(500).json({
+        success: false,
         error: "Import failed",
       });
     }

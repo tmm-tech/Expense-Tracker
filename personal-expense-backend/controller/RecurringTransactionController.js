@@ -10,6 +10,12 @@ module.exports = {
   /* ================= CREATE ================= */
   CreateRecurring: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const recurring = await createRecurring({
         ...req.body,
         userId: req.user.id,
@@ -28,6 +34,12 @@ module.exports = {
   /* ================= READ ================= */
   GetRecurring: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const recurring = await getRecurringByUser(req.user.id);
 
       res.json({ success: true, data: recurring });
@@ -42,6 +54,12 @@ module.exports = {
 
   GetRecurringById: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const recurring = await getRecurringById(req.params.id, req.user.id);
 
       if (!recurring) {
@@ -64,6 +82,12 @@ module.exports = {
   /* ================= UPDATE ================= */
   UpdateRecurring: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const updated = await updateRecurring(
         req.params.id,
         req.user.id,
@@ -90,6 +114,12 @@ module.exports = {
   /* ================= DELETE ================= */
   DeleteRecurring: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const deleted = await deleteRecurring(req.params.id, req.user.id);
 
       if (!deleted.count) {

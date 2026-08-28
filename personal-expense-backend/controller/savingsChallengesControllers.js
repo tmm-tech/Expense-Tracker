@@ -7,6 +7,12 @@ module.exports = {
    */
   getChallenges: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.id;
 
       const challenges = await prisma.savingsChallenge.findMany({
@@ -35,6 +41,12 @@ module.exports = {
    */
   getSummary: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.id;
 
       const challenges = await prisma.savingsChallenge.findMany({
@@ -75,7 +87,7 @@ module.exports = {
         }
       );
       if (summary.length === 0) {
-         return res.json([]);
+        return res.json([]);
       }
 
       return res.json({

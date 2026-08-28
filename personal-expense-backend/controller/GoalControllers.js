@@ -56,6 +56,12 @@ module.exports = {
   // POST /api/goals
   createGoal: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { name, targetAmount, endDate } = req.body;
 
@@ -84,6 +90,12 @@ module.exports = {
   // PUT /api/goals/:id
   updateGoal: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 
@@ -106,6 +118,12 @@ module.exports = {
   // DELETE /api/goals/:id
   deleteGoal: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
 
@@ -127,6 +145,12 @@ module.exports = {
   // POST /api/goals/:id/contribute
   contributeToGoal: async (req, res) => {
     try {
+      if (!req.user?.sub) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
       const userId = req.user.sub;
       const { id } = req.params;
       const { amount } = req.body;
