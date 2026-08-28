@@ -427,6 +427,29 @@ export function CSVImport({
               setPreview([]);
             }}
           />
+
+                  {requiresPassword && (
+          <div className="rounded-lg border p-4 space-y-2">
+            <label className="text-sm font-medium">
+              Statement Password
+            </label>
+
+            <Input
+              type="password"
+              placeholder="Enter PDF password"
+              value={pdfPassword}
+              onChange={(e) => setPdfPassword(e.target.value)}
+              autoFocus
+            />
+
+            <p className="text-xs text-muted-foreground">
+              Your password is used only to unlock this PDF for import and is not
+              stored by AureX.
+            </p>
+          </div>
+        )}
+
+        
           <Button
             onClick={() => previewImport.mutate()}
             disabled={
@@ -447,26 +470,7 @@ export function CSVImport({
 
         </div>
 
-        {requiresPassword && (
-          <div className="rounded-lg border p-4 space-y-2">
-            <label className="text-sm font-medium">
-              Statement Password
-            </label>
 
-            <Input
-              type="password"
-              placeholder="Enter PDF password"
-              value={pdfPassword}
-              onChange={(e) => setPdfPassword(e.target.value)}
-              autoFocus
-            />
-
-            <p className="text-xs text-muted-foreground">
-              Your password is used only to unlock this PDF for import and is not
-              stored by AureX.
-            </p>
-          </div>
-        )}
       </div>
 
 
