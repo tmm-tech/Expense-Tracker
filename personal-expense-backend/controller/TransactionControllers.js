@@ -788,7 +788,6 @@ Do not ask questions.
         });
       }
 
-      const userId = req.user.sub;
 
       /* =========================
          GET USER CATEGORIES
