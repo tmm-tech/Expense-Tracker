@@ -46,6 +46,12 @@ interface TransactionCategoryDialogProps {
   onCategoryCreated: (category: Category) => void;
 }
 
+
+interface CreateCategoryResponse {
+  success: boolean;
+  data: Category;
+  message?: string;
+}
 /* =========================
    SCHEMA
 ========================= */
@@ -154,18 +160,21 @@ export function TransactionCategoryDialog({
     try {
       setIsSubmitting(true);
 
-      const category = await apiFetch<Category>(
-        "/categories",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            name: data.name.trim(),
-            type: data.type,
-            icon: data.icon || "Folder",
-            color: data.color || "#3b82f6",
-          }),
-        },
-      );
+      const response =
+        await apiFetch<CreateCategoryResponse>(
+          "/categories",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              name: data.name.trim(),
+              type: data.type,
+              icon: data.icon || "Folder",
+              color: data.color || "#3b82f6",
+            }),
+          },
+        );
+
+      const category = response.data;
 
       toast.success(
         `"${category.name}" category created`,
@@ -194,8 +203,8 @@ export function TransactionCategoryDialog({
 
       toast.error(
         error?.error ||
-          error?.message ||
-          "Failed to create category",
+        error?.message ||
+        "Failed to create category",
       );
     } finally {
       setIsSubmitting(false);
@@ -270,26 +279,13 @@ export function TransactionCategoryDialog({
                     Transaction Type
                   </FormLabel>
 
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-
-                    <SelectContent>
-                      <SelectItem value="expense">
-                        Expense
-                      </SelectItem>
-
-                      <SelectItem value="income">
-                        Income
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <div className="flex h-10 items-center rounded-md border bg-muted px-3 text-sm">
+                      {field.value === "expense"
+                        ? "Expense"
+                        : "Income"}
+                    </div>
+                  </FormControl>
 
                   <FormMessage />
                 </FormItem>
@@ -338,11 +334,10 @@ export function TransactionCategoryDialog({
                                 rounded-lg
                                 border
                                 transition
-                                ${
-                                  selectedIcon ===
+                                ${selectedIcon ===
                                   iconName
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border hover:border-primary/50"
+                                  ? "border-primary bg-primary/10"
+                                  : "border-border hover:border-primary/50"
                                 }
                               `}
                             >
@@ -390,11 +385,10 @@ export function TransactionCategoryDialog({
                               rounded-lg
                               border-2
                               transition
-                              ${
-                                selectedColor ===
+                              ${selectedColor ===
                                 color.value
-                                  ? "border-foreground scale-110"
-                                  : "border-transparent"
+                                ? "border-foreground scale-110"
+                                : "border-transparent"
                               }
                             `}
                             style={{

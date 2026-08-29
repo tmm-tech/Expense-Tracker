@@ -114,17 +114,17 @@ export function CategoryDialog({
     resolver: zodResolver(categorySchema),
     defaultValues: editingCategory
       ? {
-          name: editingCategory.name,
-          type: editingCategory.type,
-          icon: editingCategory.icon ?? "",
-          color: editingCategory.color ?? "",
-        }
+        name: editingCategory.name,
+        type: editingCategory.type,
+        icon: editingCategory.icon ?? "",
+        color: editingCategory.color ?? "",
+      }
       : {
-          name: "",
-          type: "expense",
-          icon: "Folder",
-          color: "#3b82f6",
-        },
+        name: "",
+        type: "expense",
+        icon: "Folder",
+        color: "#3b82f6",
+      },
   });
 
   const selectedIcon = form.watch("icon");
@@ -136,38 +136,33 @@ export function CategoryDialog({
         body: JSON.stringify(payload),
       }),
 
-    onMutate: async (newCategory) => {
-      await queryClient.cancelQueries({ queryKey: ["categories"] });
-
-      const previousCategories =
-        queryClient.getQueryData<Category[]>(["categories"]) ?? [];
-
-      const optimisticCategory: Category = {
-        id: `temp-${Date.now()}`,
-        ...newCategory,
-      };
-
-      queryClient.setQueryData<Category[]>(
-        ["categories"],
-        [optimisticCategory, ...previousCategories],
-      );
-
-      return { previousCategories };
-    },
-
-    onError: (_err, _newCategory, context) => {
-      queryClient.setQueryData(["categories"], context?.previousCategories);
-      toast.error("Failed to create category");
-    },
-
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({
+        queryKey: ["categories"],
+      });
+
       toast.success("Category created");
-      form.reset();
+
+      form.reset({
+        name: "",
+        type: "expense",
+        icon: "Folder",
+        color: "#3b82f6",
+      });
+
       onOpenChange(false);
     },
-  });
 
+    onError: (error: any) => {
+      console.error("Create category error:", error);
+
+      toast.error(
+        error?.error ||
+        error?.message ||
+        "Failed to create category",
+      );
+    },
+  });
   const updateCategory = useMutation({
     mutationFn: (payload: Category) =>
       apiFetch<Category>(`/categories/${payload.id}`, {
@@ -283,11 +278,10 @@ export function CategoryDialog({
                             key={iconName}
                             type="button"
                             onClick={() => field.onChange(iconName)}
-                            className={`flex h-12 w-12 items-center justify-center rounded-lg border transition-colors ${
-                              selectedIcon === iconName
-                                ? "border-primary bg-primary/10"
-                                : "border-border hover:border-primary/50"
-                            }`}
+                            className={`flex h-12 w-12 items-center justify-center rounded-lg border transition-colors ${selectedIcon === iconName
+                              ? "border-primary bg-primary/10"
+                              : "border-border hover:border-primary/50"
+                              }`}
                           >
                             {Icon && <Icon className="h-5 w-5" />}
                           </button>
@@ -313,11 +307,10 @@ export function CategoryDialog({
                           key={color.value}
                           type="button"
                           onClick={() => field.onChange(color.value)}
-                          className={`h-10 w-10 rounded-lg border-2 transition-all ${
-                            selectedColor === color.value
-                              ? "border-foreground scale-110"
-                              : "border-transparent"
-                          }`}
+                          className={`h-10 w-10 rounded-lg border-2 transition-all ${selectedColor === color.value
+                            ? "border-foreground scale-110"
+                            : "border-transparent"
+                            }`}
                           style={{ backgroundColor: color.value }}
                           title={color.name}
                         />

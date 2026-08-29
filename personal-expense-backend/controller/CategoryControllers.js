@@ -57,48 +57,88 @@ module.exports = {
   // POST /api/categories
   createCategory: async (req, res) => {
     try {
-      if (!req.user?.sub) {
+      const userId = req.user?.sub;
+
+      if (!userId) {
         return res.status(401).json({
           success: false,
-          message: "Unauthorized",
+          error: "Unauthorized",
         });
       }
-      const userId = req.user.sub;
+
       const { name, type, color, icon } = req.body;
 
-      if (!name || !type) {
+      // =========================
+      // VALIDATION
+      // =========================
+
+      const trimmedName =
+        typeof name === "string" ? name.trim() : "";
+
+      if (!trimmedName) {
         return res.status(400).json({
-          message: "Category name and type are required",
+          success: false,
+          error: "Category name is required",
         });
       }
+
+      if (!["income", "expense", "goal"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid category type",
+        });
+      }
+
+      // =========================
+      // DUPLICATE CHECK
+      // =========================
 
       const exists = await prisma.category.findFirst({
         where: {
           userId,
-          name,
+          name: trimmedName,
           type,
         },
       });
 
       if (exists) {
-        return res.status(409).json({ message: "Category already exists" });
+        return res.status(409).json({
+          success: false,
+          error: "Category already exists",
+        });
       }
+
+      // =========================
+      // CREATE
+      // =========================
 
       const category = await prisma.category.create({
         data: {
           userId,
-          name,
+          name: trimmedName,
           type,
-          color,
-          icon,
+          color: color || null,
+          icon: icon || null,
           isDefault: false,
         },
       });
 
-      res.status(201).json(category);
+      return res.status(201).json({
+        success: true,
+        data: category,
+      });
+
     } catch (err) {
-      console.error(err);
-      res.status(400).json({ message: "Failed to create category" });
+      console.error("Create category error:", err);
+
+      return res.status(500).json({
+        success: false,
+        error: "Failed to create category",
+        details:
+          process.env.NODE_ENV === "development"
+            ? err.message
+            : undefined,
+      });
     }
   },
 
