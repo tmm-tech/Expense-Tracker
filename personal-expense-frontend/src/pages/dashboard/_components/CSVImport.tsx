@@ -68,6 +68,12 @@ interface PreviewRow {
   originalRow?: number;
 }
 
+interface ImportError {
+  message?: string;
+  error?: string;
+  requiresPassword?: boolean;
+}
+
 interface PreviewResponse {
   success: boolean;
 
@@ -262,7 +268,7 @@ export function CSVImport({
 
       toast.error(
         error?.message ||
-          "Failed to create category",
+        "Failed to create category",
       );
     }
   };
@@ -306,14 +312,13 @@ export function CSVImport({
        */
 
       if (
-        fileType === "pdf" &&
-        pdfPassword.trim()
-      ) {
+        fileType === "pdf" && pdfPassword) {
         formData.append(
           "pdfPassword",
           pdfPassword,
         );
       }
+
 
       return apiFetch<PreviewResponse>(
         "/import/preview",
@@ -356,9 +361,10 @@ export function CSVImport({
           };
         });
 
-      setPreview(normalizedRows);
+
 
       setRequiresPassword(false);
+      setPreview(normalizedRows);
 
       if (!normalizedRows.length) {
         toast.info(
@@ -389,27 +395,12 @@ export function CSVImport({
     },
 
     onError: (error: any) => {
-      console.error(
-        "AI import preview error:",
-        error,
-      );
-
-      const message =
-        error?.message || "";
-
-      /*
-       * Backend returns requiresPassword,
-       * but apiFetch may expose only the error
-       * message. Support both.
-       */
+      console.error("AI import preview error:", error);
 
       if (
-        message
-          .toLowerCase()
-          .includes("password") ||
-        message
-          .toLowerCase()
-          .includes("protected")
+        error?.requiresPassword === true ||
+        error?.response?.requiresPassword === true ||
+        error?.data?.requiresPassword === true
       ) {
         setRequiresPassword(true);
 
@@ -421,8 +412,9 @@ export function CSVImport({
       }
 
       toast.error(
-        message ||
-          "Unable to analyze the statement.",
+        error?.error ||
+        error?.message ||
+        "Unable to analyze the statement.",
       );
     },
   });
@@ -482,7 +474,7 @@ export function CSVImport({
 
       toast.error(
         error?.message ||
-          "Import failed",
+        "Import failed",
       );
     },
   });
@@ -628,79 +620,69 @@ export function CSVImport({
           <Input
             type="file"
             accept=".csv,.pdf"
-            onChange={handleFileChange}
+            onChange={(e) => {
+              const selectedFile = e.target.files?.[0] || null;
+
+              setFile(selectedFile);
+              setPdfPassword("");
+              setRequiresPassword(false);
+              setPreview([]);
+            }}
           />
 
-          {/* PASSWORD */}
-
-          {requiresPassword && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
-
+          {/* PDF PASSWORD */}
+          {requiresPassword && file?.type === "application/pdf" && (
+            <div className="rounded-lg border p-4 space-y-3">
               <div>
-
                 <label className="text-sm font-medium">
-                  Statement Password
+                  PDF Password / PIN
                 </label>
 
                 <p className="text-xs text-muted-foreground mt-1">
-                  This PDF is password protected.
+                  This statement is password protected. Enter the password or PIN
+                  used to open the PDF.
                 </p>
-
               </div>
 
               <Input
                 type="password"
-                placeholder="Enter PDF password"
+                placeholder="Enter PDF password or PIN"
                 value={pdfPassword}
-                onChange={(event) =>
-                  setPdfPassword(
-                    event.target.value,
-                  )
-                }
-                autoFocus
+                onChange={(e) => setPdfPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    previewImport.mutate();
+                  }
+                }}
               />
 
               <p className="text-xs text-muted-foreground">
-                The password is sent only for
-                unlocking this PDF and is not
+                The password is sent only for processing this import and is not
                 stored by AureX.
               </p>
-
             </div>
           )}
 
-          {/* ANALYZE */}
-
           <Button
-            onClick={() =>
-              previewImport.mutate()
-            }
+            onClick={() => previewImport.mutate()}
             disabled={
               previewImport.isPending ||
               !file ||
               !accountId ||
               (requiresPassword &&
-                !pdfPassword.trim())
+                file?.type === "application/pdf" &&
+                !pdfPassword)
             }
+            className="w-full"
           >
+            <Upload className="w-4 h-4 mr-2" />
 
-            {previewImport.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing statement...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-
-                {requiresPassword
-                  ? "Unlock & Analyze"
-                  : "Analyze with AI"}
-              </>
-            )}
-
+            {previewImport.isPending
+              ? "Analyzing with AI..."
+              : requiresPassword
+                ? "Unlock & Analyze"
+                : "Analyze with AI"}
           </Button>
-
         </div>
 
       </div>
@@ -845,11 +827,10 @@ export function CSVImport({
                       return (
                         <tr
                           key={`${row.date}-${index}`}
-                          className={`border-t ${
-                            needsCategory
-                              ? "bg-yellow-500/5"
-                              : ""
-                          }`}
+                          className={`border-t ${needsCategory
+                            ? "bg-yellow-500/5"
+                            : ""
+                            }`}
                         >
 
                           {/* DATE */}
@@ -907,7 +888,7 @@ export function CSVImport({
                             <Badge
                               variant={
                                 row.type ===
-                                "income"
+                                  "income"
                                   ? "default"
                                   : "secondary"
                               }
@@ -939,11 +920,10 @@ export function CSVImport({
                               >
 
                                 <SelectTrigger
-                                  className={`flex-1 ${
-                                    needsCategory
-                                      ? "border-yellow-500"
-                                      : ""
-                                  }`}
+                                  className={`flex-1 ${needsCategory
+                                    ? "border-yellow-500"
+                                    : ""
+                                    }`}
                                 >
 
                                   <SelectValue
@@ -1015,7 +995,7 @@ export function CSVImport({
 
                                 {row.categoryConfidence &&
                                   row.categoryConfidence !==
-                                    "none" && (
+                                  "none" && (
                                     <span>
                                       (
                                       {
@@ -1070,17 +1050,15 @@ export function CSVImport({
                   <p className="text-xs text-muted-foreground mt-1">
 
                     {uncategorizedRows.length > 0
-                      ? `${uncategorizedRows.length} transaction${
-                          uncategorizedRows.length ===
-                          1
-                            ? ""
-                            : "s"
-                        } ${
-                          uncategorizedRows.length ===
-                          1
-                            ? "does"
-                            : "do"
-                        } not have a category. Select an existing category or create a new one.`
+                      ? `${uncategorizedRows.length} transaction${uncategorizedRows.length ===
+                        1
+                        ? ""
+                        : "s"
+                      } ${uncategorizedRows.length ===
+                        1
+                        ? "does"
+                        : "do"
+                      } not have a category. Select an existing category or create a new one.`
                       : "Some transactions still require review before they can be imported."}
 
                   </p>
