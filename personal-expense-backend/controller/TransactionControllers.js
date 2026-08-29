@@ -379,206 +379,222 @@ module.exports = {
       });
     }
   },
-previewImport: async (req, res) => {
-  try {
-    const userId = req.user?.id || req.user?.sub;
+  previewImport: async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?.sub;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: "Unauthorized: missing user ID",
-      });
-    }
-
-    const { accountId, fileType, pdfPassword } = req.body;
-    const file = req.file;
-
-    /* =========================
-       VALIDATION
-    ========================= */
-
-    if (!file) {
-      return res.status(400).json({
-        success: false,
-        error: "No file uploaded",
-      });
-    }
-
-    if (!accountId) {
-      return res.status(400).json({
-        success: false,
-        error: "Account is required",
-      });
-    }
-
-    if (!["csv", "pdf"].includes(fileType)) {
-      return res.status(400).json({
-        success: false,
-        error: "Unsupported file type",
-      });
-    }
-
-    /* =========================
-       GET USER CATEGORIES
-    ========================= */
-
-    const categories = await prisma.category.findMany({
-      where: {
-        userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    /* =========================
-       EXTRACT FILE CONTENT
-    ========================= */
-
-    let text = "";
-
-    /* CSV */
-
-    if (fileType === "csv") {
-      text = file.buffer.toString("utf-8");
-    }
-
-    /* PDF */
-
-    if (fileType === "pdf") {
-      try {
-        const options = {};
-
-        if (pdfPassword) {
-          options.password = pdfPassword;
-        }
-
-        const data = await pdf(file.buffer, options);
-
-        text = data.text;
-      } catch (error) {
-        console.error("PDF extraction error:", error);
-
-        const message =
-          error?.message?.toLowerCase() || "";
-
-        /* PASSWORD REQUIRED */
-
-        if (
-          error?.code === 1 &&
-          message.includes("no password")
-        ) {
-          return res.status(400).json({
-            success: false,
-            error:
-              "This PDF is password protected. Please enter the PDF password.",
-            requiresPassword: true,
-          });
-        }
-
-        /* INCORRECT PASSWORD */
-
-        if (
-          message.includes("incorrect password") ||
-          message.includes("invalid password") ||
-          message.includes("password is incorrect")
-        ) {
-          return res.status(400).json({
-            success: false,
-            error: "Incorrect PDF password.",
-            requiresPassword: true,
-          });
-        }
-
-        return res.status(400).json({
+      if (!userId) {
+        return res.status(401).json({
           success: false,
-          error: "Unable to read the PDF statement.",
+          error: "Unauthorized: missing user ID",
         });
       }
-    }
-
-    /* =========================
-       TEXT VALIDATION
-    ========================= */
-
-    if (!text || !text.trim()) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Could not extract any text from the file.",
+      console.log("IMPORT PREVIEW BODY:", {
+        accountId: req.body?.accountId,
+        fileType: req.body?.fileType,
+        hasPdfPassword:
+          typeof req.body?.pdfPassword === "string" &&
+          req.body.pdfPassword.length > 0,
+        passwordLength:
+          typeof req.body?.pdfPassword === "string"
+            ? req.body.pdfPassword.length
+            : 0,
       });
-    }
 
-    /* =========================
-       CHUNK DOCUMENT
-    ========================= */
+      console.log("IMPORT PREVIEW FILE:", {
+        originalname: req.file?.originalname,
+        mimetype: req.file?.mimetype,
+        size: req.file?.size,
+      });
 
-    const chunkText = (
-      text,
-      maxCharacters = 12000
-    ) => {
-      const chunks = [];
+      const { accountId, fileType, pdfPassword } = req.body;
+      const file = req.file;
 
-      for (
-        let i = 0;
-        i < text.length;
-        i += maxCharacters
-      ) {
-        chunks.push(
-          text.slice(i, i + maxCharacters)
-        );
+      /* =========================
+         VALIDATION
+      ========================= */
+
+      if (!file) {
+        return res.status(400).json({
+          success: false,
+          error: "No file uploaded",
+        });
       }
 
-      return chunks;
-    };
+      if (!accountId) {
+        return res.status(400).json({
+          success: false,
+          error: "Account is required",
+        });
+      }
 
-    const chunks = chunkText(text, 12000);
+      if (!["csv", "pdf"].includes(fileType)) {
+        return res.status(400).json({
+          success: false,
+          error: "Unsupported file type",
+        });
+      }
 
-    console.log(
-      `AI import: processing ${chunks.length} chunks`
-    );
+      /* =========================
+         GET USER CATEGORIES
+      ========================= */
 
-    const allRows = [];
-    const failedChunks = [];
+      const categories = await prisma.category.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
 
-    /* =========================
-       CATEGORY LIST FOR AI
-    ========================= */
+      /* =========================
+         EXTRACT FILE CONTENT
+      ========================= */
 
-    const categoryList = categories.map(
-      (category) => ({
-        id: category.id,
-        name: category.name,
-        type: category.type,
-      })
-    );
+      let text = "";
 
-    /* =========================
-       AI EXTRACTION
-    ========================= */
+      /* CSV */
 
-    for (let i = 0; i < chunks.length; i++) {
+      if (fileType === "csv") {
+        text = file.buffer.toString("utf-8");
+      }
+
+      /* PDF */
+
+      if (fileType === "pdf") {
+        try {
+          const options = {};
+
+          if (pdfPassword) {
+            options.password = pdfPassword;
+          }
+
+          const data = await pdf(file.buffer, options);
+
+          text = data.text;
+        } catch (error) {
+          console.error("PDF extraction error:", error);
+
+          const message =
+            error?.message?.toLowerCase() || "";
+
+          /* PASSWORD REQUIRED */
+
+          if (
+            error?.code === 1 &&
+            message.includes("no password")
+          ) {
+            return res.status(400).json({
+              success: false,
+              error:
+                "This PDF is password protected. Please enter the PDF password.",
+              requiresPassword: true,
+            });
+          }
+
+          /* INCORRECT PASSWORD */
+
+          if (
+            message.includes("incorrect password") ||
+            message.includes("invalid password") ||
+            message.includes("password is incorrect")
+          ) {
+            return res.status(400).json({
+              success: false,
+              error: "Incorrect PDF password.",
+              requiresPassword: true,
+            });
+          }
+
+          return res.status(400).json({
+            success: false,
+            error: "Unable to read the PDF statement.",
+          });
+        }
+      }
+
+      /* =========================
+         TEXT VALIDATION
+      ========================= */
+
+      if (!text || !text.trim()) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Could not extract any text from the file.",
+        });
+      }
+
+      /* =========================
+         CHUNK DOCUMENT
+      ========================= */
+
+      const chunkText = (
+        text,
+        maxCharacters = 12000
+      ) => {
+        const chunks = [];
+
+        for (
+          let i = 0;
+          i < text.length;
+          i += maxCharacters
+        ) {
+          chunks.push(
+            text.slice(i, i + maxCharacters)
+          );
+        }
+
+        return chunks;
+      };
+
+      const chunks = chunkText(text, 12000);
+
       console.log(
-        `AI processing import chunk ${
-          i + 1
-        }/${chunks.length}`
+        `AI import: processing ${chunks.length} chunks`
       );
 
-      try {
-        const response =
-          await openai.responses.create({
-            model: "gpt-5-mini",
+      const allRows = [];
+      const failedChunks = [];
 
-            input: [
-              {
-                role: "system",
+      /* =========================
+         CATEGORY LIST FOR AI
+      ========================= */
 
-                content: `
+      const categoryList = categories.map(
+        (category) => ({
+          id: category.id,
+          name: category.name,
+          type: category.type,
+        })
+      );
+
+      /* =========================
+         AI EXTRACTION
+      ========================= */
+
+      for (let i = 0; i < chunks.length; i++) {
+        console.log(
+          `AI processing import chunk ${i + 1
+          }/${chunks.length}`
+        );
+
+        try {
+          const response =
+            await openai.responses.create({
+              model: "gpt-5-mini",
+
+              input: [
+                {
+                  role: "system",
+
+                  content: `
 You are AureX Finance's financial statement transaction extraction engine.
 
 Your job is to extract genuine financial transactions from the supplied bank statement section.
@@ -653,211 +669,209 @@ Do not explain your answer.
 Do not ask questions.
 `,
 
-              },
+                },
 
-              {
-                role: "user",
-                content: chunks[i],
-              },
-            ],
-          });
+                {
+                  role: "user",
+                  content: chunks[i],
+                },
+              ],
+            });
 
-        /* =========================
-           PARSE AI RESPONSE
-        ========================= */
+          /* =========================
+             PARSE AI RESPONSE
+          ========================= */
 
-        const result = JSON.parse(
-          response.output_text
-        );
+          const result = JSON.parse(
+            response.output_text
+          );
 
-        if (
-          !result ||
-          !Array.isArray(result.rows)
-        ) {
+          if (
+            !result ||
+            !Array.isArray(result.rows)
+          ) {
+            console.error(
+              `AI returned invalid rows for chunk ${i + 1
+              }`
+            );
+
+            failedChunks.push(i + 1);
+
+            continue;
+          }
+
+          /* =========================
+             VALIDATE TRANSACTIONS
+          ========================= */
+
+          for (const row of result.rows) {
+            if (!row.date) continue;
+
+            if (!row.description) continue;
+
+            if (
+              typeof row.amount !== "number" ||
+              !Number.isFinite(row.amount)
+            ) {
+              continue;
+            }
+
+            if (
+              row.type !== "income" &&
+              row.type !== "expense"
+            ) {
+              continue;
+            }
+
+            /* =========================
+               VALIDATE CATEGORY
+            ========================= */
+
+            let categoryId = null;
+
+            if (row.categoryId) {
+              const category =
+                categories.find(
+                  (category) =>
+                    category.id ===
+                    row.categoryId &&
+                    category.type === row.type
+                );
+
+              if (category) {
+                categoryId = category.id;
+              }
+            }
+
+            /* =========================
+               CATEGORY CONFIDENCE
+            ========================= */
+
+            let categoryConfidence =
+              "none";
+
+            if (categoryId) {
+              if (
+                ["high", "medium", "low"].includes(
+                  row.categoryConfidence
+                )
+              ) {
+                categoryConfidence =
+                  row.categoryConfidence;
+              } else {
+                categoryConfidence =
+                  "medium";
+              }
+            }
+
+            /* =========================
+               ADD ROW
+            ========================= */
+
+            allRows.push({
+              date: row.date,
+
+              description:
+                row.description.trim(),
+
+              amount: Math.abs(
+                row.amount
+              ),
+
+              type: row.type,
+
+              categoryId,
+
+              categoryConfidence,
+
+              needsCategoryReview:
+                !categoryId ||
+                categoryConfidence ===
+                "low" ||
+                categoryConfidence ===
+                "none",
+            });
+          }
+        } catch (error) {
           console.error(
-            `AI returned invalid rows for chunk ${
-              i + 1
-            }`
+            `Failed to process AI chunk ${i + 1
+            }:`,
+            error
           );
 
           failedChunks.push(i + 1);
+        }
+      }
 
+      /* =========================
+         REMOVE DUPLICATES
+      ========================= */
+
+      const uniqueRows = [];
+      const seen = new Set();
+
+      for (const row of allRows) {
+        const key = [
+          row.date,
+          row.description
+            .trim()
+            .toLowerCase(),
+          row.amount,
+          row.type,
+        ].join("|");
+
+        if (seen.has(key)) {
           continue;
         }
 
-        /* =========================
-           VALIDATE TRANSACTIONS
-        ========================= */
+        seen.add(key);
 
-        for (const row of result.rows) {
-          if (!row.date) continue;
-
-          if (!row.description) continue;
-
-          if (
-            typeof row.amount !== "number" ||
-            !Number.isFinite(row.amount)
-          ) {
-            continue;
-          }
-
-          if (
-            row.type !== "income" &&
-            row.type !== "expense"
-          ) {
-            continue;
-          }
-
-          /* =========================
-             VALIDATE CATEGORY
-          ========================= */
-
-          let categoryId = null;
-
-          if (row.categoryId) {
-            const category =
-              categories.find(
-                (category) =>
-                  category.id ===
-                    row.categoryId &&
-                  category.type === row.type
-              );
-
-            if (category) {
-              categoryId = category.id;
-            }
-          }
-
-          /* =========================
-             CATEGORY CONFIDENCE
-          ========================= */
-
-          let categoryConfidence =
-            "none";
-
-          if (categoryId) {
-            if (
-              ["high", "medium", "low"].includes(
-                row.categoryConfidence
-              )
-            ) {
-              categoryConfidence =
-                row.categoryConfidence;
-            } else {
-              categoryConfidence =
-                "medium";
-            }
-          }
-
-          /* =========================
-             ADD ROW
-          ========================= */
-
-          allRows.push({
-            date: row.date,
-
-            description:
-              row.description.trim(),
-
-            amount: Math.abs(
-              row.amount
-            ),
-
-            type: row.type,
-
-            categoryId,
-
-            categoryConfidence,
-
-            needsCategoryReview:
-              !categoryId ||
-              categoryConfidence ===
-                "low" ||
-              categoryConfidence ===
-                "none",
-          });
-        }
-      } catch (error) {
-        console.error(
-          `Failed to process AI chunk ${
-            i + 1
-          }:`,
-          error
-        );
-
-        failedChunks.push(i + 1);
-      }
-    }
-
-    /* =========================
-       REMOVE DUPLICATES
-    ========================= */
-
-    const uniqueRows = [];
-    const seen = new Set();
-
-    for (const row of allRows) {
-      const key = [
-        row.date,
-        row.description
-          .trim()
-          .toLowerCase(),
-        row.amount,
-        row.type,
-      ].join("|");
-
-      if (seen.has(key)) {
-        continue;
+        uniqueRows.push(row);
       }
 
-      seen.add(key);
+      /* =========================
+         RESPONSE
+      ========================= */
 
-      uniqueRows.push(row);
+      return res.json({
+        success: true,
+
+        data: {
+          rows: uniqueRows,
+
+          accountId,
+
+          totalRows:
+            uniqueRows.length,
+
+          categorizedRows:
+            uniqueRows.filter(
+              (row) =>
+                row.categoryId
+            ).length,
+
+          uncategorizedRows:
+            uniqueRows.filter(
+              (row) =>
+                !row.categoryId
+            ).length,
+
+          failedChunks,
+        },
+      });
+    } catch (err) {
+      console.error(
+        "AI import preview error:",
+        err
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          "AI import preview failed",
+      });
     }
-
-    /* =========================
-       RESPONSE
-    ========================= */
-
-    return res.json({
-      success: true,
-
-      data: {
-        rows: uniqueRows,
-
-        accountId,
-
-        totalRows:
-          uniqueRows.length,
-
-        categorizedRows:
-          uniqueRows.filter(
-            (row) =>
-              row.categoryId
-          ).length,
-
-        uncategorizedRows:
-          uniqueRows.filter(
-            (row) =>
-              !row.categoryId
-          ).length,
-
-        failedChunks,
-      },
-    });
-  } catch (err) {
-    console.error(
-      "AI import preview error:",
-      err
-    );
-
-    return res.status(500).json({
-      success: false,
-      error:
-        "AI import preview failed",
-    });
-  }
-},
+  },
   /* ============================
      CONFIRM IMPORT
   ============================ */

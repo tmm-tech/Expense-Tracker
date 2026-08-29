@@ -631,34 +631,30 @@ export function CSVImport({
           />
 
           {/* PDF PASSWORD */}
-          {requiresPassword && file?.type === "application/pdf" && (
-            <div className="rounded-lg border p-4 space-y-3">
+          {requiresPassword && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3 dark:border-amber-800 dark:bg-amber-950/30">
               <div>
-                <label className="text-sm font-medium">
-                  PDF Password / PIN
-                </label>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  🔐 Password-protected PDF
+                </p>
 
-                <p className="text-xs text-muted-foreground mt-1">
-                  This statement is password protected. Enter the password or PIN
-                  used to open the PDF.
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                  This Statement is protected with a password. Enter the PDF
+                  password below so AureX can read and analyze the statement.
                 </p>
               </div>
 
               <Input
                 type="password"
-                placeholder="Enter PDF password or PIN"
+                placeholder="Enter PDF password"
                 value={pdfPassword}
                 onChange={(e) => setPdfPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    previewImport.mutate();
-                  }
-                }}
+                className="border-amber-400 focus-visible:ring-amber-500"
               />
 
-              <p className="text-xs text-muted-foreground">
-                The password is sent only for processing this import and is not
-                stored by AureX.
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                ⚠️ Your password is used only for this import request and is not saved
+                as part of your transaction data.
               </p>
             </div>
           )}
