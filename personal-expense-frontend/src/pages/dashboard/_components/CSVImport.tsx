@@ -19,6 +19,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
+  LockKeyhole,
   Plus,
   Sparkles,
   Upload,
@@ -631,33 +632,51 @@ export function CSVImport({
           />
 
           {/* PDF PASSWORD */}
-          {requiresPassword && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3 dark:border-amber-800 dark:bg-amber-950/30">
-              <div>
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  🔐 Password-protected PDF
-                </p>
+         {requiresPassword && (
+  <div className="rounded-lg border border-amber-500/30 bg-background p-4 space-y-3 shadow-sm">
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
+        <LockKeyhole className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      </div>
 
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                  This Statement is protected with a password. Enter the PDF
-                  password below so AureX can read and analyze the statement.
-                </p>
-              </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium">
+          Password-protected statement
+        </p>
 
-              <Input
-                type="password"
-                placeholder="Enter PDF password"
-                value={pdfPassword}
-                onChange={(e) => setPdfPassword(e.target.value)}
-                className="border-amber-400 focus-visible:ring-amber-500"
-              />
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          This PDF is encrypted. Enter the statement password to allow
+          AureX to securely read and analyze the transactions.
+        </p>
+      </div>
+    </div>
 
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                ⚠️ Your password is used only for this import request and is not saved
-                as part of your transaction data.
-              </p>
-            </div>
-          )}
+    <div className="space-y-2">
+      <label className="text-sm font-medium">
+        PDF password
+      </label>
+
+      <Input
+        type="password"
+        placeholder="Enter your PDF password"
+        value={pdfPassword}
+        onChange={(e) =>
+          setPdfPassword(e.target.value)
+        }
+        className="h-10"
+      />
+
+      <div className="flex items-start gap-2">
+        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Your password is used only to unlock this statement during
+          the import process. It is not stored with your transactions.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
           <Button
             onClick={() => previewImport.mutate()}

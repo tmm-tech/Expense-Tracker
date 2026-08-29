@@ -389,24 +389,7 @@ module.exports = {
           error: "Unauthorized: missing user ID",
         });
       }
-      console.log("IMPORT PREVIEW BODY:", {
-        accountId: req.body?.accountId,
-        fileType: req.body?.fileType,
-        hasPdfPassword:
-          typeof req.body?.pdfPassword === "string" &&
-          req.body.pdfPassword.length > 0,
-        passwordLength:
-          typeof req.body?.pdfPassword === "string"
-            ? req.body.pdfPassword.length
-            : 0,
-      });
-
-      console.log("IMPORT PREVIEW FILE:", {
-        originalname: req.file?.originalname,
-        mimetype: req.file?.mimetype,
-        size: req.file?.size,
-      });
-
+    
       const { accountId, fileType, pdfPassword } = req.body;
       const file = req.file;
 
@@ -467,57 +450,82 @@ module.exports = {
 
       /* PDF */
 
-      if (fileType === "pdf") {
-        try {
-          const options = {};
+   if (fileType === "pdf") {
+  try {
+    const password =
+      typeof pdfPassword === "string"
+        ? pdfPassword.trim()
+        : "";
 
-          if (pdfPassword) {
-            options.password = pdfPassword;
-          }
+    console.log("Attempting PDF extraction:", {
+      hasPassword: Boolean(password),
+      passwordLength: password.length,
+    });
 
-          const data = await pdf(file.buffer, options);
+    const options = {};
 
-          text = data.text;
-        } catch (error) {
-          console.error("PDF extraction error:", error);
+    if (password) {
+      options.password = password;
+    }
 
-          const message =
-            error?.message?.toLowerCase() || "";
+    const data = await pdf(file.buffer, options);
 
-          /* PASSWORD REQUIRED */
+    console.log("PDF extraction successful:", {
+      pages: data.numpages,
+      characters: data.text?.length || 0,
+    });
 
-          if (
-            error?.code === 1 &&
-            message.includes("no password")
-          ) {
-            return res.status(400).json({
-              success: false,
-              error:
-                "This PDF is password protected. Please enter the PDF password.",
-              requiresPassword: true,
-            });
-          }
+    text = data.text;
 
-          /* INCORRECT PASSWORD */
+  } catch (error) {
+    console.error("PDF extraction error:", {
+      message: error?.message,
+      code: error?.code,
+      name: error?.name,
+    });
 
-          if (
-            message.includes("incorrect password") ||
-            message.includes("invalid password") ||
-            message.includes("password is incorrect")
-          ) {
-            return res.status(400).json({
-              success: false,
-              error: "Incorrect PDF password.",
-              requiresPassword: true,
-            });
-          }
+    const message =
+      error?.message?.toLowerCase() || "";
 
-          return res.status(400).json({
-            success: false,
-            error: "Unable to read the PDF statement.",
-          });
-        }
-      }
+    /*
+     * PDF requires a password but none was supplied.
+     */
+    if (
+      error?.code === 1 &&
+      message.includes("no password")
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "This PDF is password protected.",
+        requiresPassword: true,
+      });
+    }
+
+    /*
+     * Password was supplied but rejected.
+     */
+    if (
+      message.includes("incorrect password") ||
+      message.includes("invalid password") ||
+      message.includes("password is incorrect") ||
+      message.includes("passwordexception")
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "The PDF password is incorrect.",
+        requiresPassword: true,
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      error:
+        "Unable to read the PDF statement.",
+    });
+  }
+}
 
       /* =========================
          TEXT VALIDATION
