@@ -1,46 +1,68 @@
 import { supabase } from "@/lib/supabase";
 import { API_BASE_URL } from "./config";
 
+interface ApiError extends Error {
+  status?: number;
+  error?: string;
+  requiresPassword?: boolean;
+  success?: boolean;
+  data?: any;
+}
+
 /**
  * Generic API fetch helper that attaches Supabase session token
- * and normalizes common API response patterns.
+ * and preserves structured API errors from the backend.
  */
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error: sessionError } =
+      await supabase.auth.getSession();
+
     const session = data?.session ?? null;
 
-    if (error || !session?.access_token) {
+    if (sessionError || !session?.access_token) {
       console.error("apiFetch: No valid session", {
-        error,
+        error: sessionError,
         data,
       });
 
       throw new Error("No valid session found");
     }
 
-    // Detect multipart/form-data
+    /* =========================
+       FORM DATA
+    ========================= */
+
     const isFormData =
       options.body instanceof FormData;
 
-    // Headers
+    /* =========================
+       HEADERS
+    ========================= */
+
     const headers: Record<string, string> = {
       ...(options.headers as Record<string, string>),
 
       Authorization: `Bearer ${session.access_token}`,
     };
 
-    // Only attach JSON content type
-    // for non-FormData requests
+    /*
+     * IMPORTANT:
+     * Do NOT set Content-Type manually for FormData.
+     * The browser must set the multipart boundary.
+     */
     if (!isFormData) {
       headers["Content-Type"] =
         "application/json";
     }
 
-    // Request
+    /* =========================
+       REQUEST
+    ========================= */
+
     const res = await fetch(
       `${API_BASE_URL}${path}`,
       {
@@ -50,62 +72,99 @@ export async function apiFetch<T>(
       },
     );
 
+    /* =========================
+       READ RESPONSE ONCE
+    ========================= */
+
     let json: any = null;
 
-    try {
-      json = await res.json();
-    } catch {
-      console.log(
-        "apiFetch: empty response body",
-      );
+    const contentType =
+      res.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      try {
+        json = await res.json();
+      } catch {
+        console.error(
+          "apiFetch: Failed to parse JSON response",
+        );
+      }
+    } else {
+      try {
+        const text = await res.text();
+
+        if (text) {
+          json = {
+            message: text,
+          };
+        }
+      } catch {
+        console.error(
+          "apiFetch: Failed to read response body",
+        );
+      }
     }
+
+    /* =========================
+       API ERROR
+    ========================= */
 
     if (!res.ok) {
-      let errorData: any = {};
+      console.error(
+        "apiFetch error response:",
+        json,
+      );
 
-      try {
-        errorData = await res.json();
-      } catch {
-        // Response was not JSON
-      }
+      const apiError = new Error(
+        json?.error ||
+          json?.message ||
+          `API request failed (${res.status})`,
+      ) as ApiError;
 
-      console.error("apiFetch error response:", errorData);
+      apiError.status = res.status;
 
-      const error = new Error(
-        errorData?.error ||
-        errorData?.message ||
-        `API request failed (${res.status})`
-      ) as Error & {
-        status?: number;
-        error?: string;
-        message?: string;
-        requiresPassword?: boolean;
-        success?: boolean;
-      };
+      apiError.error =
+        json?.error;
 
-      error.status = res.status;
-      error.error = errorData?.error;
-      error.message =
-        errorData?.error ||
-        errorData?.message ||
+      apiError.message =
+        json?.error ||
+        json?.message ||
         `API request failed (${res.status})`;
-      error.requiresPassword = errorData?.requiresPassword;
-      error.success = errorData?.success;
 
-      throw error;
+      apiError.requiresPassword =
+        json?.requiresPassword === true;
 
+      apiError.success =
+        json?.success;
+
+      apiError.data =
+        json?.data;
+
+      throw apiError;
     }
 
+    /* =========================
+       SUCCESS
+    ========================= */
+
     return json as T;
+
   } catch (err: any) {
     console.error(
       "apiFetch unexpected error:",
       err,
     );
 
-    throw new Error(
-      err?.message ||
-      "Unexpected API error",
-    );
+    /*
+     * IMPORTANT:
+     * Do NOT create a new Error here.
+     *
+     * The original API error may contain:
+     * - requiresPassword
+     * - status
+     * - error
+     * - success
+     */
+    throw err;
   }
 }
