@@ -303,6 +303,20 @@ module.exports = {
         });
       }
 
+      const account = await prisma.account.findFirst({
+        where: {
+          id: accountId,
+          userId,
+        },
+      });
+
+      if (!account) {
+        return res.status(403).json({
+          success: false,
+          error: "Invalid account",
+        });
+      }
+
       const { accountId, fileType, pdfPassword } = req.body;
       const file = req.file;
 
@@ -390,7 +404,10 @@ module.exports = {
           // Password required
           if (
             error?.code === 1 &&
-            message.includes("no password")
+            (
+              message.includes("no password") ||
+              message.includes("password")
+            )
           ) {
             return res.status(400).json({
               success: false,
@@ -436,20 +453,29 @@ module.exports = {
          CHUNK DOCUMENT
       ========================= */
 
-      const chunkText = (
-        text,
-        maxCharacters = 12000
-      ) => {
+      const chunkText = (text, maxCharacters = 12000) => {
+        const lines = text.split(/\r?\n/);
         const chunks = [];
 
-        for (
-          let i = 0;
-          i < text.length;
-          i += maxCharacters
-        ) {
-          chunks.push(
-            text.slice(i, i + maxCharacters)
-          );
+        let current = "";
+
+        for (const line of lines) {
+          if (
+            current.length + line.length + 1 >
+            maxCharacters
+          ) {
+            if (current.trim()) {
+              chunks.push(current);
+            }
+
+            current = line;
+          } else {
+            current += `${line}\n`;
+          }
+        }
+
+        if (current.trim()) {
+          chunks.push(current);
         }
 
         return chunks;
@@ -475,22 +501,6 @@ module.exports = {
           type: category.type,
         })
       );
-
-      const sendProgress = (stage, progress, currentChunk, totalChunks) => {
-        if (!res.headersSent) {
-          return;
-        }
-
-        res.write(
-          JSON.stringify({
-            type: "progress",
-            stage,
-            progress,
-            currentChunk,
-            totalChunks,
-          }) + "\n"
-        );
-      };
 
       /* =========================
          AI EXTRACTION
@@ -802,6 +812,20 @@ Do not ask questions.
           message: "Unauthorized: missing user ID",
         });
       }
+
+      const account = await prisma.account.findFirst({
+  where: {
+    id: accountId,
+    userId,
+  },
+});
+
+if (!account) {
+  return res.status(403).json({
+    success: false,
+    error: "Invalid account",
+  });
+}
       const {
         rows,
         accountId,

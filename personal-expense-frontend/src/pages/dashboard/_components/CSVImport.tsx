@@ -24,20 +24,17 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-
 import { toast } from "sonner";
-
 import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-
 import { apiFetch } from "@/lib/api";
-
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
 import { Progress } from "@/components/ui/progress";
+import { TransactionCategoryDialog } from "./TransactionCategoryDialog";
 
 /* ============================================================
    TYPES
@@ -70,11 +67,6 @@ interface PreviewRow {
   originalRow?: number;
 }
 
-interface ImportError {
-  message?: string;
-  error?: string;
-  requiresPassword?: boolean;
-}
 
 interface PreviewResponse {
   success: boolean;
@@ -95,6 +87,12 @@ interface CategoryCreateResponse {
   data: Category;
 }
 
+interface TransactionCategoryDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  type: "income" | "expense";
+  onCategoryCreated: (category: Category) => void;
+}
 /* ============================================================
    COMPONENT
 ============================================================ */
@@ -121,8 +119,8 @@ export function CSVImport({
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [currentChunk, setCurrentChunk] = useState(0);
-  const [totalChunks, setTotalChunks] = useState(0);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [categoryRowIndex, setCategoryRowIndex] = useState<number | null>(null);
   const [analysisStage, setAnalysisStage] = useState(
     "Preparing your statement...",
   );
@@ -136,6 +134,11 @@ export function CSVImport({
   ];
 
   const [messageIndex, setMessageIndex] = useState(0);
+
+  const openAddCategory = (index: number) => {
+    setCategoryRowIndex(index);
+    setCategoryDialogOpen(true);
+  };
 
   useEffect(() => {
     if (!isAnalyzing) return;
@@ -186,6 +189,43 @@ export function CSVImport({
   /* ============================================================
      UPDATE CATEGORY
   ============================================================ */
+  const updateType = (
+    index: number,
+    type: "income" | "expense",
+  ) => {
+    setPreview((current) =>
+      current.map((row, i) => {
+        if (i !== index) return row;
+
+        const currentCategory = row.categoryId
+          ? findCategory(row.categoryId)
+          : undefined;
+
+        const categoryStillValid =
+          currentCategory?.type === type;
+
+        return {
+          ...row,
+          type,
+
+          categoryId: categoryStillValid
+            ? row.categoryId
+            : undefined,
+
+          categoryName: categoryStillValid
+            ? currentCategory?.name
+            : undefined,
+
+          categoryConfidence: categoryStillValid
+            ? row.categoryConfidence
+            : "none",
+
+          needsCategoryReview:
+            !categoryStillValid,
+        };
+      }),
+    );
+  };
 
   const updateCategory = (
     index: number,
@@ -202,7 +242,7 @@ export function CSVImport({
 
           categoryId,
 
-          categoryName: category?.name,
+          categoryName: category?.name ?? "",
 
           categoryConfidence: "high",
 
@@ -212,6 +252,22 @@ export function CSVImport({
         };
       }),
     );
+  };
+
+  const handleCategoryCreated = (category: Category) => {
+    if (categoryRowIndex === null) return;
+
+    updateCategory(
+      categoryRowIndex,
+      category.id,
+    );
+
+    setCategoryDialogOpen(false);
+    setCategoryRowIndex(null);
+
+    queryClient.invalidateQueries({
+      queryKey: ["categories"],
+    });
   };
 
   /* ============================================================
@@ -240,98 +296,6 @@ export function CSVImport({
     },
   });
 
-  const handleCreateCategory = async (
-    index: number,
-    type: "income" | "expense",
-  ) => {
-    const name = window.prompt(
-      `Create ${type} category`,
-    );
-
-    if (!name?.trim()) return;
-
-    try {
-      const response =
-        await createCategory.mutateAsync({
-          name: name.trim(),
-          type,
-        });
-
-      /*
-       * Your categories API follows the standard
-       * { success, data } response structure.
-       */
-
-      const category = response.data;
-
-      if (!category) {
-        throw new Error(
-          "Category was not returned by the server",
-        );
-      }
-
-      /*
-       * Refresh categories everywhere.
-       */
-      queryClient.setQueryData(
-        ["categories"],
-        (current: any) => {
-          if (!current) return current;
-
-          return {
-            ...current,
-            data: [
-              ...(current.data ?? []),
-              category,
-            ],
-          };
-        },
-      );
-      await queryClient.invalidateQueries({
-        queryKey: ["categories"],
-      });
-
-      /*
-       * Immediately assign the newly created category
-       * to the transaction being edited.
-       */
-
-      setPreview((current) =>
-        current.map((row, i) => {
-          if (i !== index) return row;
-
-          return {
-            ...row,
-
-            categoryId: category.id,
-
-            categoryName: category.name,
-
-            categoryConfidence: "high",
-
-            needsCategoryReview: false,
-
-            error: undefined,
-          };
-        }),
-      );
-
-      toast.success(
-        `Category "${category.name}" created`,
-      );
-    } catch (error: any) {
-      console.error(
-        "Create category error:",
-        error,
-      );
-
-      toast.error(
-        error?.message ||
-        "Failed to create category",
-      );
-    }
-  };
-
   /* ============================================================
      PREVIEW IMPORT
   ============================================================ */
@@ -348,8 +312,6 @@ export function CSVImport({
 
       setIsAnalyzing(true);
       setAnalysisProgress(5);
-      setCurrentChunk(0);
-      setTotalChunks(0);
       setAnalysisStage(
         file.type === "application/pdf"
           ? "Reading your PDF statement..."
@@ -400,8 +362,6 @@ export function CSVImport({
     onSuccess: (response) => {
       setIsAnalyzing(false);
       setAnalysisProgress(100);
-      setCurrentChunk(0);
-      setTotalChunks(0);
       setAnalysisStage("✨ Your statement is ready!");
 
       const rows =
@@ -472,8 +432,6 @@ export function CSVImport({
       setIsAnalyzing(false);
 
       setAnalysisProgress(0);
-      setCurrentChunk(0);
-      setTotalChunks(0);
       setAnalysisStage("Analysis could not be completed.");
 
       console.error("AI import preview error:", error);
@@ -1084,139 +1042,74 @@ export function CSVImport({
                           {/* TYPE */}
 
                           <td className="p-3">
-
-                            <Badge
-                              variant={
-                                row.type ===
-                                  "income"
-                                  ? "default"
-                                  : "secondary"
+                            <Select
+                              value={row.type}
+                              onValueChange={(value) =>
+                                updateType(
+                                  index,
+                                  value as "income" | "expense",
+                                )
                               }
                             >
-                              {row.type}
-                            </Badge>
+                              <SelectTrigger className="w-[130px]">
+                                <SelectValue />
+                              </SelectTrigger>
 
+                              <SelectContent>
+                                <SelectItem value="income">
+                                  Income
+                                </SelectItem>
+
+                                <SelectItem value="expense">
+                                  Expense
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
 
                           {/* CATEGORY */}
 
                           <td className="p-3">
-
-                            <div className="flex gap-2">
-
-                              <Select
-                                value={
-                                  row.categoryId ??
-                                  ""
+                            <Select
+                              value={row.categoryId || ""}
+                              onValueChange={(value) => {
+                                if (value === "__add_new_category__") {
+                                  openAddCategory(index);
+                                  return;
                                 }
-                                onValueChange={(
-                                  value,
-                                ) =>
-                                  updateCategory(
-                                    index,
-                                    value,
+
+                                updateCategory(index, value);
+                              }}
+                            >
+                              <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                {categories
+                                  .filter(
+                                    (category) =>
+                                      category.type === row.type,
                                   )
-                                }
-                              >
+                                  .map((category) => (
+                                    <SelectItem
+                                      key={category.id}
+                                      value={category.id}
+                                    >
+                                      {category.name}
+                                    </SelectItem>
+                                  ))}
 
-                                <SelectTrigger
-                                  className={`flex-1 ${needsCategory
-                                    ? "border-yellow-500"
-                                    : ""
-                                    }`}
+                                {/* ADD CATEGORY */}
+
+                                <SelectItem
+                                  value="__add_new_category__"
+                                  className="font-medium"
                                 >
-
-                                  <SelectValue
-                                    placeholder={
-                                      "Select category"
-                                    }
-                                  />
-
-                                </SelectTrigger>
-
-                                <SelectContent>
-
-                                  {rowCategories.map(
-                                    (category) => (
-                                      <SelectItem
-                                        key={
-                                          category.id
-                                        }
-                                        value={
-                                          category.id
-                                        }
-                                      >
-                                        {
-                                          category.name
-                                        }
-                                      </SelectItem>
-                                    ),
-                                  )}
-
-                                </SelectContent>
-
-                              </Select>
-
-                              {/* CREATE CATEGORY */}
-
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="outline"
-                                title={`Create ${row.type} category`}
-                                onClick={() =>
-                                  handleCreateCategory(
-                                    index,
-                                    row.type,
-                                  )
-                                }
-                                disabled={
-                                  createCategory.isPending
-                                }
-                              >
-                                {createCategory.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Plus className="h-4 w-4" />
-                                )}
-                              </Button>
-
-                            </div>
-
-                            {/* AI MATCH */}
-
-                            {matchedCategory && (
-                              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-
-                                <CheckCircle2 className="h-3 w-3" />
-
-                                AI matched:{" "}
-                                {matchedCategory.name}
-
-                                {row.categoryConfidence &&
-                                  row.categoryConfidence !==
-                                  "none" && (
-                                    <span>
-                                      (
-                                      {
-                                        row.categoryConfidence
-                                      }
-                                      )
-                                    </span>
-                                  )}
-
-                              </div>
-                            )}
-
-                            {/* REVIEW */}
-
-                            {needsCategory && (
-                              <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
-                                No suitable existing
-                                category was found.
-                              </p>
-                            )}
-
+                                  + Add New Category
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
 
                         </tr>
@@ -1327,6 +1220,23 @@ export function CSVImport({
           </div>
         )}
 
+      <TransactionCategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={(open) => {
+          setCategoryDialogOpen(open);
+
+          if (!open) {
+            setCategoryRowIndex(null);
+          }
+        }}
+        type={
+          categoryRowIndex !== null
+            ? preview[categoryRowIndex]?.type ?? "expense"
+            : "expense"
+        }
+        onCategoryCreated={handleCategoryCreated}
+      />
     </div>
   );
+
 }
