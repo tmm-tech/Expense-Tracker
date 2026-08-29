@@ -61,15 +61,39 @@ export async function apiFetch<T>(
     }
 
     if (!res.ok) {
-      console.error(
-        "apiFetch error response:",
-        json,
-      );
+      let errorData: any = {};
 
-      throw new Error(
-        json?.message ||
-          `API request failed (${res.status})`,
-      );
+      try {
+        errorData = await res.json();
+      } catch {
+        // Response was not JSON
+      }
+
+      console.error("apiFetch error response:", errorData);
+
+      const error = new Error(
+        errorData?.error ||
+        errorData?.message ||
+        `API request failed (${res.status})`
+      ) as Error & {
+        status?: number;
+        error?: string;
+        message?: string;
+        requiresPassword?: boolean;
+        success?: boolean;
+      };
+
+      error.status = res.status;
+      error.error = errorData?.error;
+      error.message =
+        errorData?.error ||
+        errorData?.message ||
+        `API request failed (${res.status})`;
+      error.requiresPassword = errorData?.requiresPassword;
+      error.success = errorData?.success;
+
+      throw error;
+
     }
 
     return json as T;
@@ -81,7 +105,7 @@ export async function apiFetch<T>(
 
     throw new Error(
       err?.message ||
-        "Unexpected API error",
+      "Unexpected API error",
     );
   }
 }
