@@ -9,8 +9,7 @@ const {
     deleteTransaction,
     getTransactionSummary,
     previewImport,
-    confirmImport,
-    importStatement
+    confirmImport
 } = require('../controller/TransactionControllers');
 
 // Create and insert a new transaction
@@ -30,9 +29,6 @@ TransactionRoutes.delete('/transactions/:id', deleteTransaction);
 
 // Transaction Summary
 TransactionRoutes.get('/transactions/summary', getTransactionSummary);
-
-// Transaction Import
-TransactionRoutes.post('/import/transactions', upload.single('file'), importStatement);
 
 // Preview Import
 TransactionRoutes.post('/import/preview', upload.single('file'), previewImport);
