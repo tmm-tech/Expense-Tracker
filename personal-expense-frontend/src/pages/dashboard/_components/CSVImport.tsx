@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import { apiFetch } from "@/lib/api";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
+import { Progress } from "@/components/ui/progress";
 
 /* ============================================================
    TYPES
@@ -118,6 +119,50 @@ export function CSVImport({
   const [requiresPassword, setRequiresPassword] =
     useState(false);
 
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [currentChunk, setCurrentChunk] = useState(0);
+  const [totalChunks, setTotalChunks] = useState(0);
+  const [analysisStage, setAnalysisStage] = useState(
+    "Preparing your statement...",
+  );
+  const analysisMessages = [
+    "🔍 Looking for transactions...",
+    "🧠 Understanding transaction descriptions...",
+    "💰 Separating income from expenses...",
+    "🏷️ Matching transactions to your categories...",
+    "🧹 Checking for duplicate transactions...",
+    "✨ Preparing your review...",
+  ];
+
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isAnalyzing) return;
+
+    const interval = setInterval(() => {
+      setAnalysisProgress((current) => {
+        /*
+         * Never visually reach 100% until
+         * the backend actually responds.
+         */
+        if (current >= 92) {
+          return current;
+        }
+
+        /*
+         * Slow down as we approach completion.
+         */
+        if (current >= 80) {
+          return current + 1;
+        }
+
+        return current + 2;
+      });
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [isAnalyzing]);
   /* ============================================================
      CATEGORY HELPERS
   ============================================================ */
@@ -228,7 +273,20 @@ export function CSVImport({
       /*
        * Refresh categories everywhere.
        */
+      queryClient.setQueryData(
+        ["categories"],
+        (current: any) => {
+          if (!current) return current;
 
+          return {
+            ...current,
+            data: [
+              ...(current.data ?? []),
+              category,
+            ],
+          };
+        },
+      );
       await queryClient.invalidateQueries({
         queryKey: ["categories"],
       });
@@ -288,6 +346,15 @@ export function CSVImport({
         throw new Error("Select an account");
       }
 
+      setIsAnalyzing(true);
+      setAnalysisProgress(5);
+      setCurrentChunk(0);
+      setTotalChunks(0);
+      setAnalysisStage(
+        file.type === "application/pdf"
+          ? "Reading your PDF statement..."
+          : "Reading your CSV statement...",
+      );
       const formData = new FormData();
 
       formData.append("file", file);
@@ -331,6 +398,12 @@ export function CSVImport({
     },
 
     onSuccess: (response) => {
+      setIsAnalyzing(false);
+      setAnalysisProgress(100);
+      setCurrentChunk(0);
+      setTotalChunks(0);
+      setAnalysisStage("✨ Your statement is ready!");
+
       const rows =
         response?.data?.rows ?? [];
 
@@ -396,6 +469,13 @@ export function CSVImport({
     },
 
     onError: (error: any) => {
+      setIsAnalyzing(false);
+
+      setAnalysisProgress(0);
+      setCurrentChunk(0);
+      setTotalChunks(0);
+      setAnalysisStage("Analysis could not be completed.");
+
       console.error("AI import preview error:", error);
 
       if (
@@ -632,51 +712,79 @@ export function CSVImport({
           />
 
           {/* PDF PASSWORD */}
-         {requiresPassword && (
-  <div className="rounded-lg border border-amber-500/30 bg-background p-4 space-y-3 shadow-sm">
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
-        <LockKeyhole className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-      </div>
+          {requiresPassword && file?.type === "application/pdf" && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 space-y-4">
 
-      <div className="space-y-1">
-        <p className="text-sm font-medium">
-          Password-protected statement
-        </p>
+              <div className="flex items-start gap-3">
 
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          This PDF is encrypted. Enter the statement password to allow
-          AureX to securely read and analyze the transactions.
-        </p>
-      </div>
-    </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                  <LockKeyhole className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
 
-    <div className="space-y-2">
-      <label className="text-sm font-medium">
-        PDF password
-      </label>
+                <div className="min-w-0">
 
-      <Input
-        type="password"
-        placeholder="Enter your PDF password"
-        value={pdfPassword}
-        onChange={(e) =>
-          setPdfPassword(e.target.value)
-        }
-        className="h-10"
-      />
+                  <p className="text-sm font-semibold">
+                    Password-protected PDF
+                  </p>
 
-      <div className="flex items-start gap-2">
-        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    This statement is encrypted and requires its PDF password
+                    before AureX can read the transactions.
+                  </p>
 
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Your password is used only to unlock this statement during
-          the import process. It is not stored with your transactions.
-        </p>
-      </div>
-    </div>
-  </div>
-)}
+                </div>
+
+              </div>
+
+              <div className="space-y-2">
+
+                <label className="text-sm font-medium">
+                  PDF password
+                </label>
+
+                <Input
+                  type="password"
+                  value={pdfPassword}
+                  placeholder="Enter PDF password"
+                  autoComplete="off"
+                  onChange={(event) =>
+                    setPdfPassword(event.target.value)
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      pdfPassword.trim() &&
+                      !previewImport.isPending
+                    ) {
+                      previewImport.mutate();
+                    }
+                  }}
+                  className="h-10 border-amber-500/40 focus-visible:ring-amber-500/30"
+                />
+
+              </div>
+
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
+
+                <div className="flex items-start gap-2">
+
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      Privacy notice:
+                    </span>{" "}
+                    AureX uses this password only to unlock the PDF during
+                    this import. It is not saved as part of your account or
+                    transaction data.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
 
           <Button
             onClick={() => previewImport.mutate()}
@@ -684,24 +792,101 @@ export function CSVImport({
               previewImport.isPending ||
               !file ||
               !accountId ||
-              (requiresPassword &&
+              (
+                requiresPassword &&
                 file?.type === "application/pdf" &&
-                !pdfPassword)
+                !pdfPassword.trim()
+              )
             }
             className="w-full"
           >
-            <Upload className="w-4 h-4 mr-2" />
-
-            {previewImport.isPending
-              ? "Analyzing with AI..."
-              : requiresPassword
-                ? "Unlock & Analyze"
-                : "Analyze with AI"}
+            {previewImport.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing statement...
+              </>
+            ) : requiresPassword ? (
+              <>
+                <LockKeyhole className="mr-2 h-4 w-4" />
+                Unlock & Analyze
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Analyze with AI
+              </>
+            )}
           </Button>
         </div>
 
       </div>
 
+      {isAnalyzing && (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+
+          <div className="flex items-start gap-4">
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+            </div>
+
+            <div className="min-w-0">
+
+              <h3 className="font-semibold">
+                Analyzing your statement
+              </h3>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                AureX is carefully reading and organizing your
+                financial transactions.
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="mt-6 space-y-3">
+
+            <Progress
+              value={analysisProgress}
+              className="h-2"
+            />
+
+            <div className="flex items-center justify-between gap-4 text-xs">
+
+              <span className="text-muted-foreground">
+                {analysisStage}
+              </span>
+
+              <span className="shrink-0 font-medium">
+                {analysisProgress}%
+              </span>
+
+            </div>
+
+          </div>
+
+          <div className="mt-5 rounded-lg border bg-muted/30 px-4 py-3">
+
+            <div className="flex items-center gap-3">
+
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+
+              <p className="text-sm">
+                {analysisMessages[messageIndex]}
+              </p>
+
+            </div>
+
+          </div>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            This may take a little while for longer statements.
+            Please keep this window open.
+          </p>
+
+        </div>
+      )}
       {/* ======================================================
           PREVIEW
       ====================================================== */}

@@ -6,7 +6,7 @@ interface ApiError extends Error {
   error?: string;
   requiresPassword?: boolean;
   success?: boolean;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -82,13 +82,9 @@ export async function apiFetch<T>(
       res.headers.get("content-type") || "";
 
     if (contentType.includes("application/json")) {
-      try {
-        json = await res.json();
-      } catch {
-        console.error(
-          "apiFetch: Failed to parse JSON response",
-        );
-      }
+
+      json = await res.json().catch(() => null);
+
     } else {
       try {
         const text = await res.text();
@@ -117,8 +113,8 @@ export async function apiFetch<T>(
 
       const apiError = new Error(
         json?.error ||
-          json?.message ||
-          `API request failed (${res.status})`,
+        json?.message ||
+        `API request failed (${res.status})`,
       ) as ApiError;
 
       apiError.status = res.status;

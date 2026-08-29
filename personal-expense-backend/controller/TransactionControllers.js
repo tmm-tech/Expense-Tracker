@@ -476,6 +476,22 @@ module.exports = {
         })
       );
 
+      const sendProgress = (stage, progress, currentChunk, totalChunks) => {
+        if (!res.headersSent) {
+          return;
+        }
+
+        res.write(
+          JSON.stringify({
+            type: "progress",
+            stage,
+            progress,
+            currentChunk,
+            totalChunks,
+          }) + "\n"
+        );
+      };
+
       /* =========================
          AI EXTRACTION
       ========================= */
