@@ -2,7 +2,7 @@ const { prisma } = require("../src/lib/prism");
 const { matchCategory } = require("../utils/categoryMatcher");
 const pdf = require("pdf-parse");
 const { parseCSV } = require("../utils/csvParser");
-const { parseEquityPDF } = require("../utils/pdfParser");
+const parsePdf = require("../utils/pdfParser");
 const { openai } = require("../src/lib/openai.js");
 
 /**
@@ -291,94 +291,7 @@ module.exports = {
       });
     }
   },
-  importStatement: async (req, res) => {
-    try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized: missing user ID",
-        });
-      }
-      const { accountId, fileType, defaultCategoryId } = req.body;
 
-      const file = req.file;
-
-      if (!file) {
-        return res.status(400).json({ error: "No file uploaded" });
-      }
-
-      let rows = [];
-
-      /* CSV */
-      if (fileType === "csv") {
-        const text = file.buffer.toString();
-        rows = parseCSV(text);
-      }
-
-      /* PDF */
-      if (fileType === "pdf") {
-        const data = await pdf(file.buffer);
-        rows = parseEquityPDF(data.text);
-      }
-
-      /* categories */
-      const categories = await prisma.category.findMany({
-        where: { userId: req.user.sub },
-      });
-
-      let imported = 0;
-      const errors = [];
-
-      for (const row of rows) {
-        try {
-          const categoryId =
-            defaultCategoryId ||
-            matchCategory(row.description, categories);
-
-          /* duplicate detection */
-          const exists = await prisma.transaction.findFirst({
-            where: {
-              userId: req.user.sub,
-              accountId,
-              amount: row.amount,
-              date: new Date(row.date),
-              description: row.description,
-            },
-          });
-
-          if (exists) continue;
-
-          await prisma.transaction.create({
-            data: {
-              userId: req.user.sub,
-              accountId,
-              categoryId,
-              description: row.description,
-              amount: row.amount,
-              type: row.type,
-              date: new Date(row.date),
-            },
-          });
-
-          imported++;
-        } catch (err) {
-          errors.push(row.description);
-        }
-      }
-
-      res.json({
-        imported,
-        total: rows.length,
-        errors,
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({
-        error: "Import failed",
-      });
-    }
-  },
   previewImport: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
@@ -389,7 +302,7 @@ module.exports = {
           error: "Unauthorized: missing user ID",
         });
       }
-    
+
       const { accountId, fileType, pdfPassword } = req.body;
       const file = req.file;
 
@@ -450,82 +363,62 @@ module.exports = {
 
       /* PDF */
 
-   if (fileType === "pdf") {
-  try {
-    const password =
-      typeof pdfPassword === "string"
-        ? pdfPassword.trim()
-        : "";
+      if (fileType === "pdf") {
+        try {
+          const result = await parsePdf(
+            file.buffer,
+            pdfPassword
+          );
 
-    console.log("Attempting PDF extraction:", {
-      hasPassword: Boolean(password),
-      passwordLength: password.length,
-    });
+          text = result.text;
 
-    const options = {};
+          console.log("PDF extraction completed:", {
+            pages: result.numpages,
+            characters: text.length,
+          });
 
-    if (password) {
-      options.password = password;
-    }
+        } catch (error) {
+          console.error("PDF extraction error:", {
+            message: error?.message,
+            code: error?.code,
+            name: error?.name,
+          });
 
-    const data = await pdf(file.buffer, options);
+          const message =
+            error?.message?.toLowerCase() || "";
 
-    console.log("PDF extraction successful:", {
-      pages: data.numpages,
-      characters: data.text?.length || 0,
-    });
+          // Password required
+          if (
+            error?.code === 1 &&
+            message.includes("no password")
+          ) {
+            return res.status(400).json({
+              success: false,
+              error:
+                "This PDF is password protected. Please enter the PDF password.",
+              requiresPassword: true,
+            });
+          }
 
-    text = data.text;
+          // Incorrect password
+          if (
+            message.includes("incorrect password") ||
+            message.includes("invalid password") ||
+            message.includes("password is incorrect")
+          ) {
+            return res.status(400).json({
+              success: false,
+              error: "Incorrect PDF password.",
+              requiresPassword: true,
+            });
+          }
 
-  } catch (error) {
-    console.error("PDF extraction error:", {
-      message: error?.message,
-      code: error?.code,
-      name: error?.name,
-    });
-
-    const message =
-      error?.message?.toLowerCase() || "";
-
-    /*
-     * PDF requires a password but none was supplied.
-     */
-    if (
-      error?.code === 1 &&
-      message.includes("no password")
-    ) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "This PDF is password protected.",
-        requiresPassword: true,
-      });
-    }
-
-    /*
-     * Password was supplied but rejected.
-     */
-    if (
-      message.includes("incorrect password") ||
-      message.includes("invalid password") ||
-      message.includes("password is incorrect") ||
-      message.includes("passwordexception")
-    ) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "The PDF password is incorrect.",
-        requiresPassword: true,
-      });
-    }
-
-    return res.status(400).json({
-      success: false,
-      error:
-        "Unable to read the PDF statement.",
-    });
-  }
-}
+          return res.status(400).json({
+            success: false,
+            error: "Unable to read the PDF statement.",
+          });
+        }
+      }
 
       /* =========================
          TEXT VALIDATION

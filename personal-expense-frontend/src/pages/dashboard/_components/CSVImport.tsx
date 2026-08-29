@@ -564,7 +564,7 @@ export function CSVImport({
             </h3>
 
             <p className="text-sm text-muted-foreground">
-              Upload a bank statement and AureX
+              Upload a CSV or PDF Statement and AureX
               will extract transactions and match
               them to your existing categories.
             </p>
