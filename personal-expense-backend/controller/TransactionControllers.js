@@ -379,159 +379,206 @@ module.exports = {
       });
     }
   },
-  previewImport: async (req, res) => {
-    try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized: missing user ID",
-        });
-      }
-      const { accountId, fileType, pdfPassword } = req.body;
-      const file = req.file;
+previewImport: async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.sub;
 
-      /* =========================
-         VALIDATION
-      ========================= */
-
-      if (!file) {
-        return res.status(400).json({
-          success: false,
-          error: "No file uploaded",
-        });
-      }
-
-      if (!accountId) {
-        return res.status(400).json({
-          success: false,
-          error: "Account is required",
-        });
-      }
-
-      if (!["csv", "pdf"].includes(fileType)) {
-        return res.status(400).json({
-          success: false,
-          error: "Unsupported file type",
-        });
-      }
-
-      /* =========================
-         GET USER CATEGORIES
-      ========================= */
-
-      const categories = await prisma.category.findMany({
-        where: {
-          userId: req.user.sub,
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-        },
-        orderBy: {
-          name: "asc",
-        },
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized: missing user ID",
       });
+    }
 
-      /* =========================
-         EXTRACT FILE CONTENT
-      ========================= */
+    const { accountId, fileType, pdfPassword } = req.body;
+    const file = req.file;
 
-      let text = "";
+    /* =========================
+       VALIDATION
+    ========================= */
 
-      if (fileType === "csv") {
-        text = file.buffer.toString("utf-8");
-      }
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: "No file uploaded",
+      });
+    }
 
- /* =========================
-      PDF
- ========================= */
+    if (!accountId) {
+      return res.status(400).json({
+        success: false,
+        error: "Account is required",
+      });
+    }
 
-      if (fileType === "pdf") {
-        try {
-          const pdfOptions = {};
+    if (!["csv", "pdf"].includes(fileType)) {
+      return res.status(400).json({
+        success: false,
+        error: "Unsupported file type",
+      });
+    }
 
-          if (pdfPassword) {
-            pdfOptions.password = pdfPassword;
-          }
+    /* =========================
+       GET USER CATEGORIES
+    ========================= */
 
-          const data = await pdf(file.buffer, pdfOptions);
+    const categories = await prisma.category.findMany({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
 
-          text = data.text;
-        } catch (error) {
-          console.error("PDF extraction error:", error);
+    /* =========================
+       EXTRACT FILE CONTENT
+    ========================= */
 
-          if (
-            error?.code === 1 ||
-            error?.message?.includes("No password given")
-          ) {
-            return res.status(400).json({
-              success: false,
-              error: "This PDF is password protected. Please enter the PDF password.",
-              requiresPassword: true,
-            });
-          }
+    let text = "";
 
-          if (
-            error?.message?.toLowerCase().includes("incorrect password") ||
-            error?.message?.toLowerCase().includes("invalid password")
-          ) {
-            return res.status(400).json({
-              success: false,
-              error: "Incorrect PDF password.",
-              requiresPassword: true,
-            });
-          }
+    /* CSV */
 
+    if (fileType === "csv") {
+      text = file.buffer.toString("utf-8");
+    }
+
+    /* PDF */
+
+    if (fileType === "pdf") {
+      try {
+        const options = {};
+
+        if (pdfPassword) {
+          options.password = pdfPassword;
+        }
+
+        const data = await pdf(file.buffer, options);
+
+        text = data.text;
+      } catch (error) {
+        console.error("PDF extraction error:", error);
+
+        const message =
+          error?.message?.toLowerCase() || "";
+
+        /* PASSWORD REQUIRED */
+
+        if (
+          error?.code === 1 &&
+          message.includes("no password")
+        ) {
           return res.status(400).json({
             success: false,
-            error: "Unable to read the PDF statement.",
+            error:
+              "This PDF is password protected. Please enter the PDF password.",
+            requiresPassword: true,
           });
         }
-      }
-      if (!text || !text.trim()) {
+
+        /* INCORRECT PASSWORD */
+
+        if (
+          message.includes("incorrect password") ||
+          message.includes("invalid password") ||
+          message.includes("password is incorrect")
+        ) {
+          return res.status(400).json({
+            success: false,
+            error: "Incorrect PDF password.",
+            requiresPassword: true,
+          });
+        }
+
         return res.status(400).json({
           success: false,
-          error: "Could not extract any text from the file.",
+          error: "Unable to read the PDF statement.",
         });
       }
+    }
 
-      /* =========================
-         CHUNK DOCUMENT
-      ========================= */
+    /* =========================
+       TEXT VALIDATION
+    ========================= */
 
-      const chunks = chunkText(text, 12000);
-      const failedChunks = [];
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Could not extract any text from the file.",
+      });
+    }
 
-      const allRows = [];
+    /* =========================
+       CHUNK DOCUMENT
+    ========================= */
 
-      /*
-       * Only send the category information
-       * needed by the AI.
-       */
-      const categoryList = categories.map((category) => ({
+    const chunkText = (
+      text,
+      maxCharacters = 12000
+    ) => {
+      const chunks = [];
+
+      for (
+        let i = 0;
+        i < text.length;
+        i += maxCharacters
+      ) {
+        chunks.push(
+          text.slice(i, i + maxCharacters)
+        );
+      }
+
+      return chunks;
+    };
+
+    const chunks = chunkText(text, 12000);
+
+    console.log(
+      `AI import: processing ${chunks.length} chunks`
+    );
+
+    const allRows = [];
+    const failedChunks = [];
+
+    /* =========================
+       CATEGORY LIST FOR AI
+    ========================= */
+
+    const categoryList = categories.map(
+      (category) => ({
         id: category.id,
         name: category.name,
         type: category.type,
-      }));
+      })
+    );
 
-      /* =========================
-         AI EXTRACTION
-      ========================= */
+    /* =========================
+       AI EXTRACTION
+    ========================= */
 
-      for (let i = 0; i < chunks.length; i++) {
-        console.log(
-          `AI processing import chunk ${i + 1}/${chunks.length}`
-        );
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(
+        `AI processing import chunk ${
+          i + 1
+        }/${chunks.length}`
+      );
 
-        const response = await openai.responses.create({
-          model: "gpt-5-mini",
+      try {
+        const response =
+          await openai.responses.create({
+            model: "gpt-5-mini",
 
-          input: [
-            {
-              role: "system",
-              content: `
+            input: [
+              {
+                role: "system",
+
+                content: `
 You are AureX Finance's financial statement transaction extraction engine.
 
 Your job is to extract genuine financial transactions from the supplied bank statement section.
@@ -547,7 +594,7 @@ EXPECTED FORMAT:
       "description": "string",
       "amount": 0,
       "type": "income",
-      "categoryId": "category-id-or-null",
+      "categoryId": "existing-category-id-or-null",
       "categoryConfidence": "high"
     }
   ]
@@ -561,47 +608,40 @@ TRANSACTION RULES:
 4. Do NOT extract statement totals.
 5. Do NOT extract subtotals.
 6. Do NOT invent transactions.
-7. Preserve descriptions as accurately as possible.
+7. Preserve transaction descriptions accurately.
 8. Use the actual transaction date.
 9. Date MUST be YYYY-MM-DD.
 10. Amount MUST be a positive number.
-11. Withdrawals, debits, purchases and payments are "expense".
-12. Deposits, credits, salary and received money are "income".
-13. If a line is not clearly a transaction, exclude it.
-14. Do not ask the user questions.
+11. Withdrawals, debits, purchases and payments = expense.
+12. Deposits, credits, salary and received money = income.
+13. If a line cannot confidently be interpreted as a transaction, exclude it.
+14. Never ask the user questions.
 
 CATEGORY MATCHING:
 
-The user's existing AureX categories are provided below.
+The following are the user's EXISTING AureX categories:
 
 ${JSON.stringify(categoryList)}
 
-For each transaction:
+For every transaction:
 
-- Try to match it to ONE existing category.
-- categoryId MUST be the ID of an existing category.
-- Never invent a category ID.
-- Only assign a category when the match is reasonably confident.
-- If there is no reasonable match, use:
-  "categoryId": null
-  "categoryConfidence": "none"
+- Try to match the transaction to ONE existing category.
+- categoryId MUST be an ID from the supplied category list.
+- NEVER invent a category ID.
+- The category type MUST match the transaction type.
+- Only assign a category when reasonably confident.
+- If no reasonable match exists, use null.
 
-The category type must correspond to the transaction type.
+Allowed category confidence values:
 
-For example:
+"high"
+"medium"
+"low"
+"none"
 
-Income transaction:
-- Salary
-- Freelance Income
-- Business Income
+If categoryId is null:
 
-Expense transaction:
-- Food
-- Transport
-- Rent
-- Utilities
-
-If uncertain, leave categoryId as null.
+"categoryConfidence": "none"
 
 IMPORTANT:
 
@@ -611,144 +651,213 @@ Do not use markdown.
 Do not use code fences.
 Do not explain your answer.
 Do not ask questions.
-            `,
-            },
-            {
-              role: "user",
-              content: chunks[i],
-            },
-          ],
-        });
+`,
+
+              },
+
+              {
+                role: "user",
+                content: chunks[i],
+              },
+            ],
+          });
 
         /* =========================
            PARSE AI RESPONSE
         ========================= */
 
-        try {
-          const result = JSON.parse(response.output_text);
+        const result = JSON.parse(
+          response.output_text
+        );
 
-          if (!result || !Array.isArray(result.rows)) {
-            console.error(
-              `AI returned invalid rows for chunk ${i + 1}`
-            );
-
-            continue;
-          }
-
-          for (const row of result.rows) {
-            /*
-             * Basic server-side validation.
-             */
-
-            if (!row.date) continue;
-            if (!row.description) continue;
-            if (typeof row.amount !== "number") continue;
-
-            if (
-              row.type !== "income" &&
-              row.type !== "expense"
-            ) {
-              continue;
-            }
-
-            /*
-             * Validate category ID against user's
-             * actual categories.
-             */
-
-            let categoryId = null;
-
-            if (row.categoryId) {
-              const category = categories.find(
-                (c) =>
-                  c.id === row.categoryId &&
-                  c.type === row.type
-              );
-
-              if (category) {
-                categoryId = category.id;
-              }
-            }
-            const confidence =
-              categoryId
-                ? row.categoryConfidence || "high"
-                : "none";
-
-            allRows.push({
-              date: row.date,
-              description: row.description,
-              amount: Math.abs(row.amount),
-              type: row.type,
-              categoryId,
-              categoryConfidence: confidence,
-              needsCategoryReview:
-                !categoryId ||
-                confidence === "low" ||
-                confidence === "none",
-            });
-          }
-        } catch (parseError) {
+        if (
+          !result ||
+          !Array.isArray(result.rows)
+        ) {
           console.error(
-            `Failed to parse AI response for chunk ${i + 1}:`,
-            response.output_text
+            `AI returned invalid rows for chunk ${
+              i + 1
+            }`
           );
 
           failedChunks.push(i + 1);
-        }
-      }
 
-      /* =========================
-         REMOVE DUPLICATES
-         ========================= */
-
-      const uniqueRows = [];
-      const seen = new Set();
-
-      for (const row of allRows) {
-        const key = [
-          row.date,
-          row.description.trim().toLowerCase(),
-          row.amount,
-          row.type,
-        ].join("|");
-
-        if (seen.has(key)) {
           continue;
         }
 
-        seen.add(key);
-        uniqueRows.push(row);
+        /* =========================
+           VALIDATE TRANSACTIONS
+        ========================= */
+
+        for (const row of result.rows) {
+          if (!row.date) continue;
+
+          if (!row.description) continue;
+
+          if (
+            typeof row.amount !== "number" ||
+            !Number.isFinite(row.amount)
+          ) {
+            continue;
+          }
+
+          if (
+            row.type !== "income" &&
+            row.type !== "expense"
+          ) {
+            continue;
+          }
+
+          /* =========================
+             VALIDATE CATEGORY
+          ========================= */
+
+          let categoryId = null;
+
+          if (row.categoryId) {
+            const category =
+              categories.find(
+                (category) =>
+                  category.id ===
+                    row.categoryId &&
+                  category.type === row.type
+              );
+
+            if (category) {
+              categoryId = category.id;
+            }
+          }
+
+          /* =========================
+             CATEGORY CONFIDENCE
+          ========================= */
+
+          let categoryConfidence =
+            "none";
+
+          if (categoryId) {
+            if (
+              ["high", "medium", "low"].includes(
+                row.categoryConfidence
+              )
+            ) {
+              categoryConfidence =
+                row.categoryConfidence;
+            } else {
+              categoryConfidence =
+                "medium";
+            }
+          }
+
+          /* =========================
+             ADD ROW
+          ========================= */
+
+          allRows.push({
+            date: row.date,
+
+            description:
+              row.description.trim(),
+
+            amount: Math.abs(
+              row.amount
+            ),
+
+            type: row.type,
+
+            categoryId,
+
+            categoryConfidence,
+
+            needsCategoryReview:
+              !categoryId ||
+              categoryConfidence ===
+                "low" ||
+              categoryConfidence ===
+                "none",
+          });
+        }
+      } catch (error) {
+        console.error(
+          `Failed to process AI chunk ${
+            i + 1
+          }:`,
+          error
+        );
+
+        failedChunks.push(i + 1);
+      }
+    }
+
+    /* =========================
+       REMOVE DUPLICATES
+    ========================= */
+
+    const uniqueRows = [];
+    const seen = new Set();
+
+    for (const row of allRows) {
+      const key = [
+        row.date,
+        row.description
+          .trim()
+          .toLowerCase(),
+        row.amount,
+        row.type,
+      ].join("|");
+
+      if (seen.has(key)) {
+        continue;
       }
 
-      /* =========================
-         RESPONSE
-      ========================= */
+      seen.add(key);
 
-      return res.json({
-        success: true,
-        data: {
-          rows: uniqueRows,
-          accountId,
-          totalRows: uniqueRows.length,
-          categorizedRows: uniqueRows.filter(
-            (row) => row.categoryId
-          ).length,
-          uncategorizedRows: uniqueRows.filter(
-            (row) => !row.categoryId
-          ).length,
-          failedChunks,
-        },
-      });
-    } catch (err) {
-      console.error("AI import preview error:", err);
-
-      return res.status(500).json({
-        success: false,
-        error: "AI import preview failed",
-      });
+      uniqueRows.push(row);
     }
-  },
 
+    /* =========================
+       RESPONSE
+    ========================= */
+
+    return res.json({
+      success: true,
+
+      data: {
+        rows: uniqueRows,
+
+        accountId,
+
+        totalRows:
+          uniqueRows.length,
+
+        categorizedRows:
+          uniqueRows.filter(
+            (row) =>
+              row.categoryId
+          ).length,
+
+        uncategorizedRows:
+          uniqueRows.filter(
+            (row) =>
+              !row.categoryId
+          ).length,
+
+        failedChunks,
+      },
+    });
+  } catch (err) {
+    console.error(
+      "AI import preview error:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      error:
+        "AI import preview failed",
+    });
+  }
+},
   /* ============================
      CONFIRM IMPORT
   ============================ */

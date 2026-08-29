@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectTrigger,
@@ -10,18 +12,24 @@ import {
   SelectItem,
   SelectContent,
 } from "@/components/ui/select";
+
 import { Badge } from "@/components/ui/badge";
+
 import {
   AlertCircle,
   CheckCircle2,
-  FileUp,
   Loader2,
   Plus,
   Sparkles,
   Upload,
 } from "lucide-react";
+
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import {
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
 
@@ -29,80 +37,128 @@ import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
 
+/* ============================================================
+   TYPES
+============================================================ */
+
+type CategoryConfidence =
+  | "high"
+  | "medium"
+  | "low"
+  | "none";
+
 interface PreviewRow {
   date: string;
   description: string;
   amount: number;
   type: "income" | "expense";
 
-  categoryId?: string;
-
-  // AI/category matching
+  categoryId?: string | null;
   categoryName?: string;
-  categoryConfidence?: number;
 
-  // Validation
+  categoryConfidence?: CategoryConfidence;
+
+  needsCategoryReview?: boolean;
+
   valid?: boolean;
   error?: string;
 
-  // Duplicate detection
   duplicate?: boolean;
 
-  // Original row
   originalRow?: number;
-}
-
-interface CSVImportProps {
-  accounts: Account[];
-  categories: Category[];
 }
 
 interface PreviewResponse {
   success: boolean;
+
   data: {
     rows: PreviewRow[];
     accountId: string;
+
+    totalRows?: number;
+    categorizedRows?: number;
+    uncategorizedRows?: number;
+    failedChunks?: number[];
   };
 }
+
+interface CategoryCreateResponse {
+  success: boolean;
+  data: Category;
+}
+
+/* ============================================================
+   COMPONENT
+============================================================ */
 
 export function CSVImport({
   accounts,
   categories,
-}: CSVImportProps) {
+}: {
+  accounts: Account[];
+  categories: Category[];
+}) {
   const queryClient = useQueryClient();
 
   const [file, setFile] = useState<File | null>(null);
+
   const [preview, setPreview] = useState<PreviewRow[]>([]);
+
   const [accountId, setAccountId] = useState("");
+
   const [pdfPassword, setPdfPassword] = useState("");
-  const [requiresPassword, setRequiresPassword] = useState(false);
+
+  const [requiresPassword, setRequiresPassword] =
+    useState(false);
 
   /* ============================================================
      CATEGORY HELPERS
   ============================================================ */
 
-  const getCategoriesForType = (type: "income" | "expense") =>
-    categories.filter((category) => category.type === type);
+  const getCategoriesForType = (
+    type: "income" | "expense",
+  ) => {
+    return categories.filter(
+      (category) => category.type === type,
+    );
+  };
+
+  const findCategory = (categoryId?: string | null) => {
+    if (!categoryId) return undefined;
+
+    return categories.find(
+      (category) => category.id === categoryId,
+    );
+  };
+
+  /* ============================================================
+     UPDATE CATEGORY
+  ============================================================ */
 
   const updateCategory = (
     index: number,
     categoryId: string,
   ) => {
-    const category = categories.find(
-      (c) => c.id === categoryId,
-    );
+    const category = findCategory(categoryId);
 
     setPreview((current) =>
-      current.map((row, i) =>
-        i === index
-          ? {
-            ...row,
-            categoryId,
-            categoryName: category?.name,
-            error: undefined,
-          }
-          : row,
-      ),
+      current.map((row, i) => {
+        if (i !== index) return row;
+
+        return {
+          ...row,
+
+          categoryId,
+
+          categoryName: category?.name,
+
+          categoryConfidence: "high",
+
+          needsCategoryReview: false,
+
+          error: undefined,
+        };
+      }),
     );
   };
 
@@ -118,30 +174,17 @@ export function CSVImport({
       name: string;
       type: "income" | "expense";
     }) => {
-      return apiFetch<Category>("/categories", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          type,
-        }),
-      });
-    },
+      return apiFetch<CategoryCreateResponse>(
+        "/categories",
+        {
+          method: "POST",
 
-    onSuccess: (category) => {
-      queryClient.invalidateQueries({
-        queryKey: ["categories"],
-      });
-
-      toast.success(`Category "${category.name}" created`);
-
-      /*
-       * If we are creating a category for a specific row,
-       * the row index is handled below.
-       */
-    },
-
-    onError: () => {
-      toast.error("Failed to create category");
+          body: JSON.stringify({
+            name,
+            type,
+          }),
+        },
+      );
     },
   });
 
@@ -156,25 +199,71 @@ export function CSVImport({
     if (!name?.trim()) return;
 
     try {
-      const category = await createCategory.mutateAsync({
-        name: name.trim(),
-        type,
+      const response =
+        await createCategory.mutateAsync({
+          name: name.trim(),
+          type,
+        });
+
+      /*
+       * Your categories API follows the standard
+       * { success, data } response structure.
+       */
+
+      const category = response.data;
+
+      if (!category) {
+        throw new Error(
+          "Category was not returned by the server",
+        );
+      }
+
+      /*
+       * Refresh categories everywhere.
+       */
+
+      await queryClient.invalidateQueries({
+        queryKey: ["categories"],
       });
 
+      /*
+       * Immediately assign the newly created category
+       * to the transaction being edited.
+       */
+
       setPreview((current) =>
-        current.map((row, i) =>
-          i === index
-            ? {
-              ...row,
-              categoryId: category.id,
-              categoryName: category.name,
-              error: undefined,
-            }
-            : row,
-        ),
+        current.map((row, i) => {
+          if (i !== index) return row;
+
+          return {
+            ...row,
+
+            categoryId: category.id,
+
+            categoryName: category.name,
+
+            categoryConfidence: "high",
+
+            needsCategoryReview: false,
+
+            error: undefined,
+          };
+        }),
       );
-    } catch {
-      // mutation already handles toast
+
+      toast.success(
+        `Category "${category.name}" created`,
+      );
+    } catch (error: any) {
+      console.error(
+        "Create category error:",
+        error,
+      );
+
+      toast.error(
+        error?.message ||
+          "Failed to create category",
+      );
     }
   };
 
@@ -195,21 +284,35 @@ export function CSVImport({
       const formData = new FormData();
 
       formData.append("file", file);
-      formData.append("accountId", accountId);
+
+      formData.append(
+        "accountId",
+        accountId,
+      );
 
       const fileType =
         file.type === "application/pdf"
           ? "pdf"
           : "csv";
 
-      formData.append("fileType", fileType);
+      formData.append(
+        "fileType",
+        fileType,
+      );
 
       /*
-       * IMPORTANT:
-       * Send the password to the backend.
+       * Only send password when this is a PDF
+       * and the user supplied one.
        */
-      if (fileType === "pdf" && pdfPassword) {
-        formData.append("pdfPassword", pdfPassword);
+
+      if (
+        fileType === "pdf" &&
+        pdfPassword.trim()
+      ) {
+        formData.append(
+          "pdfPassword",
+          pdfPassword,
+        );
       }
 
       return apiFetch<PreviewResponse>(
@@ -222,44 +325,105 @@ export function CSVImport({
     },
 
     onSuccess: (response) => {
-      const rows = response.data.rows ?? [];
-
-      setPreview(rows);
+      const rows =
+        response?.data?.rows ?? [];
 
       /*
-       * Backend may return password-protected status
-       * through the normal error path, so once preview
-       * succeeds we no longer need the password prompt.
+       * Make sure every row has a consistent
+       * review state.
        */
+
+      const normalizedRows =
+        rows.map((row) => {
+          const category =
+            findCategory(
+              row.categoryId,
+            );
+
+          const hasCategory =
+            Boolean(row.categoryId);
+
+          return {
+            ...row,
+
+            categoryName:
+              category?.name ??
+              row.categoryName,
+
+            needsCategoryReview:
+              row.needsCategoryReview ??
+              !hasCategory,
+          };
+        });
+
+      setPreview(normalizedRows);
+
       setRequiresPassword(false);
 
-      if (!rows.length) {
+      if (!normalizedRows.length) {
         toast.info(
           "No transactions were found in this statement.",
         );
+
         return;
       }
 
-      toast.success(
-        `${rows.length} transaction${rows.length === 1 ? "" : "s"
-        } found`,
-      );
+      const categorized =
+        normalizedRows.filter(
+          (row) => row.categoryId,
+        ).length;
+
+      const needsReview =
+        normalizedRows.length -
+        categorized;
+
+      if (needsReview > 0) {
+        toast.success(
+          `${normalizedRows.length} transactions found. ${needsReview} need category review.`,
+        );
+      } else {
+        toast.success(
+          `${normalizedRows.length} transactions found and categorized.`,
+        );
+      }
     },
 
     onError: (error: any) => {
-      const message = error?.message || "";
+      console.error(
+        "AI import preview error:",
+        error,
+      );
+
+      const message =
+        error?.message || "";
+
+      /*
+       * Backend returns requiresPassword,
+       * but apiFetch may expose only the error
+       * message. Support both.
+       */
 
       if (
-        message.toLowerCase().includes("password") ||
-        message.toLowerCase().includes("protected")
+        message
+          .toLowerCase()
+          .includes("password") ||
+        message
+          .toLowerCase()
+          .includes("protected")
       ) {
         setRequiresPassword(true);
 
-        toast.error("This PDF is password protected");
+        toast.error(
+          "This PDF is password protected. Enter the password and try again.",
+        );
+
         return;
       }
 
-      toast.error("Preview failed");
+      toast.error(
+        message ||
+          "Unable to analyze the statement.",
+      );
     },
   });
 
@@ -268,9 +432,12 @@ export function CSVImport({
   ============================================================ */
 
   const confirmImport = useMutation({
-    mutationFn: (rows: PreviewRow[]) =>
+    mutationFn: (
+      rows: PreviewRow[],
+    ) =>
       apiFetch("/import/confirm", {
         method: "POST",
+
         body: JSON.stringify({
           rows,
           accountId,
@@ -299,38 +466,62 @@ export function CSVImport({
       );
 
       setPreview([]);
+
       setFile(null);
+
       setPdfPassword("");
+
       setRequiresPassword(false);
     },
 
     onError: (error: any) => {
+      console.error(
+        "Confirm import error:",
+        error,
+      );
+
       toast.error(
-        error?.message || "Import failed",
+        error?.message ||
+          "Import failed",
       );
     },
   });
 
   /* ============================================================
-     IMPORT VALIDATION
+     REVIEW STATUS
   ============================================================ */
 
-  const rowsNeedingAttention = useMemo(
-    () =>
-      preview.filter(
+  const rowsNeedingAttention =
+    useMemo(() => {
+      return preview.filter(
         (row) =>
+          row.needsCategoryReview ||
           !row.categoryId ||
           row.valid === false ||
           row.duplicate,
-      ),
-    [preview],
-  );
+      );
+    }, [preview]);
+
+  const uncategorizedRows =
+    useMemo(() => {
+      return preview.filter(
+        (row) => !row.categoryId,
+      );
+    }, [preview]);
+
+  const categorizedRows =
+    preview.length -
+    uncategorizedRows.length;
+
+  /*
+   * We allow import only when every transaction
+   * has a category and there are no validation
+   * errors or duplicates.
+   */
 
   const canConfirm =
     preview.length > 0 &&
-    rowsNeedingAttention.filter(
-      (row) => !row.duplicate,
-    ).length === 0;
+    rowsNeedingAttention.length === 0;
 
   /* ============================================================
      FILE CHANGE
@@ -340,11 +531,15 @@ export function CSVImport({
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const selectedFile =
-      event.target.files?.[0] || null;
+      event.target.files?.[0] ??
+      null;
 
     setFile(selectedFile);
+
     setPreview([]);
+
     setPdfPassword("");
+
     setRequiresPassword(false);
   };
 
@@ -361,27 +556,34 @@ export function CSVImport({
 
       <div className="rounded-xl border bg-card p-5 space-y-5">
 
+        {/* HEADER */}
+
         <div className="flex items-start gap-3">
+
           <div className="rounded-lg bg-primary/10 p-2">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
 
           <div>
+
             <h3 className="font-semibold">
               AI Transaction Import
             </h3>
 
             <p className="text-sm text-muted-foreground">
-              Upload a bank statement and AureX will
-              automatically extract and categorize
-              your transactions.
+              Upload a bank statement and AureX
+              will extract transactions and match
+              them to your existing categories.
             </p>
+
           </div>
+
         </div>
 
         {/* ACCOUNT */}
 
         <div className="space-y-2">
+
           <label className="text-sm font-medium">
             Account
           </label>
@@ -393,11 +595,13 @@ export function CSVImport({
               setPreview([]);
             }}
           >
+
             <SelectTrigger>
               <SelectValue placeholder="Select account" />
             </SelectTrigger>
 
             <SelectContent>
+
               {accounts.map((account) => (
                 <SelectItem
                   key={account.id}
@@ -406,13 +610,17 @@ export function CSVImport({
                   {account.name} ({account.type})
                 </SelectItem>
               ))}
+
             </SelectContent>
+
           </Select>
+
         </div>
 
         {/* FILE */}
 
-        <div className="space-y-2">
+        <div className="space-y-3">
+
           <label className="text-sm font-medium">
             Statement
           </label>
@@ -420,59 +628,82 @@ export function CSVImport({
           <Input
             type="file"
             accept=".csv,.pdf"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] || null);
-              setPdfPassword("");
-              setRequiresPassword(false);
-              setPreview([]);
-            }}
+            onChange={handleFileChange}
           />
 
-                  {requiresPassword && (
-          <div className="rounded-lg border p-4 space-y-2">
-            <label className="text-sm font-medium">
-              Statement Password
-            </label>
+          {/* PASSWORD */}
 
-            <Input
-              type="password"
-              placeholder="Enter PDF password"
-              value={pdfPassword}
-              onChange={(e) => setPdfPassword(e.target.value)}
-              autoFocus
-            />
+          {requiresPassword && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
 
-            <p className="text-xs text-muted-foreground">
-              Your password is used only to unlock this PDF for import and is not
-              stored by AureX.
-            </p>
-          </div>
-        )}
+              <div>
 
-        
+                <label className="text-sm font-medium">
+                  Statement Password
+                </label>
+
+                <p className="text-xs text-muted-foreground mt-1">
+                  This PDF is password protected.
+                </p>
+
+              </div>
+
+              <Input
+                type="password"
+                placeholder="Enter PDF password"
+                value={pdfPassword}
+                onChange={(event) =>
+                  setPdfPassword(
+                    event.target.value,
+                  )
+                }
+                autoFocus
+              />
+
+              <p className="text-xs text-muted-foreground">
+                The password is sent only for
+                unlocking this PDF and is not
+                stored by AureX.
+              </p>
+
+            </div>
+          )}
+
+          {/* ANALYZE */}
+
           <Button
-            onClick={() => previewImport.mutate()}
+            onClick={() =>
+              previewImport.mutate()
+            }
             disabled={
               previewImport.isPending ||
               !file ||
               !accountId ||
-              (requiresPassword && !pdfPassword)
+              (requiresPassword &&
+                !pdfPassword.trim())
             }
           >
-            <Upload className="mr-2 h-4 w-4" />
 
-            {previewImport.isPending
-              ? "Analyzing..."
-              : requiresPassword
-                ? "Unlock & Analyze"
-                : "Analyze with AI"}
+            {previewImport.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing statement...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+
+                {requiresPassword
+                  ? "Unlock & Analyze"
+                  : "Analyze with AI"}
+              </>
+            )}
+
           </Button>
 
         </div>
 
-
       </div>
-
 
       {/* ======================================================
           PREVIEW
@@ -486,29 +717,76 @@ export function CSVImport({
           <div className="flex flex-wrap items-center justify-between gap-3">
 
             <div>
+
               <h3 className="font-semibold">
                 Import Preview
               </h3>
 
               <p className="text-sm text-muted-foreground">
-                Review the transactions before importing.
+                Review the transactions before
+                importing them.
               </p>
+
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
 
               <Badge variant="outline">
                 {preview.length} transactions
               </Badge>
 
-              {rowsNeedingAttention.length > 0 && (
-                <Badge variant="secondary">
-                  {rowsNeedingAttention.length} need review
+              <Badge variant="secondary">
+                {categorizedRows} categorized
+              </Badge>
+
+              {uncategorizedRows.length > 0 && (
+                <Badge variant="destructive">
+                  {uncategorizedRows.length} need category
                 </Badge>
               )}
 
             </div>
+
           </div>
+
+          {/* FAILED CHUNKS WARNING */}
+
+          {previewImport.data?.data?.failedChunks &&
+            previewImport.data.data.failedChunks
+              .length > 0 && (
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4">
+
+                <div className="flex gap-2">
+
+                  <AlertCircle className="h-5 w-5 text-yellow-500 shrink-0" />
+
+                  <div>
+
+                    <p className="font-medium text-sm">
+                      Some parts of the statement
+                      could not be analyzed
+                    </p>
+
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The AI could not process{" "}
+                      {
+                        previewImport.data
+                          .data.failedChunks
+                          .length
+                      } section
+                      {previewImport.data.data.failedChunks
+                        .length === 1
+                        ? ""
+                        : "s"}{" "}
+                      of the statement.
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
 
           {/* TABLE */}
 
@@ -521,6 +799,7 @@ export function CSVImport({
                 <thead className="sticky top-0 bg-muted z-10">
 
                   <tr>
+
                     <th className="p-3 text-left">
                       Date
                     </th>
@@ -537,173 +816,233 @@ export function CSVImport({
                       Type
                     </th>
 
-                    <th className="p-3 text-left min-w-[220px]">
+                    <th className="p-3 text-left min-w-[250px]">
                       Category
                     </th>
+
                   </tr>
 
                 </thead>
 
                 <tbody>
 
-                  {preview.map((row, index) => {
+                  {preview.map(
+                    (row, index) => {
 
-                    const rowCategories =
-                      getCategoriesForType(
-                        row.type,
-                      );
+                      const rowCategories =
+                        getCategoriesForType(
+                          row.type,
+                        );
 
-                    const needsCategory =
-                      !row.categoryId;
+                      const needsCategory =
+                        !row.categoryId;
 
-                    return (
-                      <tr
-                        key={`${row.date}-${index}`}
-                        className={`border-t ${needsCategory
-                          ? "bg-yellow-500/5"
-                          : ""
+                      const matchedCategory =
+                        findCategory(
+                          row.categoryId,
+                        );
+
+                      return (
+                        <tr
+                          key={`${row.date}-${index}`}
+                          className={`border-t ${
+                            needsCategory
+                              ? "bg-yellow-500/5"
+                              : ""
                           }`}
-                      >
+                        >
 
-                        {/* DATE */}
+                          {/* DATE */}
 
-                        <td className="p-3 whitespace-nowrap">
-                          {row.date}
-                        </td>
+                          <td className="p-3 whitespace-nowrap">
+                            {row.date}
+                          </td>
 
-                        {/* DESCRIPTION */}
+                          {/* DESCRIPTION */}
 
-                        <td className="p-3 max-w-[300px]">
-                          <div className="truncate">
-                            {row.description}
-                          </div>
+                          <td className="p-3 max-w-[320px]">
 
-                          {row.duplicate && (
+                            <div className="truncate">
+                              {row.description}
+                            </div>
+
+                            {row.duplicate && (
+                              <Badge
+                                variant="secondary"
+                                className="mt-1 text-xs"
+                              >
+                                Possible duplicate
+                              </Badge>
+                            )}
+
+                            {row.error && (
+                              <p className="text-xs text-destructive mt-1">
+                                {row.error}
+                              </p>
+                            )}
+
+                          </td>
+
+                          {/* AMOUNT */}
+
+                          <td className="p-3 text-right font-medium whitespace-nowrap">
+
+                            KES{" "}
+                            {Number(
+                              row.amount,
+                            ).toLocaleString(
+                              "en-KE",
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              },
+                            )}
+
+                          </td>
+
+                          {/* TYPE */}
+
+                          <td className="p-3">
+
                             <Badge
-                              variant="secondary"
-                              className="mt-1 text-xs"
-                            >
-                              Possible duplicate
-                            </Badge>
-                          )}
-
-                          {row.error && (
-                            <p className="text-xs text-destructive mt-1">
-                              {row.error}
-                            </p>
-                          )}
-                        </td>
-
-                        {/* AMOUNT */}
-
-                        <td className="p-3 text-right font-medium whitespace-nowrap">
-                          KES{" "}
-                          {Number(
-                            row.amount,
-                          ).toLocaleString()}
-                        </td>
-
-                        {/* TYPE */}
-
-                        <td className="p-3">
-                          <Badge
-                            variant={
-                              row.type ===
+                              variant={
+                                row.type ===
                                 "income"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {row.type}
-                          </Badge>
-                        </td>
-
-                        {/* CATEGORY */}
-
-                        <td className="p-3">
-
-                          <div className="flex gap-2">
-
-                            <Select
-                              value={
-                                row.categoryId ||
-                                ""
-                              }
-                              onValueChange={(
-                                value,
-                              ) =>
-                                updateCategory(
-                                  index,
-                                  value,
-                                )
+                                  ? "default"
+                                  : "secondary"
                               }
                             >
+                              {row.type}
+                            </Badge>
 
-                              <SelectTrigger
-                                className={
-                                  needsCategory
-                                    ? "border-yellow-500"
-                                    : ""
+                          </td>
+
+                          {/* CATEGORY */}
+
+                          <td className="p-3">
+
+                            <div className="flex gap-2">
+
+                              <Select
+                                value={
+                                  row.categoryId ??
+                                  ""
+                                }
+                                onValueChange={(
+                                  value,
+                                ) =>
+                                  updateCategory(
+                                    index,
+                                    value,
+                                  )
                                 }
                               >
-                                <SelectValue
-                                  placeholder="Select category"
-                                />
-                              </SelectTrigger>
 
-                              <SelectContent>
+                                <SelectTrigger
+                                  className={`flex-1 ${
+                                    needsCategory
+                                      ? "border-yellow-500"
+                                      : ""
+                                  }`}
+                                >
 
-                                {rowCategories.map(
-                                  (category) => (
-                                    <SelectItem
-                                      key={
-                                        category.id
-                                      }
-                                      value={
-                                        category.id
-                                      }
-                                    >
-                                      {
-                                        category.name
-                                      }
-                                    </SelectItem>
-                                  ),
+                                  <SelectValue
+                                    placeholder={
+                                      "Select category"
+                                    }
+                                  />
+
+                                </SelectTrigger>
+
+                                <SelectContent>
+
+                                  {rowCategories.map(
+                                    (category) => (
+                                      <SelectItem
+                                        key={
+                                          category.id
+                                        }
+                                        value={
+                                          category.id
+                                        }
+                                      >
+                                        {
+                                          category.name
+                                        }
+                                      </SelectItem>
+                                    ),
+                                  )}
+
+                                </SelectContent>
+
+                              </Select>
+
+                              {/* CREATE CATEGORY */}
+
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                title={`Create ${row.type} category`}
+                                onClick={() =>
+                                  handleCreateCategory(
+                                    index,
+                                    row.type,
+                                  )
+                                }
+                                disabled={
+                                  createCategory.isPending
+                                }
+                              >
+                                {createCategory.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Plus className="h-4 w-4" />
                                 )}
+                              </Button>
 
-                              </SelectContent>
-
-                            </Select>
-
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              title="Create category"
-                              onClick={() =>
-                                handleCreateCategory(
-                                  index,
-                                  row.type,
-                                )
-                              }
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-
-                          </div>
-
-                          {row.categoryName && (
-                            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                              <CheckCircle2 className="h-3 w-3" />
-                              AI matched:{" "}
-                              {row.categoryName}
                             </div>
-                          )}
 
-                        </td>
+                            {/* AI MATCH */}
 
-                      </tr>
-                    );
-                  })}
+                            {matchedCategory && (
+                              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+
+                                <CheckCircle2 className="h-3 w-3" />
+
+                                AI matched:{" "}
+                                {matchedCategory.name}
+
+                                {row.categoryConfidence &&
+                                  row.categoryConfidence !==
+                                    "none" && (
+                                    <span>
+                                      (
+                                      {
+                                        row.categoryConfidence
+                                      }
+                                      )
+                                    </span>
+                                  )}
+
+                              </div>
+                            )}
+
+                            {/* REVIEW */}
+
+                            {needsCategory && (
+                              <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
+                                No suitable existing
+                                category was found.
+                              </p>
+                            )}
+
+                          </td>
+
+                        </tr>
+                      );
+                    },
+                  )}
 
                 </tbody>
 
@@ -713,16 +1052,14 @@ export function CSVImport({
 
           </div>
 
-          {/* ==================================================
-              REVIEW WARNING
-          ================================================== */}
+          {/* REVIEW WARNING */}
 
           {!canConfirm && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4">
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
 
-                <AlertCircle className="h-5 w-5 text-yellow-500" />
+                <AlertCircle className="h-5 w-5 text-yellow-500 shrink-0" />
 
                 <div>
 
@@ -731,9 +1068,21 @@ export function CSVImport({
                   </p>
 
                   <p className="text-xs text-muted-foreground mt-1">
-                    Some transactions do not have a
-                    category. Select an existing category
-                    or create a new one before importing.
+
+                    {uncategorizedRows.length > 0
+                      ? `${uncategorizedRows.length} transaction${
+                          uncategorizedRows.length ===
+                          1
+                            ? ""
+                            : "s"
+                        } ${
+                          uncategorizedRows.length ===
+                          1
+                            ? "does"
+                            : "do"
+                        } not have a category. Select an existing category or create a new one.`
+                      : "Some transactions still require review before they can be imported."}
+
                   </p>
 
                 </div>
@@ -743,21 +1092,22 @@ export function CSVImport({
             </div>
           )}
 
-          {/* ==================================================
-              CONFIRM
-          ================================================== */}
+          {/* CONFIRM */}
 
           <Button
             className="w-full"
             size="lg"
             onClick={() =>
-              confirmImport.mutate(preview)
+              confirmImport.mutate(
+                preview,
+              )
             }
             disabled={
               confirmImport.isPending ||
               !canConfirm
             }
           >
+
             {confirmImport.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -766,15 +1116,18 @@ export function CSVImport({
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Confirm Import ({preview.length})
+                Confirm Import (
+                {preview.length})
               </>
             )}
+
           </Button>
+
         </div>
       )}
 
       {/* ======================================================
-          EMPTY / INITIAL STATE
+          READY STATE
       ====================================================== */}
 
       {!preview.length &&
@@ -789,7 +1142,7 @@ export function CSVImport({
             </p>
 
             <p className="text-sm text-muted-foreground">
-              Click "Analyze with AI" to extract the
+              Click "Analyze with AI" to extract
               transactions from your statement.
             </p>
 
