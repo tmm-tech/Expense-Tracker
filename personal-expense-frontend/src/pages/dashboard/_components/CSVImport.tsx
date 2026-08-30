@@ -50,7 +50,7 @@ interface PreviewRow {
   date: string;
   description: string;
   amount: number;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
 
   categoryId?: string | null;
   categoryName?: string;
@@ -90,7 +90,7 @@ interface CategoryCreateResponse {
 interface TransactionCategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
   onCategoryCreated: (category: Category) => void;
 }
 /* ============================================================
@@ -171,7 +171,7 @@ export function CSVImport({
   ============================================================ */
 
   const getCategoriesForType = (
-    type: "income" | "expense",
+    type: "income" | "expense" | "transfer",
   ) => {
     return categories.filter(
       (category) => category.type === type,
@@ -191,7 +191,7 @@ export function CSVImport({
   ============================================================ */
   const updateType = (
     index: number,
-    type: "income" | "expense",
+    type: "income" | "expense" | "transfer",
   ) => {
     setPreview((current) =>
       current.map((row, i) => {
@@ -280,7 +280,7 @@ export function CSVImport({
       type,
     }: {
       name: string;
-      type: "income" | "expense";
+      type: "income" | "expense" | "transfer";
     }) => {
       return apiFetch<CategoryCreateResponse>(
         "/categories",
@@ -1047,7 +1047,7 @@ export function CSVImport({
                               onValueChange={(value) =>
                                 updateType(
                                   index,
-                                  value as "income" | "expense",
+                                  value as "income" | "expense" | "transfer",
                                 )
                               }
                             >
@@ -1062,6 +1062,10 @@ export function CSVImport({
 
                                 <SelectItem value="expense">
                                   Expense
+                                </SelectItem>
+
+                                <SelectItem value="transfer">
+                                  Transfer
                                 </SelectItem>
                               </SelectContent>
                             </Select>

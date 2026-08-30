@@ -59,12 +59,13 @@ export function TransactionDialog({
     : null;
   const queryClient = useQueryClient();
 
-  const [type, setType] = useState<"income" | "expense">("expense");
+  const [type, setType] = useState<"income" | "expense" | "transfer">("expense");
   const [categoryId, setCategoryId] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [accountId, setAccountId] = useState<string>("");
+  const [toAccountId, setToAccountId] = useState<string>("");
 
   /* --------- Populate on edit --------- */
 
@@ -82,6 +83,7 @@ export function TransactionDialog({
 
       setDate(txDate);
       setAccountId(editingTransaction.accountId ?? "");
+
     } else {
       setType("expense");
       setCategoryId("");
@@ -89,6 +91,7 @@ export function TransactionDialog({
       setDescription("");
       setDate(new Date());
       setAccountId("");
+      setToAccountId("");
     }
   }, [editingTransaction, open]);
   const createTransaction = useMutation({
@@ -128,7 +131,34 @@ export function TransactionDialog({
       onOpenChange(false);
     },
   });
+  const createTransfer = useMutation({
+    mutationFn: (payload: {
+      fromAccountId: string;
+      toAccountId: string;
+      amount: number;
+      description: string;
+      date: number;
+    }) =>
+      apiFetch("/transfers", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
 
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+
+      toast.success("Transfer created");
+
+      onOpenChange(false);
+      onTransactionSaved();
+    },
+
+    onError: (error) => {
+      console.error("Create transfer error:", error);
+      toast.error("Failed to create transfer");
+    },
+  });
   const updateTransaction = useMutation({
     mutationFn: (payload: Transaction) =>
       apiFetch<Transaction>(`/transactions/${payload.id}`, {
@@ -166,8 +196,28 @@ export function TransactionDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!categoryId || !amount || !description) {
+    if (!amount || !description) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!accountId) {
+      toast.error("Please select an account");
+      return;
+    }
+
+    if (type === "transfer" && !toAccountId) {
+      toast.error("Please select the destination account");
+      return;
+    }
+
+    if (type !== "transfer" && !categoryId) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    if (type === "transfer" && accountId === toAccountId) {
+      toast.error("From and destination accounts must be different");
       return;
     }
 
@@ -177,24 +227,54 @@ export function TransactionDialog({
       return;
     }
 
-    const payload = {
-      type,
-      categoryId,
-      amount: amountNum,
-      description,
-      date: date ? date.getTime() : Date.now(),
-      accountId: accountId || null,
-    };
+    const payload =
+      type === "transfer"
+        ? {
+          fromAccountId: accountId,
+          toAccountId,
+          amount: amountNum,
+          description,
+          date: date ? date.getTime() : Date.now(),
+        }
+        : {
+          type,
+          categoryId,
+          amount: amountNum,
+          description,
+          date: date ? date.getTime() : Date.now(),
+          accountId,
+        };
 
     if (editingTransaction) {
       updateTransaction.mutate({
         id: editingTransaction.id,
-        ...payload,
+        type,
+        categoryId: categoryId || null,
+        amount: amountNum,
+        description,
+        date: date ? date.getTime() : Date.now(),
+        accountId,
+      });
+    } else if (type === "transfer") {
+      createTransfer.mutate({
+        fromAccountId: accountId,
+        toAccountId,
+        amount: amountNum,
+        description,
+        date: date ? date.getTime() : Date.now(),
       });
     } else {
-      createTransaction.mutate(payload);
+      createTransaction.mutate({
+        type,
+        categoryId,
+        amount: amountNum,
+        description,
+        date: date ? date.getTime() : Date.now(),
+        accountId,
+      });
     }
-  };
+
+  }
 
   const filteredCategories = categories.filter((c) => c.type === type);
 
@@ -221,7 +301,7 @@ export function TransactionDialog({
             <Select
               value={type}
               onValueChange={(v) => {
-                setType(v as "income" | "expense");
+                setType(v as "income" | "expense" | "transfer");
                 setCategoryId("");
               }}
             >
@@ -231,40 +311,65 @@ export function TransactionDialog({
               <SelectContent>
                 <SelectItem value="income">Income</SelectItem>
                 <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="transfer">Transfer</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No category</SelectItem>
-                {filteredCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+          {type !== "transfer" && (
+            <div className="space-y-2">
+              <Label>Category</Label>
+
+              <Select
+                value={categoryId}
+                onValueChange={setCategoryId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="none">
+                    No category
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+
+                  {filteredCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Account */}
           <div className="space-y-2">
-            <Label>Account (Optional)</Label>
+            <Label>
+              {type === "transfer" ? "From Account" : "Account"}
+            </Label>
+
             <Select
               value={accountId}
-              onValueChange={(val) => setAccountId(val === "none" ? "" : val)}
+              onValueChange={(val) =>
+                setAccountId(val === "none" ? "" : val)
+              }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select an account" />
+                <SelectValue
+                  placeholder={
+                    type === "transfer"
+                      ? "Select source account"
+                      : "Select an account"
+                  }
+                />
               </SelectTrigger>
+
               <SelectContent>
-                <SelectItem value="none">No account</SelectItem>
+                <SelectItem value="none">
+                  No account
+                </SelectItem>
+
                 {accounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
                     {acc.name} ({acc.type})
@@ -273,6 +378,37 @@ export function TransactionDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {type === "transfer" && (
+            <div className="space-y-2">
+              <Label>To Account</Label>
+
+              <Select
+                value={toAccountId}
+                onValueChange={(val) =>
+                  setToAccountId(val === "none" ? "" : val)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select destination account" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="none">
+                    Select destination
+                  </SelectItem>
+
+                  {accounts
+                    .filter((acc) => acc.id !== accountId)
+                    .map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.type})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Amount */}
           <div className="space-y-2">
