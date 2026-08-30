@@ -9,11 +9,15 @@ const {
     deleteTransaction,
     getTransactionSummary,
     previewImport,
-    confirmImport
+    confirmImport,
+    createTransfer
 } = require('../controller/TransactionControllers');
 
 // Create and insert a new transaction
 TransactionRoutes.post('/transactions', createTransaction);
+
+// Create Transfer between accounts
+TransactionRoutes.post("/transfer", createTransfer);
 
 // Read all transactions
 TransactionRoutes.get('/transactions', getTransactions);

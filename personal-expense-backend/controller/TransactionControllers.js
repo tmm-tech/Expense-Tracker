@@ -21,12 +21,14 @@ const chunkText = (text, maxCharacters = 12000) => {
 };
 
 module.exports = {
+
   /* ===========================
      CREATE TRANSACTION
   ============================ */
   createTransaction: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -34,44 +36,237 @@ module.exports = {
         });
       }
 
-      const { accountId, categoryId, amount, date, description, type } =
-        req.body;
+      const {
+        accountId,
+        categoryId,
+        amount,
+        date,
+        description,
+        type,
+        source = "manual",
+        importBatchId,
+        transferId,
+        transferAccountId,
+        transferDirection,
+      } = req.body;
 
-      if (!accountId || !categoryId || !amount || !date || !type) {
+      /* ===========================
+         VALIDATION
+      ============================ */
+
+      if (!accountId || !amount || !date || !type) {
         return res.status(400).json({
           success: false,
           message: "Missing required fields",
         });
       }
 
-      const transaction = await prisma.transaction.create({
-        data: {
+      if (!["income", "expense", "transfer"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction type",
+        });
+      }
+
+      const numericAmount = Number(amount);
+
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Amount must be greater than zero",
+        });
+      }
+
+      const transactionDate = new Date(date);
+
+      if (Number.isNaN(transactionDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction date",
+        });
+      }
+
+      /* ===========================
+         ACCOUNT VALIDATION
+      ============================ */
+
+      const account = await prisma.account.findFirst({
+        where: {
+          id: accountId,
           userId,
-          accountId,
-          categoryId, // ✅ use categoryId, not category
-          amount: Number(amount),
-          date: new Date(date),
-          type, // should be "income" or "expense"
-          description: description || null,
-        },
-      });
-      // Update account balance
-      await prisma.account.update({
-        where: { id: accountId },
-        data: {
-          balance: {
-            increment: type === "income" ? Number(amount) : -Number(amount),
-          },
         },
       });
 
-      return res.json({
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: "Account not found",
+        });
+      }
+
+      /* ===========================
+         CATEGORY VALIDATION
+         Category is optional.
+      ============================ */
+
+      if (categoryId) {
+        const category = await prisma.category.findFirst({
+          where: {
+            id: categoryId,
+            userId,
+            type,
+          },
+        });
+
+        if (!category) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid category for this transaction type",
+          });
+        }
+      }
+
+      /* ===========================
+         TRANSFER VALIDATION
+      ============================ */
+
+      if (type === "transfer") {
+        if (!transferAccountId) {
+          return res.status(400).json({
+            success: false,
+            message: "Transfer account is required",
+          });
+        }
+
+        if (!["outgoing", "incoming"].includes(transferDirection)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid transfer direction",
+          });
+        }
+
+        if (transferAccountId === accountId) {
+          return res.status(400).json({
+            success: false,
+            message: "Transfer accounts must be different",
+          });
+        }
+
+        const transferAccount = await prisma.account.findFirst({
+          where: {
+            id: transferAccountId,
+            userId,
+          },
+        });
+
+        if (!transferAccount) {
+          return res.status(404).json({
+            success: false,
+            message: "Transfer account not found",
+          });
+        }
+      }
+
+      /* ===========================
+         CREATE TRANSACTION
+         + UPDATE BALANCE ATOMICALLY
+      ============================ */
+
+      const result = await prisma.$transaction(async (tx) => {
+        const transaction = await tx.transaction.create({
+          data: {
+            userId,
+            accountId,
+            categoryId: categoryId || null,
+
+            amount: numericAmount,
+            date: transactionDate,
+            type,
+
+            description: description || null,
+
+            source,
+            importBatchId: importBatchId || null,
+
+            transferId: transferId || null,
+            transferAccountId: transferAccountId || null,
+            transferDirection: transferDirection || null,
+          },
+        });
+
+        /* ===========================
+           NORMAL TRANSACTION
+        ============================ */
+
+        if (type === "income") {
+          await tx.account.update({
+            where: {
+              id: accountId,
+            },
+            data: {
+              balance: {
+                increment: numericAmount,
+              },
+            },
+          });
+        }
+
+        if (type === "expense") {
+          await tx.account.update({
+            where: {
+              id: accountId,
+            },
+            data: {
+              balance: {
+                decrement: numericAmount,
+              },
+            },
+          });
+        }
+
+        /* ===========================
+           TRANSFER
+        ============================ */
+
+        if (type === "transfer") {
+          if (transferDirection === "outgoing") {
+            await tx.account.update({
+              where: {
+                id: accountId,
+              },
+              data: {
+                balance: {
+                  decrement: numericAmount,
+                },
+              },
+            });
+          }
+
+          if (transferDirection === "incoming") {
+            await tx.account.update({
+              where: {
+                id: accountId,
+              },
+              data: {
+                balance: {
+                  increment: numericAmount,
+                },
+              },
+            });
+          }
+        }
+
+        return transaction;
+      });
+
+      return res.status(201).json({
         success: true,
         message: "Transaction created successfully",
-        data: transaction,
+        data: result,
       });
     } catch (error) {
       console.error("Create transaction error:", error);
+
       return res.status(500).json({
         success: false,
         message: "Create Transaction Error: Something went wrong",
@@ -79,66 +274,296 @@ module.exports = {
     }
   },
 
+
   /* ===========================
-     GET TRANSACTIONS (FILTERED)
-     Query params:
-     - page
-     - limit
-     - category
-     - type (income | expense)
-     - from / to (date range)
+   CREATE TRANSFER
+============================ */
+  createTransfer: async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?.sub;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
+      const {
+        fromAccountId,
+        toAccountId,
+        amount,
+        date,
+        description,
+      } = req.body;
+
+      // Validate required fields
+      if (
+        !fromAccountId ||
+        !toAccountId ||
+        !amount ||
+        !date
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "From account, to account, amount and date are required",
+        });
+      }
+
+      // Prevent transfer to the same account
+      if (fromAccountId === toAccountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot transfer money to the same account",
+        });
+      }
+
+      const numericAmount = Number(amount);
+
+      if (
+        !Number.isFinite(numericAmount) ||
+        numericAmount <= 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Transfer amount must be greater than zero",
+        });
+      }
+
+      const transferDate = new Date(date);
+
+      if (Number.isNaN(transferDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transfer date",
+        });
+      }
+
+      /*
+       * Make sure BOTH accounts belong to
+       * the authenticated user.
+       */
+      const accounts = await prisma.account.findMany({
+        where: {
+          id: {
+            in: [fromAccountId, toAccountId],
+          },
+          userId,
+        },
+      });
+
+      if (accounts.length !== 2) {
+        return res.status(404).json({
+          success: false,
+          message: "One or both accounts were not found",
+        });
+      }
+
+      /*
+       * Create the transfer and update both
+       * account balances atomically.
+       */
+      const result = await prisma.$transaction(async (tx) => {
+        const transfer = await tx.transfer.create({
+          data: {
+            userId,
+            fromAccountId,
+            toAccountId,
+            amount: numericAmount,
+            date: transferDate,
+            description: description || null,
+          },
+        });
+
+        /*
+         * Transaction representing money leaving
+         * the source account.
+         */
+        const outgoingTransaction =
+          await tx.transaction.create({
+            data: {
+              userId,
+              accountId: fromAccountId,
+              categoryId: null,
+              amount: numericAmount,
+              date: transferDate,
+              type: "transfer",
+              description:
+                description || "Transfer to another account",
+              source: "manual",
+              transferId: transfer.id,
+              transferAccountId: toAccountId,
+              transferDirection: "outgoing",
+            },
+          });
+
+        /*
+         * Transaction representing money entering
+         * the destination account.
+         */
+        const incomingTransaction =
+          await tx.transaction.create({
+            data: {
+              userId,
+              accountId: toAccountId,
+              categoryId: null,
+              amount: numericAmount,
+              date: transferDate,
+              type: "transfer",
+              description:
+                description || "Transfer from another account",
+              source: "manual",
+              transferId: transfer.id,
+              transferAccountId: fromAccountId,
+              transferDirection: "incoming",
+            },
+          });
+
+        /*
+         * Decrease source account.
+         */
+        await tx.account.update({
+          where: {
+            id: fromAccountId,
+          },
+          data: {
+            balance: {
+              decrement: numericAmount,
+            },
+          },
+        });
+
+        /*
+         * Increase destination account.
+         */
+        await tx.account.update({
+          where: {
+            id: toAccountId,
+          },
+          data: {
+            balance: {
+              increment: numericAmount,
+            },
+          },
+        });
+
+        return {
+          transfer,
+          outgoingTransaction,
+          incomingTransaction,
+        };
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Transfer created successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Create transfer error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Create Transfer Error: Something went wrong",
+      });
+    }
+  },
+
+  /* ===========================
+     GET TRANSACTIONS
   ============================ */
   getTransactions: async (req, res) => {
     try {
-      const userId = req.user.sub;
+      const userId = req.user?.id || req.user?.sub;
+
       if (!userId) {
-        return res
-          .status(401)
-          .json({ message: "Unauthorized: missing user ID" });
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
       }
-      const { page = 1, limit = 20, category, type, from, to } = req.query;
+
+      const {
+        page = 1,
+        limit = 20,
+        category,
+        type,
+        from,
+        to,
+      } = req.query;
+
+      const pageNumber = Math.max(Number(page), 1);
+      const limitNumber = Math.min(Math.max(Number(limit), 1), 100);
 
       const where = {
-        userId: req.user.id,
+        userId,
       };
 
-      if (category) where.category = category;
+      /* Category filter */
 
-      if (type === "income") where.amount = { gt: 0 };
-      if (type === "expense") where.amount = { lt: 0 };
+      if (category) {
+        where.categoryId = category;
+      }
+
+      /* Type filter */
+
+      if (
+        type &&
+        ["income", "expense", "transfer"].includes(type)
+      ) {
+        where.type = type;
+      }
+
+      /* Date filter */
 
       if (from || to) {
         where.date = {};
-        if (from) where.date.gte = new Date(from);
-        if (to) where.date.lte = new Date(to);
+
+        if (from) {
+          where.date.gte = new Date(from);
+        }
+
+        if (to) {
+          where.date.lte = new Date(to);
+        }
       }
 
-      const transactions = await prisma.transaction.findMany({
-        where,
-        orderBy: { date: "desc" },
-        skip: (page - 1) * limit,
-        take: Number(limit),
-      });
-      const transactionCount = await prisma.transaction.count({
-        where: { userId },
-      });
+      const [transactions, transactionCount] =
+        await prisma.$transaction([
+          prisma.transaction.findMany({
+            where,
+            include: {
+              account: true,
+              category: true,
+            },
+            orderBy: {
+              date: "desc",
+            },
+            skip: (pageNumber - 1) * limitNumber,
+            take: limitNumber,
+          }),
 
-      if (transactionCount === 0) {
-        return res.json([]);
-      }
-      res.json({
+          prisma.transaction.count({
+            where,
+          }),
+        ]);
+
+      return res.json({
         success: true,
         data: transactions,
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page: pageNumber,
+          limit: limitNumber,
           total: transactionCount,
-          totalPages: Math.ceil(transactionCount / limit),
+          totalPages: Math.ceil(
+            transactionCount / limitNumber
+          ),
         },
       });
     } catch (error) {
       console.error("Get transactions error:", error);
-      res.status(500).json({
+
+      return res.status(500).json({
         success: false,
         message: `Get Transactions Error: ${error.message}`,
       });
@@ -265,33 +690,49 @@ module.exports = {
   },
 
   /* ===========================
-     TRANSACTION SUMMARY (REPORTS)
+     TRANSACTION SUMMARY
   ============================ */
   getTransactionSummary: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
+
       if (!userId) {
         return res.status(401).json({
           success: false,
           message: "Unauthorized: missing user ID",
         });
       }
+
       const summary = await prisma.transaction.groupBy({
-        by: ["category"],
-        where: { userId: req.user.id },
-        _sum: { amount: true },
+        by: ["categoryId", "type"],
+        where: {
+          userId,
+        },
+        _sum: {
+          amount: true,
+        },
       });
 
-      res.json({ success: true, data: summary });
+      return res.json({
+        success: true,
+        data: summary,
+      });
     } catch (error) {
-      console.error("Transaction summary error:", error);
-      res.status(500).json({
+      console.error(
+        "Transaction summary error:",
+        error
+      );
+
+      return res.status(500).json({
         success: false,
         message: `Transaction Summary Error: ${error.message}`,
       });
     }
   },
 
+  /* ===========================
+   PREVIEW IMPORT
+============================ */
   previewImport: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
@@ -302,21 +743,6 @@ module.exports = {
           error: "Unauthorized: missing user ID",
         });
       }
-
-      const account = await prisma.account.findFirst({
-        where: {
-          id: accountId,
-          userId,
-        },
-      });
-
-      if (!account) {
-        return res.status(403).json({
-          success: false,
-          error: "Invalid account",
-        });
-      }
-
       const { accountId, fileType, pdfPassword } = req.body;
       const file = req.file;
 
@@ -346,6 +772,25 @@ module.exports = {
       }
 
       /* =========================
+         VERIFY ACCOUNT
+      ========================= */
+
+
+      const account = await prisma.account.findFirst({
+        where: {
+          id: accountId,
+          userId,
+        },
+      });
+
+      if (!account) {
+        return res.status(403).json({
+          success: false,
+          error: "Invalid account",
+        });
+      }
+
+      /* =========================
          GET USER CATEGORIES
       ========================= */
 
@@ -357,6 +802,26 @@ module.exports = {
           id: true,
           name: true,
           type: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      /* =========================
+         GET USER ACCOUNTS
+      ========================= */
+      const accounts = await prisma.account.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          id: true,
+          name: true,
+          institution: true,
+          accountNumber: true,
+          type: true,
+          currency: true,
         },
         orderBy: {
           name: "asc",
@@ -501,6 +966,18 @@ module.exports = {
           type: category.type,
         })
       );
+      /* =========================
+         ACCOUNT LIST FOR AI
+      ========================= */
+
+      const accountList = accounts.map((account) => ({
+        id: account.id,
+        name: account.name,
+        institution: account.institution,
+        accountNumber: account.accountNumber,
+        type: account.type,
+        currency: account.currency,
+      }));
 
       /* =========================
          AI EXTRACTION
@@ -538,7 +1015,10 @@ EXPECTED FORMAT:
       "amount": 0,
       "type": "income",
       "categoryId": "existing-category-id-or-null",
-      "categoryConfidence": "high"
+      "categoryConfidence": "high",
+      "isTransfer": false,
+      "transferAccountId": null,
+      "transferConfidence": "none"
     }
   ]
 }
@@ -585,6 +1065,51 @@ Allowed category confidence values:
 If categoryId is null:
 
 "categoryConfidence": "none"
+
+TRANSFER DETECTION:
+
+Some transactions may represent transfers between the user's own AureX accounts.
+
+Examples:
+- Transfer to Savings
+- Transfer from Checking
+- M-PESA to Bank
+- Bank to M-PESA
+- Funds transferred to another account
+- Internal account transfer
+
+For every transaction, determine whether it appears to be a transfer.
+
+If it is NOT a transfer:
+
+"isTransfer": false
+"transferAccountId": null
+"transferConfidence": "none"
+
+If it IS a transfer:
+
+"isTransfer": true
+
+Try to identify the other AureX account involved.
+
+Only use an account ID from the supplied AureX account list.
+
+If the other account cannot be confidently identified:
+
+"transferAccountId": null
+
+Allowed transfer confidence values:
+
+"high"
+"medium"
+"low"
+"none"
+
+Never invent an account ID.
+
+EXISTING AUREX ACCOUNTS:
+
+${JSON.stringify(accountList)}
 
 IMPORTANT:
 
@@ -651,6 +1176,41 @@ Do not ask questions.
             }
 
             /* =========================
+              VALIDATE TRANSFER
+            ========================= */
+
+            let isTransfer = false;
+            let transferAccountId = null;
+            let transferConfidence = "none";
+
+            if (row.isTransfer === true) {
+              isTransfer = true;
+
+              if (
+                row.transferAccountId &&
+                accounts.some(
+                  (account) =>
+                    account.id === row.transferAccountId &&
+                    account.id !== accountId
+                )
+              ) {
+                transferAccountId = row.transferAccountId;
+              }
+
+              if (
+                ["high", "medium", "low"].includes(
+                  row.transferConfidence
+                )
+              ) {
+                transferConfidence =
+                  row.transferConfidence;
+              } else {
+                transferConfidence = "medium";
+              }
+            }
+
+
+            /* =========================
                VALIDATE CATEGORY
             ========================= */
 
@@ -711,12 +1271,24 @@ Do not ask questions.
 
               categoryConfidence,
 
+              isTransfer,
+
+              transferAccountId,
+
+              transferConfidence,
+
               needsCategoryReview:
                 !categoryId ||
-                categoryConfidence ===
-                "low" ||
-                categoryConfidence ===
-                "none",
+                categoryConfidence === "low" ||
+                categoryConfidence === "none",
+
+              needsTransferReview:
+                isTransfer &&
+                (
+                  !transferAccountId ||
+                  transferConfidence === "low" ||
+                  transferConfidence === "none"
+                ),
             });
           }
         } catch (error) {
@@ -812,24 +1384,8 @@ Do not ask questions.
           message: "Unauthorized: missing user ID",
         });
       }
+      const { rows, accountId } = req.body;
 
-      const account = await prisma.account.findFirst({
-  where: {
-    id: accountId,
-    userId,
-  },
-});
-
-if (!account) {
-  return res.status(403).json({
-    success: false,
-    error: "Invalid account",
-  });
-}
-      const {
-        rows,
-        accountId,
-      } = req.body;
 
       /* =========================
          VALIDATION
@@ -846,6 +1402,24 @@ if (!account) {
         return res.status(400).json({
           success: false,
           error: "No transactions to import",
+        });
+      }
+
+      /* =========================
+         VERIFY ACCOUNT
+      ========================= */
+
+      const account = await prisma.account.findFirst({
+        where: {
+          id: accountId,
+          userId,
+        },
+      });
+
+      if (!account) {
+        return res.status(403).json({
+          success: false,
+          error: "Invalid account",
         });
       }
 

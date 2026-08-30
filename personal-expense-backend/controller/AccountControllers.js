@@ -60,7 +60,7 @@ module.exports = {
       const skip = (page - 1) * limit;
 
       const accounts = await prisma.account.findMany({
-        where: { userId: req.user.id },
+        where: { userId},
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,

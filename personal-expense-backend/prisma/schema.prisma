@@ -20,6 +20,7 @@ model User {
   accounts      Account[]
   categories    Category[]
   transactions  Transaction[]
+  transfers     Transfer[]
   budgets       Budget[]
   goals         Goal[]
   bills         Bill[]
@@ -32,6 +33,7 @@ model User {
   notifications Notification[]
   NetWorth      NetWorth[]
   Snapshot      NetWorthSnapshot[]
+  importBatches ImportBatch[]
 }
 
 model Preferences {
@@ -54,7 +56,7 @@ model Notification {
 }
 
 model Account {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
   institution   String
   accountNumber String?
@@ -62,23 +64,26 @@ model Account {
   currency      String
   balance       Float
   userId        String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  user          User          @relation(fields: [userId], references: [id])
-  transactions  Transaction[]
-  Recurring     Recurring[]
-  Snapshot      AccountSnapshot[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  Recurring    Recurring[]
+  Snapshot     AccountSnapshot[]
+
+  transfersFrom Transfer[] @relation("TransferFromAccount")
+  transfersTo   Transfer[] @relation("TransferToAccount")
 }
 
 model AccountSnapshot {
-  id          String   @id @default(uuid())
-  accountId   String
-  snapshotId  String
-  balance     Float
-  account     Account  @relation(fields: [accountId], references: [id])
-  snapshot    NetWorthSnapshot @relation(fields: [snapshotId], references: [id])
+  id         String           @id @default(uuid())
+  accountId  String
+  snapshotId String
+  balance    Float
+  account    Account          @relation(fields: [accountId], references: [id])
+  snapshot   NetWorthSnapshot @relation(fields: [snapshotId], references: [id])
 }
-
 
 model Category {
   id           String        @id @default(uuid())
@@ -96,29 +101,89 @@ model Category {
   Recurring    Recurring[]
 }
 
+model Transfer {
+  id     String @id @default(uuid())
+  userId String
+
+  fromAccountId String
+  toAccountId   String
+
+  amount      Float
+  date        DateTime
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  fromAccount Account @relation("TransferFromAccount", fields: [fromAccountId], references: [id])
+
+  toAccount Account @relation("TransferToAccount", fields: [toAccountId], references: [id])
+
+  @@index([userId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+}
+
 model Transaction {
-  id         String @id @default(uuid())
+  id         String  @id @default(uuid())
   userId     String
   accountId  String
-  categoryId String
+  categoryId String?
 
-  type        String // "income" | "expense"
+  type        String
   amount      Float
   description String?
   date        DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  source        String  @default("manual")
+  importBatchId String?
+
+  transferId        String?
+  transferAccountId String?
+  transferDirection String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   billId String?
   debtId String?
   goalId String?
 
-  user     User     @relation(fields: [userId], references: [id])
-  account  Account  @relation(fields: [accountId], references: [id])
-  category Category @relation(fields: [categoryId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  account     Account      @relation(fields: [accountId], references: [id])
+  category    Category?    @relation(fields: [categoryId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
 
   @@index([userId])
   @@index([userId, date])
+  @@index([accountId])
+  @@index([transferId])
+  @@index([importBatchId])
+}
+
+model ImportBatch {
+  id     String @id @default(uuid())
+  userId String
+
+  fileName String?
+  source   String // csv | pdf | bank_statement
+  status   String  @default("completed") // processing | completed | failed
+
+  totalRows    Int @default(0)
+  importedRows Int @default(0)
+  skippedRows  Int @default(0)
+  failedRows   Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
 }
 
 model Budget {
@@ -224,9 +289,8 @@ model Alert {
   user User @relation(fields: [userId], references: [id])
 }
 
-
 model Investment {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   userId        String
   name          String
   type          String
@@ -236,18 +300,18 @@ model Investment {
   contribution  Float?
   startDate     DateTime
   notes         String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
   symbol        String?
-  quantity       Float?
-  purchasePrice  Float?
-  currentPrice   Float?
-  premium        Float?
-  sumAssured     Float?
-  maturityDate   DateTime?
-  
-  user     User     @relation(fields: [userId], references: [id])
-  @@map("investments")
+  quantity      Float?
+  purchasePrice Float?
+  currentPrice  Float?
+  premium       Float?
+  sumAssured    Float?
+  maturityDate  DateTime?
 
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("investments")
 }
 
 model Recurring {
@@ -313,21 +377,22 @@ model NetWorth {
 }
 
 model NetWorthSnapshot {
-  id             String   @id @default(uuid())
-  netWorthId     String
-  userId         String
-  date           DateTime @default(now())
-  assets         Float
-  liabilities    Float
-  totalAssets    Float
+  id               String   @id @default(uuid())
+  netWorthId       String
+  userId           String
+  date             DateTime @default(now())
+  assets           Float
+  liabilities      Float
+  totalAssets      Float
   totalLiabilities Float
-  notes          String?
-  cash           Float?
-  investments    Float?
-  debts          Float?
+  notes            String?
+  cash             Float?
+  investments      Float?
+  debts            Float?
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  netWorth NetWorth? @relation(fields: [netWorthId], references: [id])
-  AccountSnapshot  AccountSnapshot[]
- @@index([userId])
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  netWorth        NetWorth?         @relation(fields: [netWorthId], references: [id])
+  AccountSnapshot AccountSnapshot[]
+
+  @@index([userId])
 }
