@@ -1547,19 +1547,38 @@ Do not ask questions.
         }
 
         /* =========================
-           CREATE TRANSACTION
-        ========================= */
+    CREATE TRANSACTION
+    + UPDATE ACCOUNT BALANCE
+ ========================= */
 
-        await prisma.transaction.create({
-          data: {
-            userId,
-            accountId,
-            categoryId,
-            description: row.description.trim(),
-            amount: Math.abs(row.amount),
-            type: row.type,
-            date: transactionDate,
-          },
+        const transactionAmount = Math.abs(row.amount);
+
+        await prisma.$transaction(async (tx) => {
+          await tx.transaction.create({
+            data: {
+              userId,
+              accountId,
+              categoryId,
+              description: row.description.trim(),
+              amount: transactionAmount,
+              type: row.type,
+              date: transactionDate,
+            },
+          });
+
+          await tx.account.update({
+            where: {
+              id: accountId,
+            },
+            data: {
+              balance: {
+                increment:
+                  row.type === "income"
+                    ? transactionAmount
+                    : -transactionAmount,
+              },
+            },
+          });
         });
 
         imported++;
