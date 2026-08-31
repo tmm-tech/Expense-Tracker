@@ -59,6 +59,7 @@ interface PreviewRow {
   categoryConfidence?: CategoryConfidence;
 
   needsCategoryReview?: boolean;
+  needsTransferReview?: boolean;
 
   valid?: boolean;
   error?: string;
@@ -560,23 +561,42 @@ export function CSVImport({
       }
 
       if (row.type === "transfer") {
-        return !row.transferAccountId;
+        return row.needsTransferReview || !row.transferAccountId;
       }
 
       return row.needsCategoryReview || !row.categoryId;
     });
   }, [preview]);
-  const uncategorizedRows =
-    useMemo(() => {
-      return preview.filter(
-        (row) => !row.categoryId,
-      );
-    }, [preview]);
+  const uncategorizedRows = useMemo(() => {
+    return preview.filter(
+      (row) =>
+        row.type !== "transfer" &&
+        !row.categoryId
+    );
+  }, [preview]);
 
-  const categorizedRows =
-    preview.length -
-    uncategorizedRows.length;
+  const categorizedRows = useMemo(() => {
+    return preview.filter(
+      (row) =>
+        row.type !== "transfer" &&
+        Boolean(row.categoryId)
+    ).length;
+  }, [preview]);
 
+  const transferRows = useMemo(() => {
+    return preview.filter(
+      (row) => row.type === "transfer"
+    );
+  }, [preview]);
+
+
+  const transfersNeedingReview = useMemo(() => {
+    return preview.filter(
+      (row) =>
+        row.type === "transfer" &&
+        !row.transferAccountId
+    );
+  }, [preview]);
   /*
    * We allow import only when every transaction
    * has a category and there are no validation
@@ -908,13 +928,27 @@ export function CSVImport({
                 {preview.length} transactions
               </Badge>
 
-              <Badge variant="secondary">
-                {categorizedRows} categorized
-              </Badge>
+              {categorizedRows > 0 && (
+                <Badge variant="secondary">
+                  {categorizedRows} categorized
+                </Badge>
+              )}
+
+              {transferRows.length > 0 && (
+                <Badge variant="outline">
+                  {transferRows.length} transfers
+                </Badge>
+              )}
 
               {uncategorizedRows.length > 0 && (
                 <Badge variant="destructive">
                   {uncategorizedRows.length} need category
+                </Badge>
+              )}
+
+              {transfersNeedingReview.length > 0 && (
+                <Badge variant="destructive">
+                  {transfersNeedingReview.length} need transfer destination
                 </Badge>
               )}
 
@@ -1214,19 +1248,15 @@ export function CSVImport({
                   </p>
 
                   <p className="text-xs text-muted-foreground mt-1">
-
                     {uncategorizedRows.length > 0
-                      ? `${uncategorizedRows.length} transaction${uncategorizedRows.length ===
-                        1
-                        ? ""
-                        : "s"
-                      } ${uncategorizedRows.length ===
-                        1
-                        ? "does"
-                        : "do"
+                      ? `${uncategorizedRows.length} transaction${uncategorizedRows.length === 1 ? "" : "s"
+                      } ${uncategorizedRows.length === 1 ? "does" : "do"
                       } not have a category. Select an existing category or create a new one.`
-                      : "Some transactions still require review before they can be imported."}
-
+                      : transfersNeedingReview.length > 0
+                        ? `${transfersNeedingReview.length} transfer${transfersNeedingReview.length === 1 ? "" : "s"
+                        } ${transfersNeedingReview.length === 1 ? "does" : "do"
+                        } not have a destination account.`
+                        : "Some transactions still require review before they can be imported."}
                   </p>
 
                 </div>

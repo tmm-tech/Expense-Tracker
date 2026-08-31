@@ -1023,6 +1023,13 @@ EXPECTED FORMAT:
   ]
 }
 
+IMPORTANT:
+
+- The "type" field may ONLY be "income" or "expense".
+- NEVER return "transfer" as the value of "type".
+- Internal transfers are identified using "isTransfer": true.
+- The backend will convert transactions marked as transfers into the final "transfer" transaction type.
+
 TRANSACTION RULES:
 
 1. Extract ONLY genuine financial transactions.
@@ -1030,15 +1037,16 @@ TRANSACTION RULES:
 3. Do NOT extract closing balances.
 4. Do NOT extract statement totals.
 5. Do NOT extract subtotals.
-6. Do NOT invent transactions.
-7. Preserve transaction descriptions accurately.
-8. Use the actual transaction date.
-9. Date MUST be YYYY-MM-DD.
-10. Amount MUST be a positive number.
-11. Withdrawals, debits, purchases and payments = expense.
-12. Deposits, credits, salary and received money = income.
-13. If a line cannot confidently be interpreted as a transaction, exclude it.
-14. Never ask the user questions.
+6. Do NOT extract running balances as transactions.
+7. Do NOT invent transactions.
+8. Preserve transaction descriptions accurately.
+9. Use the actual transaction date.
+10. Date MUST be in YYYY-MM-DD format.
+11. Amount MUST be a positive number.
+12. Withdrawals, debits, purchases and payments = expense.
+13. Deposits, credits, salary and received money = income.
+14. If a line cannot confidently be interpreted as a genuine transaction, exclude it.
+15. Never ask the user questions.
 
 CATEGORY MATCHING:
 
@@ -1046,7 +1054,7 @@ The following are the user's EXISTING AureX categories:
 
 ${JSON.stringify(categoryList)}
 
-For every transaction:
+For every non-transfer transaction:
 
 - Try to match the transaction to ONE existing category.
 - categoryId MUST be an ID from the supplied category list.
@@ -1066,11 +1074,41 @@ If categoryId is null:
 
 "categoryConfidence": "none"
 
+IMPORTANT TRANSFER RULE:
+
+If a transaction is an internal transfer between the user's own AureX accounts, it MUST be identified as:
+
+"isTransfer": true
+
+The "type" field MUST still be either "income" or "expense".
+
+For an outgoing transfer:
+
+"type": "expense"
+"isTransfer": true
+
+For an incoming transfer:
+
+"type": "income"
+"isTransfer": true
+
+The backend will convert transactions marked with "isTransfer": true into the final "transfer" transaction type.
+
+Do NOT classify an internal transfer as an ordinary income or expense.
+
+Transfers must NEVER receive a categoryId.
+
+For transfers:
+
+"categoryId": null
+"categoryConfidence": "none"
+
 TRANSFER DETECTION:
 
 Some transactions may represent transfers between the user's own AureX accounts.
 
 Examples:
+
 - Transfer to Savings
 - Transfer from Checking
 - M-PESA to Bank
@@ -1078,7 +1116,7 @@ Examples:
 - Funds transferred to another account
 - Internal account transfer
 
-For every transaction, determine whether it appears to be a transfer.
+For every transaction, determine whether it appears to be an internal transfer.
 
 If it is NOT a transfer:
 
@@ -1089,6 +1127,11 @@ If it is NOT a transfer:
 If it IS a transfer:
 
 "isTransfer": true
+
+The "type" field must remain:
+
+- "expense" when money leaves the selected statement account.
+- "income" when money enters the selected statement account.
 
 Try to identify the other AureX account involved.
 
@@ -1111,6 +1154,51 @@ EXISTING AUREX ACCOUNTS:
 
 ${JSON.stringify(accountList)}
 
+TRANSFER EXAMPLES:
+
+Outgoing transfer:
+
+{
+  "date": "YYYY-MM-DD",
+  "description": "Transfer to Savings",
+  "amount": 5000,
+  "type": "expense",
+  "categoryId": null,
+  "categoryConfidence": "none",
+  "isTransfer": true,
+  "transferAccountId": "existing-account-id",
+  "transferConfidence": "high"
+}
+
+Incoming transfer:
+
+{
+  "date": "YYYY-MM-DD",
+  "description": "Transfer from Checking",
+  "amount": 5000,
+  "type": "income",
+  "categoryId": null,
+  "categoryConfidence": "none",
+  "isTransfer": true,
+  "transferAccountId": "existing-account-id",
+  "transferConfidence": "high"
+}
+
+TRANSFER ACCOUNT SAFETY:
+
+- Only select an account from the supplied AureX account list.
+- Never invent or guess an account ID.
+- Do not select the currently selected source account as the transfer destination.
+- If the destination cannot be confidently identified, return null for transferAccountId.
+- If transferAccountId is null, set transferConfidence to "none".
+
+CATEGORY SAFETY:
+
+- Only select categories from the supplied AureX category list.
+- Never invent category IDs.
+- Never assign a category to a transfer.
+- If unsure about a category, return categoryId as null and categoryConfidence as "none".
+
 IMPORTANT:
 
 Return JSON only.
@@ -1120,7 +1208,6 @@ Do not use code fences.
 Do not explain your answer.
 Do not ask questions.
 `,
-
                 },
 
                 {
@@ -1168,24 +1255,43 @@ Do not ask questions.
               continue;
             }
 
+            /*
+   * Determine transaction type.
+   *
+   * AI may return income/expense + isTransfer=true.
+   * In that case, AureX must normalize it to transfer.
+   */
+            const isTransfer = row.isTransfer === true;
+
+            const transactionType = isTransfer
+              ? "transfer"
+              : row.type;
+
+            /*
+             * Only income, expense and transfer
+             * are valid AureX transaction types.
+             */
             if (
-              row.type !== "income" &&
-              row.type !== "expense"
+              !["income", "expense", "transfer"].includes(
+                transactionType
+              )
             ) {
               continue;
             }
+
 
             /* =========================
               VALIDATE TRANSFER
             ========================= */
 
-            let isTransfer = false;
             let transferAccountId = null;
             let transferConfidence = "none";
 
-            if (row.isTransfer === true) {
-              isTransfer = true;
-
+            if (isTransfer) {
+              /*
+               * Only allow another account belonging
+               * to the authenticated user.
+               */
               if (
                 row.transferAccountId &&
                 accounts.some(
@@ -1194,9 +1300,13 @@ Do not ask questions.
                     account.id !== accountId
                 )
               ) {
-                transferAccountId = row.transferAccountId;
+                transferAccountId =
+                  row.transferAccountId;
               }
 
+              /*
+               * Normalize transfer confidence.
+               */
               if (
                 ["high", "medium", "low"].includes(
                   row.transferConfidence
@@ -1205,39 +1315,40 @@ Do not ask questions.
                 transferConfidence =
                   row.transferConfidence;
               } else {
-                transferConfidence = "medium";
+                transferConfidence =
+                  transferAccountId
+                    ? "medium"
+                    : "none";
               }
             }
-
 
             /* =========================
                VALIDATE CATEGORY
             ========================= */
 
             let categoryId = null;
+            let categoryConfidence = "none";
 
-            if (row.categoryId) {
+            /*
+             * Transfers NEVER receive categories.
+             */
+            if (!isTransfer && row.categoryId) {
               const category =
                 categories.find(
                   (category) =>
-                    category.id ===
-                    row.categoryId &&
-                    category.type === row.type
+                    category.id === row.categoryId &&
+                    category.type === transactionType
                 );
 
               if (category) {
                 categoryId = category.id;
               }
             }
-
             /* =========================
                CATEGORY CONFIDENCE
             ========================= */
 
-            let categoryConfidence =
-              "none";
-
-            if (categoryId) {
+            if (!isTransfer && categoryId) {
               if (
                 ["high", "medium", "low"].includes(
                   row.categoryConfidence
@@ -1254,18 +1365,15 @@ Do not ask questions.
             /* =========================
                ADD ROW
             ========================= */
-
             allRows.push({
               date: row.date,
 
               description:
                 row.description.trim(),
 
-              amount: Math.abs(
-                row.amount
-              ),
+              amount: Math.abs(row.amount),
 
-              type: row.type,
+              type: transactionType,
 
               categoryId,
 
@@ -1277,11 +1385,20 @@ Do not ask questions.
 
               transferConfidence,
 
+              /*
+               * Transfers do not require categories.
+               */
               needsCategoryReview:
-                !categoryId ||
-                categoryConfidence === "low" ||
-                categoryConfidence === "none",
+                !isTransfer &&
+                (
+                  !categoryId ||
+                  categoryConfidence === "low" ||
+                  categoryConfidence === "none"
+                ),
 
+              /*
+               * Transfers require a destination account.
+               */
               needsTransferReview:
                 isTransfer &&
                 (
@@ -1346,12 +1463,15 @@ Do not ask questions.
           categorizedRows:
             uniqueRows.filter(
               (row) =>
+                !row.isTransfer &&
                 row.categoryId
             ).length,
 
+            
           uncategorizedRows:
             uniqueRows.filter(
               (row) =>
+                !row.isTransfer &&
                 !row.categoryId
             ).length,
 
