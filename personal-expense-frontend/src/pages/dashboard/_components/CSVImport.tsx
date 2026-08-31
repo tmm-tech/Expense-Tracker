@@ -66,6 +66,9 @@ interface PreviewRow {
   duplicate?: boolean;
 
   originalRow?: number;
+
+  // Transfer destination account
+  transferAccountId?: string | null;
 }
 
 
@@ -94,6 +97,7 @@ interface TransactionCategoryDialogProps {
   type: "income" | "expense" | "transfer";
   onCategoryCreated: (category: Category) => void;
 }
+
 /* ============================================================
    COMPONENT
 ============================================================ */
@@ -188,6 +192,16 @@ export function CSVImport({
   };
 
   /* ============================================================
+     ACCOUNT  HELPERS
+  ============================================================ */
+
+  const getTransferAccounts = (currentAccountId: string) => {
+    return accounts.filter(
+      (account) => account.id !== currentAccountId
+    );
+  };
+
+  /* ============================================================
      UPDATE CATEGORY
   ============================================================ */
   const updateType = (
@@ -209,20 +223,36 @@ export function CSVImport({
           ...row,
           type,
 
-          categoryId: categoryStillValid
-            ? row.categoryId
-            : undefined,
+          categoryId:
+            type === "transfer"
+              ? undefined
+              : categoryStillValid
+                ? row.categoryId
+                : undefined,
 
-          categoryName: categoryStillValid
-            ? currentCategory?.name
-            : undefined,
+          categoryName:
+            type === "transfer"
+              ? undefined
+              : categoryStillValid
+                ? currentCategory?.name
+                : undefined,
 
-          categoryConfidence: categoryStillValid
-            ? row.categoryConfidence
-            : "none",
+          categoryConfidence:
+            type === "transfer"
+              ? "none"
+              : categoryStillValid
+                ? row.categoryConfidence
+                : "none",
 
           needsCategoryReview:
-            !categoryStillValid,
+            type === "transfer"
+              ? false
+              : !categoryStillValid,
+
+          transferAccountId:
+            type === "transfer"
+              ? row.transferAccountId ?? null
+              : null,
         };
       }),
     );
@@ -523,17 +553,19 @@ export function CSVImport({
      REVIEW STATUS
   ============================================================ */
 
-  const rowsNeedingAttention =
-    useMemo(() => {
-      return preview.filter(
-        (row) =>
-          row.needsCategoryReview ||
-          !row.categoryId ||
-          row.valid === false ||
-          row.duplicate,
-      );
-    }, [preview]);
+  const rowsNeedingAttention = useMemo(() => {
+    return preview.filter((row) => {
+      if (row.valid === false || row.duplicate) {
+        return true;
+      }
 
+      if (row.type === "transfer") {
+        return !row.transferAccountId;
+      }
+
+      return row.needsCategoryReview || !row.categoryId;
+    });
+  }, [preview]);
   const uncategorizedRows =
     useMemo(() => {
       return preview.filter(
@@ -958,7 +990,7 @@ export function CSVImport({
                     </th>
 
                     <th className="p-3 text-left min-w-[250px]">
-                      Category
+                      Category / Transfer To
                     </th>
 
                   </tr>
@@ -1077,49 +1109,80 @@ export function CSVImport({
                             </Select>
                           </td>
 
-                          {/* CATEGORY */}
+                          {/* CATEGORY / TRANSFER DESTINATION */}
 
                           <td className="p-3">
-                            <Select
-                              value={row.categoryId || ""}
-                              onValueChange={(value) => {
-                                if (value === "__add_new_category__") {
-                                  openAddCategory(index);
-                                  return;
-                                }
+                            {row.type === "transfer" ? (
+                              <Select
+                                value={row.transferAccountId || ""}
+                                onValueChange={(value) => {
+                                  setPreview((current) =>
+                                    current.map((item, i) =>
+                                      i === index
+                                        ? {
+                                          ...item,
+                                          transferAccountId: value,
+                                        }
+                                        : item
+                                    )
+                                  );
+                                }}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="Transfer to..." />
+                                </SelectTrigger>
 
-                                updateCategory(index, value);
-                              }}
-                            >
-                              <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-
-                              <SelectContent>
-                                {categories
-                                  .filter(
-                                    (category) =>
-                                      category.type === row.type,
-                                  )
-                                  .map((category) => (
+                                <SelectContent>
+                                  {getTransferAccounts(accountId).map((account) => (
                                     <SelectItem
-                                      key={category.id}
-                                      value={category.id}
+                                      key={account.id}
+                                      value={account.id}
                                     >
-                                      {category.name}
+                                      {account.name}
                                     </SelectItem>
                                   ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Select
+                                value={row.categoryId || ""}
+                                onValueChange={(value) => {
+                                  if (value === "__add_new_category__") {
+                                    openAddCategory(index);
+                                    return;
+                                  }
 
-                                {/* ADD CATEGORY */}
+                                  updateCategory(index, value);
+                                }}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
 
-                                <SelectItem
-                                  value="__add_new_category__"
-                                  className="font-medium"
-                                >
-                                  + Add New Category
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                                <SelectContent>
+                                  {categories
+                                    .filter(
+                                      (category) =>
+                                        category.type === row.type,
+                                    )
+                                    .map((category) => (
+                                      <SelectItem
+                                        key={category.id}
+                                        value={category.id}
+                                      >
+                                        {category.name}
+                                      </SelectItem>
+                                    ))}
+
+                                  <SelectItem
+                                    value="__add_new_category__"
+                                    className="font-medium"
+                                  >
+                                    + Add New Category
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
                           </td>
 
                         </tr>

@@ -1469,12 +1469,196 @@ Do not ask questions.
           !Number.isFinite(row.amount) ||
           row.amount <= 0 ||
           Number.isNaN(transactionDate.getTime()) ||
-          !["income", "expense"].includes(row.type)
+          !["income", "expense", "transfer"].includes(row.type)
         ) {
           skipped++;
           continue;
         }
+        /* =========================
+           HANDLE TRANSFER
+        ========================= */
 
+        if (row.type === "transfer") {
+          /*
+           * A transfer must have a destination account.
+           */
+          if (!row.transferAccountId) {
+            skipped++;
+            continue;
+          }
+
+          /*
+           * Prevent transferring to the same account.
+           */
+          if (row.transferAccountId === accountId) {
+            skipped++;
+            continue;
+          }
+
+          /*
+           * Verify destination account belongs
+           * to the authenticated user.
+           */
+          const destinationAccount =
+            await prisma.account.findFirst({
+              where: {
+                id: row.transferAccountId,
+                userId,
+              },
+            });
+
+          if (!destinationAccount) {
+            skipped++;
+            continue;
+          }
+
+          const transferAmount =
+            Math.abs(row.amount);
+
+          /*
+           * Check whether this transfer has
+           * already been imported.
+           *
+           * We check the outgoing transaction
+           * on the source account.
+           */
+          const startOfDay =
+            new Date(transactionDate);
+
+          startOfDay.setHours(
+            0,
+            0,
+            0,
+            0
+          );
+
+          const endOfDay =
+            new Date(transactionDate);
+
+          endOfDay.setHours(
+            23,
+            59,
+            59,
+            999
+          );
+
+          const existingTransfer =
+            await prisma.transaction.findFirst({
+              where: {
+                userId,
+                accountId,
+                amount: transferAmount,
+                type: "transfer",
+                description: row.description,
+                date: {
+                  gte: startOfDay,
+                  lte: endOfDay,
+                },
+              },
+            });
+
+          if (existingTransfer) {
+            duplicates++;
+            continue;
+          }
+
+          /*
+           * Create the transfer and both
+           * transaction records atomically.
+           */
+          await prisma.$transaction(async (tx) => {
+            const transfer =
+              await tx.transfer.create({
+                data: {
+                  userId,
+                  fromAccountId: accountId,
+                  toAccountId:
+                    row.transferAccountId,
+                  amount: transferAmount,
+                  date: transactionDate,
+                  description:
+                    row.description.trim(),
+                },
+              });
+
+            /*
+             * Money leaving source account.
+             */
+            await tx.transaction.create({
+              data: {
+                userId,
+                accountId,
+                categoryId: null,
+                description:
+                  row.description.trim(),
+                amount: transferAmount,
+                type: "transfer",
+                date: transactionDate,
+                transferId: transfer.id,
+                transferAccountId:
+                  row.transferAccountId,
+                transferDirection: "outgoing",
+              },
+            });
+
+            /*
+             * Money entering destination account.
+             */
+            await tx.transaction.create({
+              data: {
+                userId,
+                accountId:
+                  row.transferAccountId,
+                categoryId: null,
+                description:
+                  row.description.trim(),
+                amount: transferAmount,
+                type: "transfer",
+                date: transactionDate,
+                transferId: transfer.id,
+                transferAccountId: accountId,
+                transferDirection: "incoming",
+              },
+            });
+
+            /*
+             * Decrease source balance.
+             */
+            await tx.account.update({
+              where: {
+                id: accountId,
+              },
+              data: {
+                balance: {
+                  decrement: transferAmount,
+                },
+              },
+            });
+
+            /*
+             * Increase destination balance.
+             */
+            await tx.account.update({
+              where: {
+                id: row.transferAccountId,
+              },
+              data: {
+                balance: {
+                  increment: transferAmount,
+                },
+              },
+            });
+          });
+
+          imported++;
+
+          /*
+           * Important:
+           * Do NOT continue into the normal
+           * income/expense transaction logic.
+           */
+          continue;
+        }
         /*
          * Category selected by the user
          * during preview.
