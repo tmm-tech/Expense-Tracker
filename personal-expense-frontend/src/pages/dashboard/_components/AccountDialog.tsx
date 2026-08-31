@@ -75,48 +75,21 @@ export default function AccountDialog({
         body: JSON.stringify(payload),
       }),
 
-    onMutate: async (newAccount) => {
-      await queryClient.cancelQueries({ queryKey: ["accounts"] });
-
-      const previousAccounts =
-        queryClient.getQueryData<Account[]>(["accounts"]) ?? [];
-
-      const optimisticAccount: Account = {
-        id: `temp-${Date.now()}`,
-        ...newAccount,
-      };
-
-      queryClient.setQueryData<Account[]>(
-        ["accounts"],
-        [optimisticAccount, ...previousAccounts],
-      );
-
-      return { previousAccounts };
-    },
-
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+
       toast.success("Account created successfully");
+
       onOpenChange(false);
     },
 
-    onError: (error, _newAccount, context) => {
-      queryClient.setQueryData(
-        ["accounts"],
-        context?.previousAccounts
-      );
-
+    onError: (error) => {
       console.error("CREATE ACCOUNT ERROR:", error);
-      console.error(
-        "CREATE ACCOUNT ERROR JSON:",
-        JSON.stringify(error, null, 2)
-      );
 
       toast.error(
-        `Failed to create account: ${error instanceof Error
+        error instanceof Error
           ? error.message
-          : JSON.stringify(error)
-        }`
+          : "Failed to create account"
       );
     },
 
@@ -129,28 +102,24 @@ export default function AccountDialog({
         body: JSON.stringify(payload),
       }),
 
-    onMutate: async (updatedAccount) => {
-      await queryClient.cancelQueries({ queryKey: ["accounts"] });
-
-      const previousAccounts =
-        queryClient.getQueryData<Account[]>(["accounts"]) ?? [];
-
-      queryClient.setQueryData<Account[]>(["accounts"], (old = []) =>
-        old.map((a) => (a.id === updatedAccount.id ? updatedAccount : a)),
-      );
-
-      return { previousAccounts };
-    },
-
-    onError: (_err, _updatedAccount, context) => {
-      queryClient.setQueryData(["accounts"], context?.previousAccounts);
-      toast.error("Failed to update account");
-    },
-
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({
+        queryKey: ["accounts"],
+      });
+
       toast.success("Account updated successfully");
+
       onOpenChange(false);
+    },
+
+    onError: (error) => {
+      console.error("UPDATE ACCOUNT ERROR:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update account"
+      );
     },
   });
 
