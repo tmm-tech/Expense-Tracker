@@ -15,6 +15,7 @@ import { apiFetch } from "@/lib/api";
 import type { Transaction } from "@/types/transaction";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 /* ---------------- TYPES ---------------- */
 
 interface TransactionListProps {
@@ -118,20 +119,28 @@ export function TransactionList({
                       {format(txDate, "MMM dd, yyyy")}
                     </span>
                   </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-sm text-foreground truncate">
+                        {transaction.description}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <p>
+                        {transaction.description}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                  <p className="text-sm text-foreground truncate">
-                    {transaction.description}
-                  </p>
                 </div>
 
                 {/* Right */}
                 <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-3">
                   <span
-                    className={`text-lg font-bold ${
-                      transaction.type === "income"
-                        ? "text-accent"
-                        : "text-destructive"
-                    }`}
+                    className={`text-lg font-bold ${transaction.type === "income"
+                      ? "text-accent"
+                      : "text-destructive"
+                      }`}
                   >
                     {transaction.type === "income" ? "+" : "-"}
                     KES {transaction.amount.toFixed(2)}

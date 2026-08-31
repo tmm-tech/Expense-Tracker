@@ -94,16 +94,18 @@ export default function AccountDialog({
       return { previousAccounts };
     },
 
+     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      toast.success("Account created successfully");
+      onOpenChange(false);
+    },
+
     onError: (_err, _newAccount, context) => {
       queryClient.setQueryData(["accounts"], context?.previousAccounts);
       toast.error("Failed to create account");
     },
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      toast.success("Account created successfully");
-      onOpenChange(false);
-    },
+   
   });
 
   const updateAccount = useMutation({
@@ -164,7 +166,7 @@ export default function AccountDialog({
     e.preventDefault();
 
     const balanceNum = Number(balance);
-    if (!name.trim() || isNaN(balanceNum)) {
+    if (!name.trim() || !institutionName.trim() || isNaN(balanceNum)) {
       toast.error("Please fill in all required fields correctly");
       return;
     }
@@ -172,7 +174,7 @@ export default function AccountDialog({
     const payload = {
       name: name.trim(),
       type,
-      institution: institutionName || undefined,
+      institution: institutionName.trim(),
       accountNumber: accountNumber || undefined,
       balance: balanceNum,
       currency,

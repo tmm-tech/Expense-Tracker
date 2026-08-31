@@ -35,6 +35,7 @@ import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
 import { Progress } from "@/components/ui/progress";
 import { TransactionCategoryDialog } from "./TransactionCategoryDialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /* ============================================================
    TYPES
@@ -1000,11 +1001,16 @@ export function CSVImport({
                           {/* DESCRIPTION */}
 
                           <td className="p-3 max-w-[320px]">
-
-                            <div className="truncate">
-                              {row.description}
-                            </div>
-
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="truncate">
+                                  {row.description}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm">
+                                <p>{row.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
                             {row.duplicate && (
                               <Badge
                                 variant="secondary"
