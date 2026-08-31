@@ -94,18 +94,32 @@ export default function AccountDialog({
       return { previousAccounts };
     },
 
-     onSuccess: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Account created successfully");
       onOpenChange(false);
     },
 
-    onError: (_err, _newAccount, context) => {
-      queryClient.setQueryData(["accounts"], context?.previousAccounts);
-      toast.error("Failed to create account");
+    onError: (error, _newAccount, context) => {
+      queryClient.setQueryData(
+        ["accounts"],
+        context?.previousAccounts
+      );
+
+      console.error("CREATE ACCOUNT ERROR:", error);
+      console.error(
+        "CREATE ACCOUNT ERROR JSON:",
+        JSON.stringify(error, null, 2)
+      );
+
+      toast.error(
+        `Failed to create account: ${error instanceof Error
+          ? error.message
+          : JSON.stringify(error)
+        }`
+      );
     },
 
-   
   });
 
   const updateAccount = useMutation({
