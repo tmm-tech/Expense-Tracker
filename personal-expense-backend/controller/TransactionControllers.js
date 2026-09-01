@@ -1275,18 +1275,19 @@ Do not ask questions.
           /* =========================
              VALIDATE TRANSACTIONS
           ========================= */
-          let runningBalance = null;
-
-          if (
-            typeof row.runningBalance === "number" &&
-            Number.isFinite(row.runningBalance)
-          ) {
-            runningBalance = row.runningBalance;
-          }
 
 
           for (const row of result.rows) {
             if (!row.date) continue;
+
+            let runningBalance = null;
+
+            if (
+              typeof row.runningBalance === "number" &&
+              Number.isFinite(row.runningBalance)
+            ) {
+              runningBalance = row.runningBalance;
+            }
 
             if (!row.description) continue;
 
@@ -1296,6 +1297,7 @@ Do not ask questions.
             ) {
               continue;
             }
+
 
             /*
    * Determine transaction type.
@@ -1549,6 +1551,25 @@ Do not ask questions.
       }
       const { rows, accountId } = req.body;
 
+      /* =========================
+         VALIDATION
+      ========================= */
+
+      if (!accountId) {
+        return res.status(400).json({
+          success: false,
+          error: "Account is required",
+        });
+      }
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No transactions to import",
+        });
+      }
+
+
       const rowsWithBalance = rows
         .filter(
           (row) =>
@@ -1568,24 +1589,6 @@ Do not ask questions.
 
       const latestStatementBalance =
         latestStatementRow?.runningBalance ?? null;
-
-      /* =========================
-         VALIDATION
-      ========================= */
-
-      if (!accountId) {
-        return res.status(400).json({
-          success: false,
-          error: "Account is required",
-        });
-      }
-
-      if (!Array.isArray(rows) || rows.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: "No transactions to import",
-        });
-      }
 
       /* =========================
          VERIFY ACCOUNT
@@ -1917,8 +1920,6 @@ Do not ask questions.
     CREATE TRANSACTION
     + UPDATE ACCOUNT BALANCE
  ========================= */
-
-        const transactionAmount = Math.abs(row.amount);
 
         await prisma.$transaction(async (tx) => {
           await tx.transaction.create({
