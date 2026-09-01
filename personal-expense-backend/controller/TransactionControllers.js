@@ -1280,15 +1280,6 @@ Do not ask questions.
           for (const row of result.rows) {
             if (!row.date) continue;
 
-            let runningBalance = null;
-
-            if (
-              typeof row.runningBalance === "number" &&
-              Number.isFinite(row.runningBalance)
-            ) {
-              runningBalance = row.runningBalance;
-            }
-
             if (!row.description) continue;
 
             if (
