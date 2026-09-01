@@ -1596,8 +1596,8 @@ Do not ask questions.
 
           failedChunks,
           statement: {
-            openingBalance: null,
-            closingBalance: null,
+            openingBalance,
+            closingBalance,
             currency: account.currency,
           },
         },
