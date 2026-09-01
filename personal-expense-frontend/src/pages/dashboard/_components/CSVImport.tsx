@@ -53,6 +53,7 @@ interface PreviewRow {
   amount: number;
   type: "income" | "expense" | "transfer";
 
+  runningBalance?: number | null;
   categoryId?: string | null;
   categoryName?: string;
 
@@ -69,7 +70,10 @@ interface PreviewRow {
   originalRow?: number;
 
   // Transfer destination account
-  transferAccountId?: string | null;
+  isTransfer: boolean;
+
+  transferAccountId: string | null;
+  transferConfidence: "high" | "medium" | "low" | "none";
 }
 
 
@@ -79,6 +83,9 @@ interface PreviewResponse {
   data: {
     rows: PreviewRow[];
     accountId: string;
+
+    statementOpeningBalance?: number | null;
+    statementClosingBalance?: number | null;
 
     totalRows?: number;
     categorizedRows?: number;
@@ -127,9 +134,11 @@ export function CSVImport({
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryRowIndex, setCategoryRowIndex] = useState<number | null>(null);
+
   const [analysisStage, setAnalysisStage] = useState(
     "Preparing your statement...",
-  );
+  ); const [statementBalance, setStatementBalance] =
+    useState<number | null>(null);
   const analysisMessages = [
     "🔍 Looking for transactions...",
     "🧠 Understanding transaction descriptions...",
@@ -399,6 +408,10 @@ export function CSVImport({
       const rows =
         response?.data?.rows ?? [];
 
+      // setStatementBalance(
+      //   response?.data?.statementBalance ?? null
+      // );
+
       /*
        * Make sure every row has a consistent
        * review state.
@@ -625,6 +638,8 @@ export function CSVImport({
     setPdfPassword("");
 
     setRequiresPassword(false);
+
+    setStatementBalance(null);
   };
 
   /* ============================================================

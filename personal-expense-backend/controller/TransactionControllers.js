@@ -1014,6 +1014,7 @@ EXPECTED FORMAT:
       "description": "string",
       "amount": 0,
       "type": "income",
+      "runningBalance": 0,
       "categoryId": "existing-category-id-or-null",
       "categoryConfidence": "high",
       "isTransfer": false,
@@ -1047,6 +1048,38 @@ TRANSACTION RULES:
 13. Deposits, credits, salary and received money = income.
 14. If a line cannot confidently be interpreted as a genuine transaction, exclude it.
 15. Never ask the user questions.
+
+RUNNING BALANCE:
+
+Bank statements may contain a balance column showing the account balance
+after each transaction.
+
+If a running balance is clearly associated with a genuine transaction,
+extract it as "runningBalance".
+
+IMPORTANT:
+
+- runningBalance is NOT a transaction amount.
+- NEVER create a transaction from a running balance.
+- NEVER treat a running balance as income or expense.
+- runningBalance represents the account balance AFTER that transaction.
+- If no running balance is available or it cannot be confidently identified,
+  return null.
+- Do not infer or invent a running balance.
+
+Example:
+
+Transaction:
+Credit = 3000
+Balance = 62847.62
+
+Return:
+
+{
+  "amount": 3000,
+  "type": "income",
+  "runningBalance": 62847.62
+}
 
 CATEGORY MATCHING:
 
@@ -1242,6 +1275,15 @@ Do not ask questions.
           /* =========================
              VALIDATE TRANSACTIONS
           ========================= */
+          let runningBalance = null;
+
+          if (
+            typeof row.runningBalance === "number" &&
+            Number.isFinite(row.runningBalance)
+          ) {
+            runningBalance = row.runningBalance;
+          }
+
 
           for (const row of result.rows) {
             if (!row.date) continue;
@@ -1375,6 +1417,8 @@ Do not ask questions.
 
               type: transactionType,
 
+              runningBalance,
+
               categoryId,
 
               categoryConfidence,
@@ -1385,9 +1429,6 @@ Do not ask questions.
 
               transferConfidence,
 
-              /*
-               * Transfers do not require categories.
-               */
               needsCategoryReview:
                 !isTransfer &&
                 (
@@ -1396,9 +1437,6 @@ Do not ask questions.
                   categoryConfidence === "none"
                 ),
 
-              /*
-               * Transfers require a destination account.
-               */
               needsTransferReview:
                 isTransfer &&
                 (
@@ -1467,7 +1505,7 @@ Do not ask questions.
                 row.categoryId
             ).length,
 
-            
+
           uncategorizedRows:
             uniqueRows.filter(
               (row) =>
@@ -1669,7 +1707,7 @@ Do not ask questions.
                 accountId,
                 amount: transferAmount,
                 type: "transfer",
-                description: row.description,
+                description: row.description.trim(),
                 date: {
                   gte: startOfDay,
                   lte: endOfDay,
@@ -1813,18 +1851,10 @@ Do not ask questions.
           );
         }
 
-        /*
-         * If still no category exists,
-         * do not create a fake category.
-         */
-
-        if (!categoryId) {
-          uncategorized++;
-        }
-
         /* =========================
            DUPLICATE DETECTION
         ========================= */
+        const transactionAmount = Math.abs(row.amount);
         const startOfDay = new Date(transactionDate);
         startOfDay.setHours(0, 0, 0, 0);
 
@@ -1835,9 +1865,9 @@ Do not ask questions.
           where: {
             userId,
             accountId,
-            amount: row.amount,
+            amount: transactionAmount,
             type: row.type,
-            description: row.description,
+            description: row.description.trim(),
             date: {
               gte: startOfDay,
               lte: endOfDay,
@@ -1848,6 +1878,15 @@ Do not ask questions.
         if (existing) {
           duplicates++;
           continue;
+        }
+
+        /*
+ * If still no category exists,
+ * do not create a fake category.
+ */
+
+        if (!categoryId) {
+          uncategorized++;
         }
 
         /* =========================
