@@ -1514,6 +1514,11 @@ Do not ask questions.
             ).length,
 
           failedChunks,
+          statement: {
+            openingBalance: null,
+            closingBalance: null,
+            currency: account.currency,
+          },
         },
       });
     } catch (err) {
@@ -1544,6 +1549,25 @@ Do not ask questions.
       }
       const { rows, accountId } = req.body;
 
+      const rowsWithBalance = rows
+        .filter(
+          (row) =>
+            typeof row.runningBalance === "number" &&
+            Number.isFinite(row.runningBalance)
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.date).getTime() -
+            new Date(b.date).getTime()
+        );
+
+      const latestStatementRow =
+        rowsWithBalance.length > 0
+          ? rowsWithBalance[rowsWithBalance.length - 1]
+          : null;
+
+      const latestStatementBalance =
+        latestStatementRow?.runningBalance ?? null;
 
       /* =========================
          VALIDATION
@@ -1925,6 +1949,20 @@ Do not ask questions.
         });
 
         imported++;
+      }
+      /* =========================
+   RECONCILE ACCOUNT BALANCE
+========================= */
+
+      if (latestStatementBalance !== null) {
+        await prisma.account.update({
+          where: {
+            id: accountId,
+          },
+          data: {
+            balance: latestStatementBalance,
+          },
+        });
       }
 
       /* =========================
