@@ -1563,6 +1563,41 @@ Do not ask questions.
         }
       }
 
+      /* =========================
+         BALANCE RECONCILIATION
+      ========================= */
+
+      let calculatedClosingBalance = null;
+      let balanceDifference = null;
+      let balanceReconciled = null;
+
+      if (
+        openingBalance !== null &&
+        closingBalance !== null
+      ) {
+        calculatedClosingBalance = openingBalance;
+
+        for (const row of rowsWithBalance) {
+          if (row.type === "income") {
+            calculatedClosingBalance += row.amount;
+          } else if (row.type === "expense") {
+            calculatedClosingBalance -= row.amount;
+          } else if (row.type === "transfer") {
+            if (row.transferDirection === "incoming") {
+              calculatedClosingBalance += row.amount;
+            } else if (row.transferDirection === "outgoing") {
+              calculatedClosingBalance -= row.amount;
+            }
+          }
+        }
+
+        balanceDifference =
+          calculatedClosingBalance - closingBalance;
+
+        balanceReconciled =
+          Math.abs(balanceDifference) < 0.01;
+      }
+
 
       /* =========================
          RESPONSE
@@ -1598,6 +1633,9 @@ Do not ask questions.
           statement: {
             openingBalance,
             closingBalance,
+            calculatedClosingBalance,
+            balanceDifference,
+            balanceReconciled,
             currency: account.currency,
           },
         },
