@@ -1409,6 +1409,13 @@ Do not ask questions.
             /* =========================
                ADD ROW
             ========================= */
+
+            const runningBalance =
+              typeof row.runningBalance === "number" &&
+                Number.isFinite(row.runningBalance)
+                ? row.runningBalance
+                : null;
+
             allRows.push({
               date: row.date,
 
@@ -1430,6 +1437,13 @@ Do not ask questions.
               transferAccountId,
 
               transferConfidence,
+
+              transferDirection:
+                isTransfer
+                  ? row.type === "expense"
+                    ? "outgoing"
+                    : "incoming"
+                  : null,
 
               needsCategoryReview:
                 !isTransfer &&
@@ -1484,6 +1498,80 @@ Do not ask questions.
 
         uniqueRows.push(row);
       }
+
+      /* =========================
+   CALCULATE STATEMENT BALANCES
+========================= */
+
+      const rowsWithBalance = uniqueRows
+        .filter(
+          (row) =>
+            typeof row.runningBalance === "number" &&
+            Number.isFinite(row.runningBalance)
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.date).getTime() -
+            new Date(b.date).getTime()
+        );
+
+      let openingBalance = null;
+      let closingBalance = null;
+
+      if (rowsWithBalance.length > 0) {
+        const firstRow = rowsWithBalance[0];
+        const lastRow =
+          rowsWithBalance[rowsWithBalance.length - 1];
+
+        /*
+         * Closing balance is simply the running balance
+         * after the final transaction.
+         */
+        closingBalance = lastRow.runningBalance;
+
+        /*
+         * Opening balance is the balance immediately
+         * before the first transaction.
+         *
+         * Income / incoming transfer:
+         * opening = running balance - transaction amount
+         *
+         * Expense / outgoing transfer:
+         * opening = running balance + transaction amount
+         */
+        if (
+          firstRow.type === "income"
+        ) {
+          openingBalance =
+            firstRow.runningBalance -
+            firstRow.amount;
+        } else if (
+          firstRow.type === "expense"
+        ) {
+          openingBalance =
+            firstRow.runningBalance +
+            firstRow.amount;
+        } else if (
+          firstRow.type === "transfer"
+        ) {
+          /*
+           * For transfers, use the direction to determine
+           * whether money entered or left the account.
+           */
+          if (
+            firstRow.transferDirection === "incoming"
+          ) {
+            openingBalance =
+              firstRow.runningBalance -
+              firstRow.amount;
+          } else {
+            openingBalance =
+              firstRow.runningBalance +
+              firstRow.amount;
+          }
+        }
+      }
+
 
       /* =========================
          RESPONSE
