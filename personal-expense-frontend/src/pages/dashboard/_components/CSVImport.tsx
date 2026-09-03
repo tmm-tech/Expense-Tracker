@@ -76,16 +76,20 @@ interface PreviewRow {
   transferConfidence: "high" | "medium" | "low" | "none";
 }
 
+interface StatementBalance {
+  openingBalance: number | null;
+  closingBalance: number | null;
+  currency: string;
+}
 
 interface PreviewResponse {
   success: boolean;
 
   data: {
+    statement: StatementBalance | null;
+
     rows: PreviewRow[];
     accountId: string;
-
-    statementOpeningBalance?: number | null;
-    statementClosingBalance?: number | null;
 
     totalRows?: number;
     categorizedRows?: number;
@@ -137,8 +141,10 @@ export function CSVImport({
 
   const [analysisStage, setAnalysisStage] = useState(
     "Preparing your statement...",
-  ); const [statementBalance, setStatementBalance] =
-    useState<number | null>(null);
+  );
+  const [statement, setStatement] =
+    useState<StatementBalance | null>(null);
+
   const analysisMessages = [
     "🔍 Looking for transactions...",
     "🧠 Understanding transaction descriptions...",
@@ -408,9 +414,10 @@ export function CSVImport({
       const rows =
         response?.data?.rows ?? [];
 
-      // setStatementBalance(
-      //   response?.data?.statementBalance ?? null
-      // );
+      const statementData =
+        response?.data?.statement ?? null;
+
+      setStatement(statementData);
 
       /*
        * Make sure every row has a consistent
@@ -639,7 +646,7 @@ export function CSVImport({
 
     setRequiresPassword(false);
 
-    setStatementBalance(null);
+    setStatement(null);
   };
 
   /* ============================================================
@@ -970,6 +977,80 @@ export function CSVImport({
             </div>
 
           </div>
+
+          {/* ======================================================
+              STATEMENT BALANCE RECONCILIATION
+          ====================================================== */}
+
+          {statement && (
+            <div className="rounded-xl border bg-card p-4">
+
+              <div className="flex items-start justify-between gap-4">
+
+                <div>
+                  <h4 className="font-semibold">
+                    Statement Balance
+                  </h4>
+
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Opening and closing balances detected from the statement.
+                  </p>
+                </div>
+
+                <Badge variant="outline">
+                  {statement.currency}
+                </Badge>
+
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                {/* OPENING BALANCE */}
+
+                <div className="rounded-lg border bg-muted/30 p-4">
+
+                  <p className="text-xs text-muted-foreground">
+                    Opening Balance
+                  </p>
+
+                  <p className="mt-1 text-lg font-semibold">
+                    {statement.openingBalance !== null
+                      ? `${statement.currency} ${Number(
+                        statement.openingBalance
+                      ).toLocaleString("en-KE", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`
+                      : "Not detected"}
+                  </p>
+
+                </div>
+
+                {/* CLOSING BALANCE */}
+
+                <div className="rounded-lg border bg-muted/30 p-4">
+
+                  <p className="text-xs text-muted-foreground">
+                    Closing Balance
+                  </p>
+
+                  <p className="mt-1 text-lg font-semibold">
+                    {statement.closingBalance !== null
+                      ? `${statement.currency} ${Number(
+                        statement.closingBalance
+                      ).toLocaleString("en-KE", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`
+                      : "Not detected"}
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
 
           {/* FAILED CHUNKS WARNING */}
 
