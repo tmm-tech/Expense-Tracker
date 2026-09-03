@@ -2095,6 +2095,19 @@ Do not ask questions.
           duplicates,
           uncategorized,
           total: rows.length,
+
+          reconciliation: {
+            performed: latestStatementBalance !== null,
+            statementBalance: latestStatementBalance,
+            accountBalance: account.balance,
+          },
+
+          processing: {
+            transactionsProcessed: rows.length,
+            transfersProcessed: rows.filter(
+              (row) => row.type === "transfer"
+            ).length,
+          },
         },
       });
     } catch (err) {

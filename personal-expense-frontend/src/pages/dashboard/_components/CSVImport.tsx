@@ -501,6 +501,7 @@ export function CSVImport({
         body: JSON.stringify({
           rows,
           accountId,
+          statement,
         }),
       }),
 
