@@ -20,7 +20,6 @@ import {
   CheckCircle2,
   Loader2,
   LockKeyhole,
-  Plus,
   Sparkles,
   Upload,
 } from "lucide-react";
@@ -32,7 +31,6 @@ import {
 import { apiFetch } from "@/lib/api";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
-import type { Transaction } from "@/types/transaction";
 import { Progress } from "@/components/ui/progress";
 import { TransactionCategoryDialog } from "./TransactionCategoryDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -46,6 +44,15 @@ type CategoryConfidence =
   | "medium"
   | "low"
   | "none";
+
+interface ReconciliationResult {
+  income: number;
+  expenses: number;
+  transfers: number;
+  expectedClosing: number | null;
+  difference: number | null;
+  reconciled: boolean | null;
+}
 
 interface PreviewRow {
   date: string;
@@ -96,18 +103,6 @@ interface PreviewResponse {
     uncategorizedRows?: number;
     failedChunks?: number[];
   };
-}
-
-interface CategoryCreateResponse {
-  success: boolean;
-  data: Category;
-}
-
-interface TransactionCategoryDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  type: "income" | "expense" | "transfer";
-  onCategoryCreated: (category: Category) => void;
 }
 
 /* ============================================================
@@ -162,10 +157,17 @@ export function CSVImport({
   };
 
   useEffect(() => {
-    if (!isAnalyzing) return;
+    if (!isAnalyzing) {
+      setMessageIndex(0);
+      return;
+    }
 
     const interval = setInterval(() => {
       setAnalysisProgress((current) => {
+
+        setMessageIndex((current) => {
+          return (current + 1) % analysisMessages.length;
+        });
         /*
          * Never visually reach 100% until
          * the backend actually responds.
@@ -316,33 +318,6 @@ export function CSVImport({
       queryKey: ["categories"],
     });
   };
-
-  /* ============================================================
-     CREATE CATEGORY
-  ============================================================ */
-
-  const createCategory = useMutation({
-    mutationFn: async ({
-      name,
-      type,
-    }: {
-      name: string;
-      type: "income" | "expense" | "transfer";
-    }) => {
-      return apiFetch<CategoryCreateResponse>(
-        "/categories",
-        {
-          method: "POST",
-
-          body: JSON.stringify({
-            name,
-            type,
-          }),
-        },
-      );
-    },
-  });
-
   /* ============================================================
      PREVIEW IMPORT
   ============================================================ */
@@ -358,7 +333,9 @@ export function CSVImport({
       }
 
       setIsAnalyzing(true);
+      setMessageIndex(0);
       setAnalysisProgress(5);
+
       setAnalysisStage(
         file.type === "application/pdf"
           ? "Reading your PDF statement..."
@@ -617,6 +594,69 @@ export function CSVImport({
         !row.transferAccountId
     );
   }, [preview]);
+
+  const reconciliation = useMemo<ReconciliationResult>(() => {
+    if (!statement) {
+      return {
+        income: 0,
+        expenses: 0,
+        transfers: 0,
+        expectedClosing: null,
+        difference: null,
+        reconciled: null,
+      };
+    }
+
+    const income = preview
+      .filter((row) => row.type === "income")
+      .reduce((total, row) => total + Number(row.amount || 0), 0);
+
+    const expenses = preview
+      .filter((row) => row.type === "expense")
+      .reduce((total, row) => total + Number(row.amount || 0), 0);
+
+    const transfers = preview
+      .filter((row) => row.type === "transfer")
+      .reduce((total, row) => total + Number(row.amount || 0), 0);
+
+    if (
+      statement.openingBalance === null ||
+      statement.closingBalance === null
+    ) {
+      return {
+        income,
+        expenses,
+        transfers,
+        expectedClosing: null,
+        difference: null,
+        reconciled: null,
+      };
+    }
+
+    /*
+     * For now, transfers are excluded from the balance calculation.
+     *
+     * This is intentional until the import rows expose the direction
+     * of a transfer relative to the selected account.
+     */
+    const expectedClosing =
+      Number(statement.openingBalance) +
+      income -
+      expenses;
+
+    const difference =
+      Number(statement.closingBalance) -
+      expectedClosing;
+
+    return {
+      income,
+      expenses,
+      transfers,
+      expectedClosing,
+      difference,
+      reconciled: Math.abs(difference) < 0.01,
+    };
+  }, [preview, statement]);
   /*
    * We allow import only when every transaction
    * has a category and there are no validation
@@ -905,7 +945,10 @@ export function CSVImport({
 
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
 
-              <p className="text-sm">
+              <p
+                key={messageIndex}
+                className="text-sm animate-in fade-in duration-500"
+              >
                 {analysisMessages[messageIndex]}
               </p>
 
@@ -989,11 +1032,12 @@ export function CSVImport({
 
                 <div>
                   <h4 className="font-semibold">
-                    Statement Balance
+                    Statement Reconciliation
                   </h4>
 
                   <p className="text-xs text-muted-foreground mt-1">
-                    Opening and closing balances detected from the statement.
+                    Compare the statement balances with the transactions
+                    detected by AureX.
                   </p>
                 </div>
 
@@ -1003,12 +1047,11 @@ export function CSVImport({
 
               </div>
 
+              {/* BALANCES */}
+
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-                {/* OPENING BALANCE */}
-
                 <div className="rounded-lg border bg-muted/30 p-4">
-
                   <p className="text-xs text-muted-foreground">
                     Opening Balance
                   </p>
@@ -1023,15 +1066,11 @@ export function CSVImport({
                       })}`
                       : "Not detected"}
                   </p>
-
                 </div>
 
-                {/* CLOSING BALANCE */}
-
                 <div className="rounded-lg border bg-muted/30 p-4">
-
                   <p className="text-xs text-muted-foreground">
-                    Closing Balance
+                    Statement Closing Balance
                   </p>
 
                   <p className="mt-1 text-lg font-semibold">
@@ -1044,10 +1083,142 @@ export function CSVImport({
                       })}`
                       : "Not detected"}
                   </p>
-
                 </div>
 
               </div>
+
+              {/* TRANSACTION MOVEMENT */}
+
+              {reconciliation.expectedClosing !== null && (
+                <div className="mt-4 rounded-lg border p-4">
+
+                  <p className="text-sm font-medium">
+                    Transaction Movement
+                  </p>
+
+                  <div className="mt-3 space-y-2 text-sm">
+
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Income
+                      </span>
+
+                      <span className="font-medium">
+                        +{statement.currency}{" "}
+                        {reconciliation.income.toLocaleString("en-KE", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Expenses
+                      </span>
+
+                      <span className="font-medium">
+                        -{statement.currency}{" "}
+                        {reconciliation.expenses.toLocaleString("en-KE", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+
+                    {reconciliation.transfers > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Transfers
+                        </span>
+
+                        <span className="font-medium">
+                          {statement.currency}{" "}
+                          {reconciliation.transfers.toLocaleString("en-KE", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="border-t pt-2 flex justify-between font-semibold">
+                      <span>
+                        Expected Closing
+                      </span>
+
+                      <span>
+                        {statement.currency}{" "}
+                        {reconciliation.expectedClosing.toLocaleString("en-KE", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* RECONCILIATION RESULT */}
+
+              {reconciliation.reconciled === true && (
+                <div className="mt-4 rounded-lg border border-green-500/30 bg-green-500/5 p-4">
+
+                  <div className="flex items-start gap-3">
+
+                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+
+                    <div>
+                      <p className="text-sm font-medium">
+                        Statement reconciles
+                      </p>
+
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        The detected transactions account for the
+                        statement closing balance.
+                      </p>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {reconciliation.reconciled === false && (
+                <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4">
+
+                  <div className="flex items-start gap-3">
+
+                    <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+
+                    <div className="min-w-0">
+
+                      <p className="text-sm font-medium">
+                        Statement does not fully reconcile
+                      </p>
+
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        The detected transactions differ from the
+                        statement closing balance by{" "}
+                        <span className="font-medium text-foreground">
+                          {statement.currency}{" "}
+                          {Math.abs(
+                            reconciliation.difference ?? 0
+                          ).toLocaleString("en-KE", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>.
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
 
             </div>
           )}
@@ -1132,18 +1303,9 @@ export function CSVImport({
                   {preview.map(
                     (row, index) => {
 
-                      const rowCategories =
-                        getCategoriesForType(
-                          row.type,
-                        );
-
                       const needsCategory =
                         !row.categoryId;
 
-                      const matchedCategory =
-                        findCategory(
-                          row.categoryId,
-                        );
 
                       return (
                         <tr
