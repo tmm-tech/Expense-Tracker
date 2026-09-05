@@ -38,9 +38,31 @@ export function TransactionList({
 
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch(`/transactions/${id}`, {
-        method: "DELETE",
-      });
+      const transaction = transactions.find((t) => t.id === id);
+
+      if (!transaction) {
+        toast.error("Transaction not found");
+        return;
+      }
+
+      if (transaction.type === "transfer") {
+        if (!transaction.transferId) {
+          toast.error("Transfer ID is missing");
+          return;
+        }
+
+        await apiFetch(`/transfer/${transaction.transferId}`, {
+          method: "DELETE",
+        });
+
+        toast.success("Transfer deleted");
+      } else {
+        await apiFetch(`/transactions/${id}`, {
+          method: "DELETE",
+        });
+
+        toast.success("Transaction deleted");
+      }
 
       await queryClient.invalidateQueries({
         queryKey: ["transactions"],
@@ -49,10 +71,9 @@ export function TransactionList({
       await queryClient.invalidateQueries({
         queryKey: ["accounts"],
       });
-
-      toast.success("Transaction deleted");
     } catch (error) {
       console.error("Delete transaction error:", error);
+
       toast.error(
         error instanceof Error
           ? error.message

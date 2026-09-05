@@ -724,6 +724,132 @@ module.exports = {
     }
   },
   /* ===========================
+     DELETE TRANSFER
+  ============================ */
+  
+  deleteTransfer: async (req, res) => {
+    const userId = req.user?.id || req.user?.sub;
+
+    try {
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const transferId = req.params.id;
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Find the transfer belonging to this user
+        const existingTransfer = await tx.transfer.findFirst({
+          where: {
+            id: transferId,
+            userId,
+          },
+        });
+
+        if (!existingTransfer) {
+          throw new Error("Transfer not found");
+        }
+
+        // Find both transactions belonging to the transfer
+        const transferTransactions = await tx.transaction.findMany({
+          where: {
+            transferId,
+            userId,
+          },
+        });
+
+        const outgoingTransaction = transferTransactions.find(
+          (transaction) =>
+            transaction.transferDirection === "outgoing"
+        );
+
+        const incomingTransaction = transferTransactions.find(
+          (transaction) =>
+            transaction.transferDirection === "incoming"
+        );
+
+        if (!outgoingTransaction || !incomingTransaction) {
+          throw new Error(
+            "Transfer transactions are incomplete"
+          );
+        }
+
+        // Reverse the original transfer balances
+        await tx.account.update({
+          where: {
+            id: outgoingTransaction.accountId,
+          },
+          data: {
+            balance: {
+              increment: existingTransfer.amount,
+            },
+          },
+        });
+
+        await tx.account.update({
+          where: {
+            id: incomingTransaction.accountId,
+          },
+          data: {
+            balance: {
+              decrement: existingTransfer.amount,
+            },
+          },
+        });
+
+        // Delete the two transaction records
+        await tx.transaction.deleteMany({
+          where: {
+            transferId,
+            userId,
+          },
+        });
+
+        // Delete the transfer record
+        const deletedTransfer = await tx.transfer.delete({
+          where: {
+            id: transferId,
+          },
+        });
+
+        return deletedTransfer;
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Transfer deleted successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Delete transfer error:", error);
+
+      if (error.message === "Transfer not found") {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (
+        error.message ===
+        "Transfer transactions are incomplete"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete transfer",
+      });
+    }
+  },
+  /* ===========================
      GET TRANSACTIONS
   ============================ */
   getTransactions: async (req, res) => {
