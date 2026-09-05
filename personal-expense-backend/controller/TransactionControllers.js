@@ -1489,7 +1489,7 @@ module.exports = {
 
               const adjustment =
                 transaction.type === "income"
-                  ? currentAdjustment.subtract(
+                  ? currentAdjustment.sub(
                     transaction.amount
                   )
                   : currentAdjustment.add(
@@ -1631,7 +1631,7 @@ module.exports = {
 
               accountAdjustments.set(
                 incoming.accountId,
-                destinationAdjustment.subtract(
+                destinationAdjustment.sub(
                   transfer.amount
                 )
               );
