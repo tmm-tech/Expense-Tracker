@@ -108,8 +108,10 @@ export function TransactionDialog({
     onMutate: async (newTx) => {
       await queryClient.cancelQueries({ queryKey: ["transactions"] });
 
-      const previous =
-        queryClient.getQueryData<Transaction[]>(["transactions"]) ?? [];
+      const cached =
+        queryClient.getQueryData<Transaction[]>(["transactions"]);
+
+      const previous = Array.isArray(cached) ? cached : [];
 
       const optimisticTx: Transaction = {
         id: `temp-${Date.now()}`,
