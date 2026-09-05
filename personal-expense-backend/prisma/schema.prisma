@@ -62,7 +62,7 @@ model Account {
   accountNumber String?
   type          String
   currency      String
-  balance       Float
+  balance Decimal @db.Decimal(15, 2)
   userId        String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -80,7 +80,7 @@ model AccountSnapshot {
   id         String           @id @default(uuid())
   accountId  String
   snapshotId String
-  balance    Float
+  balance Decimal @db.Decimal(15, 2)
   account    Account          @relation(fields: [accountId], references: [id])
   snapshot   NetWorthSnapshot @relation(fields: [snapshotId], references: [id])
 }
@@ -108,7 +108,7 @@ model Transfer {
   fromAccountId String
   toAccountId   String
 
-  amount      Float
+  amount      Decimal @db.Decimal(15, 2)
   date        DateTime
   description String?
 
@@ -133,7 +133,7 @@ model Transaction {
   categoryId String?
 
   type        String
-  amount      Float
+  amount      Decimal @db.Decimal(15, 2)
   description String?
   date        DateTime
 
@@ -188,7 +188,7 @@ model ImportBatch {
 
 model Budget {
   id         String   @id @default(uuid())
-  limit      Float
+  limit      Decimal @db.Decimal(15, 2)
   period     String
   startDate  DateTime
   userId     String
@@ -210,8 +210,8 @@ model Goal {
   id            String     @id @default(uuid())
   userId        String
   name          String
-  targetAmount  Float
-  currentAmount Float      @default(0)
+  targetAmount  Decimal @db.Decimal(15, 2)
+  currentAmount Decimal @default(0) @db.Decimal(15, 2)
   status        GoalStatus @default(active)
   startDate     DateTime
   endDate       DateTime?
@@ -227,10 +227,10 @@ model Debt {
   name           String
   type           String
   creditor       String
-  originalAmount Float
-  currentBalance Float
+  originalAmount Decimal @db.Decimal(15, 2)
+  currentBalance Decimal @db.Decimal(15, 2)
+  minimumPayment Decimal @db.Decimal(15, 2)
   interestRate   Float
-  minimumPayment Float
   dueDay         Int
   startDate      DateTime
   notes          String
@@ -246,7 +246,7 @@ model Debt {
 model DebtPayment {
   id     String   @id @default(uuid())
   debtId String
-  amount Float
+  amount Decimal @db.Decimal(15, 2)
   paidAt DateTime @default(now())
 
   debt Debt @relation(fields: [debtId], references: [id])
@@ -258,7 +258,7 @@ model Bill {
   id         String        @id @default(uuid())
   userId     String
   name       String
-  amount     Float
+  amount     Decimal @db.Decimal(15, 2)
   dueDay     Int
   frequency  BillFrequency
   isPaid     Boolean       @default(false)
@@ -295,18 +295,18 @@ model Investment {
   name          String
   type          String
   provider      String?
-  principal     Float
-  currentValue  Float
-  contribution  Float?
+  principal     Decimal @db.Decimal(15, 2)
+  currentValue  Decimal @db.Decimal(15, 2)
+  contribution  Decimal? @db.Decimal(15, 2)
+  purchasePrice Decimal? @db.Decimal(15, 2)
+  currentPrice  Decimal? @db.Decimal(15, 2)
+  premium       Decimal? @db.Decimal(15, 2)
+  sumAssured    Decimal? @db.Decimal(15, 2)
   startDate     DateTime
   notes         String?
   createdAt     DateTime  @default(now())
   symbol        String?
   quantity      Float?
-  purchasePrice Float?
-  currentPrice  Float?
-  premium       Float?
-  sumAssured    Float?
   maturityDate  DateTime?
 
   user User @relation(fields: [userId], references: [id])
@@ -319,7 +319,7 @@ model Recurring {
   userId      String
   accountId   String
   description String
-  amount      Float
+  amount      Decimal @db.Decimal(15, 2)
   type        String // "income" | "expense"
   categoryId  String
   frequency   String // "daily" | "weekly" | "monthly" | "yearly"
@@ -344,8 +344,8 @@ model SavingsChallenge {
   name        String
   description String?
 
-  targetAmount  Decimal @db.Decimal(12, 2)
-  currentAmount Decimal @default(0) @db.Decimal(12, 2)
+  targetAmount  Decimal @db.Decimal(15, 2)
+  currentAmount Decimal @default(0) @db.Decimal(15, 2)
 
   startDate DateTime
   endDate   DateTime
@@ -367,7 +367,7 @@ model NetWorth {
   id        String             @id @default(uuid())
   userId    String
   date      DateTime           @default(now())
-  value     Float
+  value     Decimal @db.Decimal(15, 2)
   snapshots NetWorthSnapshot[]
 
   // relations
@@ -381,14 +381,14 @@ model NetWorthSnapshot {
   netWorthId       String
   userId           String
   date             DateTime @default(now())
-  assets           Float
-  liabilities      Float
-  totalAssets      Float
-  totalLiabilities Float
+  assets           Decimal @db.Decimal(15, 2)
+  liabilities      Decimal @db.Decimal(15, 2)
+  totalAssets      Decimal @db.Decimal(15, 2)
+  totalLiabilities Decimal @db.Decimal(15, 2)
+  cash             Decimal? @db.Decimal(15, 2)
+  investments      Decimal? @db.Decimal(15, 2)
+  debts            Decimal? @db.Decimal(15, 2)
   notes            String?
-  cash             Float?
-  investments      Float?
-  debts            Float?
 
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   netWorth        NetWorth?         @relation(fields: [netWorthId], references: [id])

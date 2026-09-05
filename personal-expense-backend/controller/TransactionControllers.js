@@ -1,3 +1,4 @@
+const { Prisma } = require("@prisma/client");
 const { prisma } = require("../src/lib/prism");
 const { matchCategory } = require("../utils/categoryMatcher");
 const pdf = require("pdf-parse");
@@ -9,17 +10,6 @@ const { openai } = require("../src/lib/openai.js");
  * NOTE:
  * req.user.id is assumed to be set by auth middleware
  */
-
-const chunkText = (text, maxCharacters = 12000) => {
-  const chunks = [];
-
-  for (let i = 0; i < text.length; i += maxCharacters) {
-    chunks.push(text.slice(i, i + maxCharacters));
-  }
-
-  return chunks;
-};
-
 module.exports = {
 
   /* ===========================
@@ -76,6 +66,7 @@ module.exports = {
           message: "Amount must be greater than zero",
         });
       }
+      const decimalAmount = new Prisma.Decimal(amount);
 
       const transactionDate = new Date(date);
 
@@ -179,7 +170,7 @@ module.exports = {
             accountId,
             categoryId: categoryId || null,
 
-            amount: numericAmount,
+            amount: decimalAmount,
             date: transactionDate,
             type,
 
@@ -205,7 +196,7 @@ module.exports = {
             },
             data: {
               balance: {
-                increment: numericAmount,
+                increment: decimalAmount,
               },
             },
           });
@@ -218,7 +209,7 @@ module.exports = {
             },
             data: {
               balance: {
-                decrement: numericAmount,
+                decrement: decimalAmount,
               },
             },
           });
@@ -236,7 +227,7 @@ module.exports = {
               },
               data: {
                 balance: {
-                  decrement: numericAmount,
+                  decrement: decimalAmount,
                 },
               },
             });
@@ -249,7 +240,7 @@ module.exports = {
               },
               data: {
                 balance: {
-                  increment: numericAmount,
+                  increment: decimalAmount,
                 },
               },
             });
@@ -329,6 +320,7 @@ module.exports = {
           message: "Transfer amount must be greater than zero",
         });
       }
+      const decimalAmount = new Prisma.Decimal(amount);
 
       const transferDate = new Date(date);
 
@@ -369,23 +361,19 @@ module.exports = {
             userId,
             fromAccountId,
             toAccountId,
-            amount: numericAmount,
+            amount: decimalAmount,
             date: transferDate,
             description: description || null,
           },
         });
 
-        /*
-         * Transaction representing money leaving
-         * the source account.
-         */
         const outgoingTransaction =
           await tx.transaction.create({
             data: {
               userId,
               accountId: fromAccountId,
               categoryId: null,
-              amount: numericAmount,
+              amount: decimalAmount,
               date: transferDate,
               type: "transfer",
               description:
@@ -397,17 +385,13 @@ module.exports = {
             },
           });
 
-        /*
-         * Transaction representing money entering
-         * the destination account.
-         */
         const incomingTransaction =
           await tx.transaction.create({
             data: {
               userId,
               accountId: toAccountId,
               categoryId: null,
-              amount: numericAmount,
+              amount: decimalAmount,
               date: transferDate,
               type: "transfer",
               description:
@@ -419,30 +403,24 @@ module.exports = {
             },
           });
 
-        /*
-         * Decrease source account.
-         */
         await tx.account.update({
           where: {
             id: fromAccountId,
           },
           data: {
             balance: {
-              decrement: numericAmount,
+              decrement: decimalAmount,
             },
           },
         });
 
-        /*
-         * Increase destination account.
-         */
         await tx.account.update({
           where: {
             id: toAccountId,
           },
           data: {
             balance: {
-              increment: numericAmount,
+              increment: decimalAmount,
             },
           },
         });
@@ -513,6 +491,7 @@ module.exports = {
           message: "Amount must be greater than zero",
         });
       }
+      const decimalAmount = new Prisma.Decimal(amount);
 
       if (!date) {
         return res.status(400).json({
@@ -616,7 +595,7 @@ module.exports = {
           },
           data: {
             balance: {
-              decrement: transferAmount,
+              decrement: decimalAmount,
             },
           },
         });
@@ -627,7 +606,7 @@ module.exports = {
           },
           data: {
             balance: {
-              increment: transferAmount,
+              increment: decimalAmount,
             },
           },
         });
@@ -641,7 +620,7 @@ module.exports = {
           data: {
             fromAccountId,
             toAccountId,
-            amount: transferAmount,
+            amount: decimalAmount,
             description: description?.trim() || null,
             date: new Date(date),
           },
@@ -656,7 +635,7 @@ module.exports = {
             },
             data: {
               accountId: fromAccountId,
-              amount: transferAmount,
+              amount: decimalAmount,
               description: description?.trim() || null,
               date: new Date(date),
               type: "transfer",
@@ -675,7 +654,7 @@ module.exports = {
             },
             data: {
               accountId: toAccountId,
-              amount: transferAmount,
+              amount: decimalAmount,
               description: description?.trim() || null,
               date: new Date(date),
               type: "transfer",
@@ -726,7 +705,7 @@ module.exports = {
   /* ===========================
      DELETE TRANSFER
   ============================ */
-  
+
   deleteTransfer: async (req, res) => {
     const userId = req.user?.id || req.user?.sub;
 
@@ -966,7 +945,7 @@ module.exports = {
       const transaction = await prisma.transaction.findFirst({
         where: {
           id: req.params.id,
-          userId: req.user.id,
+          userId,
         },
       });
 
@@ -1127,44 +1106,48 @@ module.exports = {
          * Income previously increased the account.
          * Expense previously decreased the account.
          */
-        const oldBalanceAdjustment =
-          existing.type === "income"
-            ? -Number(existing.amount)
-            : Number(existing.amount);
+        const oldAmount = existing.amount;
+        const newAmount = new Prisma.Decimal(amount);
 
-        await tx.account.update({
-          where: {
-            id: oldAccount.id,
-          },
-          data: {
-            balance: {
-              increment: oldBalanceAdjustment,
+        if (existing.type === "income") {
+          await tx.account.update({
+            where: { id: oldAccount.id },
+            data: {
+              balance: {
+                decrement: oldAmount,
+              },
             },
-          },
-        });
-
-        /*
-         * Apply the new transaction's effect.
-         *
-         * Income increases the account.
-         * Expense decreases the account.
-         */
-        const newBalanceAdjustment =
-          type === "income"
-            ? amountNum
-            : -amountNum;
-
-        await tx.account.update({
-          where: {
-            id: newAccount.id,
-          },
-          data: {
-            balance: {
-              increment: newBalanceAdjustment,
+          });
+        } else {
+          await tx.account.update({
+            where: { id: oldAccount.id },
+            data: {
+              balance: {
+                increment: oldAmount,
+              },
             },
-          },
-        });
+          });
+        }
 
+        if (type === "income") {
+          await tx.account.update({
+            where: { id: newAccount.id },
+            data: {
+              balance: {
+                increment: newAmount,
+              },
+            },
+          });
+        } else {
+          await tx.account.update({
+            where: { id: newAccount.id },
+            data: {
+              balance: {
+                decrement: newAmount,
+              },
+            },
+          });
+        }
         // Update the transaction
         return await tx.transaction.update({
           where: {
@@ -1173,7 +1156,7 @@ module.exports = {
           data: {
             type,
             categoryId: categoryId || null,
-            amount: amountNum,
+            amount: newAmount,
             description: String(description).trim(),
             date: transactionDate,
             accountId,
@@ -1293,21 +1276,30 @@ module.exports = {
          * Expense originally decreased the balance,
          * so deleting it increases the balance.
          */
-        const balanceAdjustment =
-          existing.type === "income"
-            ? -Number(existing.amount)
-            : Number(existing.amount);
-
-        await tx.account.update({
-          where: {
-            id: account.id,
-          },
-          data: {
-            balance: {
-              increment: balanceAdjustment,
+        if (existing.type === "income") {
+          await tx.account.update({
+            where: {
+              id: account.id,
             },
-          },
-        });
+            data: {
+              balance: {
+                decrement: existing.amount,
+              },
+            },
+          });
+        } else {
+          await tx.account.update({
+            where: {
+              id: account.id,
+            },
+            data: {
+              balance: {
+                increment: existing.amount,
+              },
+            },
+          });
+        }
+
 
         // Delete the transaction
         return await tx.transaction.delete({
@@ -2369,7 +2361,7 @@ Do not ask questions.
         });
       }
 
-      const startingBalance = Number(account.balance);
+      const startingBalance = new Prisma.Decimal(account.balance);
 
       /* =========================
          GET USER CATEGORIES
@@ -2402,8 +2394,11 @@ Do not ask questions.
       let duplicates = 0;
       let uncategorized = 0;
       let transfers = 0;
-      let income = 0;
-      let expenses = 0;
+
+      let income = new Prisma.Decimal(0);
+      let expenses = new Prisma.Decimal(0);
+      let transferOut = new Prisma.Decimal(0);
+      let transferIn = new Prisma.Decimal(0);
 
       /* =========================
          IMPORT TRANSACTIONS
@@ -2425,13 +2420,25 @@ Do not ask questions.
           continue;
         }
 
-        const transactionAmount = Math.abs(row.amount);
+        const transactionAmount = new Prisma.Decimal(
+          Math.abs(row.amount)
+        );
 
         /* =========================
            HANDLE TRANSFER
         ========================= */
 
         if (row.type === "transfer") {
+
+          if (
+            !["outgoing", "incoming"].includes(
+              row.transferDirection
+            )
+          ) {
+            skipped++;
+            continue;
+          }
+
           if (!row.transferAccountId) {
             skipped++;
             continue;
@@ -2482,12 +2489,22 @@ Do not ask questions.
           }
 
           await prisma.$transaction(async (tx) => {
+            const fromAccountId =
+              row.transferDirection === "outgoing"
+                ? accountId
+                : row.transferAccountId;
+
+            const toAccountId =
+              row.transferDirection === "outgoing"
+                ? row.transferAccountId
+                : accountId;
+
             const transfer =
               await tx.transfer.create({
                 data: {
                   userId,
-                  fromAccountId: accountId,
-                  toAccountId: row.transferAccountId,
+                  fromAccountId,
+                  toAccountId,
                   amount: transactionAmount,
                   date: transactionDate,
                   description: row.description.trim(),
@@ -2495,40 +2512,37 @@ Do not ask questions.
               });
 
             /*
-             * OUTGOING
+             * OUTGOING TRANSACTION
              */
-
             await tx.transaction.create({
               data: {
                 userId,
-                accountId,
+                accountId: fromAccountId,
                 categoryId: null,
                 description: row.description.trim(),
                 amount: transactionAmount,
                 type: "transfer",
                 date: transactionDate,
                 transferId: transfer.id,
-                transferAccountId:
-                  row.transferAccountId,
+                transferAccountId: toAccountId,
                 transferDirection: "outgoing",
               },
             });
 
             /*
-             * INCOMING
+             * INCOMING TRANSACTION
              */
-
             await tx.transaction.create({
               data: {
                 userId,
-                accountId: row.transferAccountId,
+                accountId: toAccountId,
                 categoryId: null,
                 description: row.description.trim(),
                 amount: transactionAmount,
                 type: "transfer",
                 date: transactionDate,
                 transferId: transfer.id,
-                transferAccountId: accountId,
+                transferAccountId: fromAccountId,
                 transferDirection: "incoming",
               },
             });
@@ -2536,10 +2550,9 @@ Do not ask questions.
             /*
              * SOURCE ACCOUNT
              */
-
             await tx.account.update({
               where: {
-                id: accountId,
+                id: fromAccountId,
               },
               data: {
                 balance: {
@@ -2551,10 +2564,9 @@ Do not ask questions.
             /*
              * DESTINATION ACCOUNT
              */
-
             await tx.account.update({
               where: {
-                id: row.transferAccountId,
+                id: toAccountId,
               },
               data: {
                 balance: {
@@ -2566,6 +2578,12 @@ Do not ask questions.
 
           imported++;
           transfers++;
+
+          if (row.transferDirection === "outgoing") {
+            transferOut = transferOut.add(transactionAmount);
+          } else {
+            transferIn = transferIn.add(transactionAmount);
+          }
 
           continue;
         }
@@ -2652,29 +2670,39 @@ Do not ask questions.
             },
           });
 
-          await tx.account.update({
-            where: {
-              id: accountId,
-            },
-            data: {
-              balance: {
-                increment:
-                  row.type === "income"
-                    ? transactionAmount
-                    : -transactionAmount,
+          if (row.type === "income") {
+            await tx.account.update({
+              where: {
+                id: accountId,
               },
-            },
-          });
+              data: {
+                balance: {
+                  increment: transactionAmount,
+                },
+              },
+            });
+          } else {
+            await tx.account.update({
+              where: {
+                id: accountId,
+              },
+              data: {
+                balance: {
+                  decrement: transactionAmount,
+                },
+              },
+            });
+          }
         });
 
         imported++;
 
         if (row.type === "income") {
-          income += transactionAmount;
+          income = income.add(transactionAmount);
         }
 
         if (row.type === "expense") {
-          expenses += transactionAmount;
+          expenses = expenses.add(transactionAmount);
         }
       }
 
@@ -2685,13 +2713,15 @@ Do not ask questions.
       const statementClosing =
         statement?.closingBalance !== null &&
           statement?.closingBalance !== undefined
-          ? Number(statement.closingBalance)
+          ? new Prisma.Decimal(statement.closingBalance)
           : null;
 
       const calculatedClosing =
-        startingBalance +
-        income -
-        expenses;
+        startingBalance
+          .add(income)
+          .subtract(expenses)
+          .add(transferIn)
+          .subtract(transferOut);
 
       let reconciliation = {
         performed: false,
@@ -2707,20 +2737,20 @@ Do not ask questions.
        */
 
       if (statementClosing !== null) {
+
         const difference =
-          statementClosing -
-          calculatedClosing;
+          statementClosing.subtract(calculatedClosing);
 
         reconciliation = {
           performed: true,
-          reconciled:
-            Math.abs(difference) < 0.01,
+          reconciled: difference.abs().lessThan(
+            new Prisma.Decimal("0.01")
+          ),
           startingBalance,
           calculatedClosing,
           statementClosing,
           difference,
         };
-
         /*
          * Set the account balance to the
          * authoritative statement closing
@@ -2785,6 +2815,8 @@ Do not ask questions.
 
           income,
           expenses,
+          transferIn,
+          transferOut,
 
           reconciliation,
 
