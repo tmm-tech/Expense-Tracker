@@ -286,7 +286,6 @@ export default function TransactionFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Accounts</SelectItem>
-              <SelectItem value="none">No Account</SelectItem>
               {accounts.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
                   {a.name}

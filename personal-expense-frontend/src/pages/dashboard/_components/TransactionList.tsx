@@ -80,6 +80,9 @@ export function TransactionList({
             const category = transaction.categoryId
               ? categories.find((c) => c.id === transaction.categoryId)
               : null;
+            const transferAccount = transaction.transferAccountId
+              ? accounts.find((a) => a.id === transaction.transferAccountId)
+              : null;
 
             const txDate =
               typeof transaction.date === "string"
@@ -98,23 +101,44 @@ export function TransactionList({
                       variant={
                         transaction.type === "income"
                           ? "default"
-                          : "destructive"
+                          : transaction.type === "transfer"
+                            ? "secondary"
+                            : "destructive"
                       }
-                      className="capitalize"
+                      className={`capitalize ${transaction.type === "transfer"
+                        ? "text-blue-600 border-blue-200"
+                        : ""
+                        }`}
                     >
-                      {transaction.type}
+                      {transaction.type === "transfer"
+                        ? transaction.transferDirection === "outgoing"
+                          ? "Transfer Out"
+                          : transaction.transferDirection === "incoming"
+                            ? "Transfer In"
+                            : "Transfer"
+                        : transaction.type}
                     </Badge>
-                    {category && (
+                    {transaction.type !== "transfer" && category && (
                       <span className="text-sm text-muted-foreground">
                         {category.name}
                       </span>
                     )}
-                    {account && (
+                    
+                    {transaction.type === "transfer" ? (
                       <Badge variant="outline" className="text-xs">
-                        {account.name}
+                        {account?.name ?? "Unknown"}{" "}
+                        {transaction.transferDirection === "outgoing"
+                          ? "→"
+                          : "←"}{" "}
+                        {transferAccount?.name ?? "Unknown"}
                       </Badge>
+                    ) : (
+                      account && (
+                        <Badge variant="outline" className="text-xs">
+                          {account.name}
+                        </Badge>
+                      )
                     )}
-
                     <span className="text-xs text-muted-foreground sm:text-sm">
                       {format(txDate, "MMM dd, yyyy")}
                     </span>
@@ -139,10 +163,18 @@ export function TransactionList({
                   <span
                     className={`text-lg font-bold ${transaction.type === "income"
                       ? "text-accent"
-                      : "text-destructive"
+                      : transaction.type === "transfer"
+                        ? "text-blue-600"
+                        : "text-destructive"
                       }`}
                   >
-                    {transaction.type === "income" ? "+" : "-"}
+                    {transaction.type === "income"
+                      ? "+"
+                      : transaction.type === "transfer"
+                        ? transaction.transferDirection === "incoming"
+                          ? "+"
+                          : "-"
+                        : "-"}
                     KES {transaction.amount.toFixed(2)}
                   </span>
 

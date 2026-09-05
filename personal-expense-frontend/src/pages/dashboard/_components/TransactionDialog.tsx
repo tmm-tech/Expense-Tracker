@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
-import type { Transaction } from "@/types/transaction";
+import type { Transaction, TransferResponse } from "@/types/transaction";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 import {
@@ -160,7 +160,7 @@ export function TransactionDialog({
     }) => {
       console.log("Creating transfer:", payload);
 
-      return apiFetch("/transfer", {
+      return apiFetch<TransferResponse>("/transfer", {
         method: "POST",
         body: JSON.stringify(payload),
       });
