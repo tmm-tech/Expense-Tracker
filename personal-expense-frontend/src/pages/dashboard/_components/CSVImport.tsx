@@ -45,6 +45,34 @@ type CategoryConfidence =
   | "low"
   | "none";
 
+interface ImportResult {
+  imported: number;
+  skipped: number;
+  duplicates: number;
+  uncategorized: number;
+  transfers: number;
+  total: number;
+
+  income: number;
+  expenses: number;
+
+  reconciliation: {
+    performed: boolean;
+    reconciled: boolean | null;
+    startingBalance: number;
+    calculatedClosing: number;
+    statementClosing: number | null;
+    difference: number | null;
+  };
+
+  account: {
+    balance: number | null;
+  };
+
+  cleanup: {
+    completed: boolean;
+  };
+}
 interface ReconciliationResult {
   income: number;
   expenses: number;
@@ -133,13 +161,41 @@ export function CSVImport({
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryRowIndex, setCategoryRowIndex] = useState<number | null>(null);
-
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStage, setImportStage] = useState("");
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [analysisStage, setAnalysisStage] = useState(
     "Preparing your statement...",
   );
   const [statement, setStatement] =
     useState<StatementBalance | null>(null);
 
+  const importSteps = [
+    {
+      id: "validate",
+      label: "Validating transactions",
+    },
+    {
+      id: "categories",
+      label: "Processing categories",
+    },
+    {
+      id: "duplicates",
+      label: "Checking for duplicate transactions",
+    },
+    {
+      id: "transfers",
+      label: "Processing transfers",
+    },
+    {
+      id: "reconciliation",
+      label: "Reconciling account balance",
+    },
+    {
+      id: "cleanup",
+      label: "Completing import cleanup",
+    },
+  ];
   const analysisMessages = [
     "🔍 Looking for transactions...",
     "🧠 Understanding transaction descriptions...",
@@ -492,10 +548,17 @@ export function CSVImport({
   ============================================================ */
 
   const confirmImport = useMutation({
-    mutationFn: (
+    mutationFn: async (
       rows: PreviewRow[],
-    ) =>
-      apiFetch("/import/confirm", {
+    ) => {
+      setIsImporting(true);
+      setImportStage("Validating transactions...");
+      setImportResult(null);
+
+      const response = await apiFetch<{
+        success: boolean;
+        data: ImportResult;
+      }>("/import/confirm", {
         method: "POST",
 
         body: JSON.stringify({
@@ -503,9 +566,36 @@ export function CSVImport({
           accountId,
           statement,
         }),
-      }),
+      });
 
-    onSuccess: () => {
+      return response;
+    },
+
+    onSuccess: (response) => {
+      const result = response.data;
+
+      setImportResult(result);
+
+      /*
+       * Final backend stage has completed.
+       */
+
+      if (result.reconciliation.performed) {
+        if (result.reconciliation.reconciled) {
+          setImportStage(
+            "Account balance reconciled successfully.",
+          );
+        } else {
+          setImportStage(
+            "Import completed with a reconciliation difference.",
+          );
+        }
+      } else {
+        setImportStage(
+          "Import cleanup completed.",
+        );
+      }
+
       queryClient.invalidateQueries({
         queryKey: ["transactions"],
       });
@@ -521,21 +611,11 @@ export function CSVImport({
       queryClient.invalidateQueries({
         queryKey: ["insights"],
       });
-
-      toast.success(
-        "Transactions imported successfully",
-      );
-
-      setPreview([]);
-
-      setFile(null);
-
-      setPdfPassword("");
-
-      setRequiresPassword(false);
     },
 
     onError: (error: any) => {
+      setIsImporting(false);
+
       console.error(
         "Confirm import error:",
         error,
@@ -961,6 +1041,102 @@ export function CSVImport({
             This may take a little while for longer statements.
             Please keep this window open.
           </p>
+
+        </div>
+      )}
+
+      {isImporting && (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+
+          <div className="flex items-start gap-4">
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Upload className="h-5 w-5 text-primary animate-pulse" />
+            </div>
+
+            <div>
+              <h3 className="font-semibold">
+                Importing your transactions
+              </h3>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                AureX is processing your transactions and
+                reconciling your account.
+              </p>
+            </div>
+
+          </div>
+
+          <div className="mt-6 space-y-3">
+
+            {importSteps.map((step, index) => {
+
+              const completed =
+                importResult !== null ||
+                (
+                  importStage ===
+                  "Completing import cleanup." &&
+                  index <= 5
+                );
+
+              const active =
+                importStage
+                  .toLowerCase()
+                  .includes(
+                    step.label
+                      .toLowerCase()
+                      .split(" ")[0]
+                  );
+
+              return (
+                <div
+                  key={step.id}
+                  className="flex items-center gap-3"
+                >
+
+                  {completed ? (
+                    <CheckCircle2
+                      className="h-5 w-5 text-green-600 shrink-0"
+                    />
+                  ) : active ? (
+                    <Loader2
+                      className="h-5 w-5 animate-spin text-primary shrink-0"
+                    />
+                  ) : (
+                    <div className="h-5 w-5 rounded-full border" />
+                  )}
+
+                  <span
+                    className={
+                      completed
+                        ? "text-sm"
+                        : active
+                          ? "text-sm font-medium"
+                          : "text-sm text-muted-foreground"
+                    }
+                  >
+                    {step.label}
+                  </span>
+
+                </div>
+              );
+            })}
+
+          </div>
+
+          <div className="mt-6 rounded-lg border bg-muted/30 px-4 py-3">
+
+            <div className="flex items-center gap-3">
+
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+
+              <p className="text-sm">
+                {importStage}
+              </p>
+
+            </div>
+
+          </div>
 
         </div>
       )}

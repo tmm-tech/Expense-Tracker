@@ -1660,13 +1660,15 @@ Do not ask questions.
   confirmImport: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
+
       if (!userId) {
         return res.status(401).json({
           success: false,
           message: "Unauthorized: missing user ID",
         });
       }
-      const { rows, accountId } = req.body;
+
+      const { rows, accountId, statement } = req.body;
 
       /* =========================
          VALIDATION
@@ -1686,27 +1688,6 @@ Do not ask questions.
         });
       }
 
-
-      const rowsWithBalance = rows
-        .filter(
-          (row) =>
-            typeof row.runningBalance === "number" &&
-            Number.isFinite(row.runningBalance)
-        )
-        .sort(
-          (a, b) =>
-            new Date(a.date).getTime() -
-            new Date(b.date).getTime()
-        );
-
-      const latestStatementRow =
-        rowsWithBalance.length > 0
-          ? rowsWithBalance[rowsWithBalance.length - 1]
-          : null;
-
-      const latestStatementBalance =
-        latestStatementRow?.runningBalance ?? null;
-
       /* =========================
          VERIFY ACCOUNT
       ========================= */
@@ -1725,6 +1706,7 @@ Do not ask questions.
         });
       }
 
+      const startingBalance = Number(account.balance);
 
       /* =========================
          GET USER CATEGORIES
@@ -1741,10 +1723,6 @@ Do not ask questions.
         },
       });
 
-      /* =========================
-         VALIDATE CATEGORIES
-      ========================= */
-
       const categoryMap = new Map(
         categories.map((category) => [
           category.id,
@@ -1752,10 +1730,17 @@ Do not ask questions.
         ])
       );
 
+      /* =========================
+         IMPORT STATISTICS
+      ========================= */
+
       let imported = 0;
       let skipped = 0;
       let duplicates = 0;
       let uncategorized = 0;
+      let transfers = 0;
+      let income = 0;
+      let expenses = 0;
 
       /* =========================
          IMPORT TRANSACTIONS
@@ -1776,31 +1761,24 @@ Do not ask questions.
           skipped++;
           continue;
         }
+
+        const transactionAmount = Math.abs(row.amount);
+
         /* =========================
            HANDLE TRANSFER
         ========================= */
 
         if (row.type === "transfer") {
-          /*
-           * A transfer must have a destination account.
-           */
           if (!row.transferAccountId) {
             skipped++;
             continue;
           }
 
-          /*
-           * Prevent transferring to the same account.
-           */
           if (row.transferAccountId === accountId) {
             skipped++;
             continue;
           }
 
-          /*
-           * Verify destination account belongs
-           * to the authenticated user.
-           */
           const destinationAccount =
             await prisma.account.findFirst({
               where: {
@@ -1814,42 +1792,18 @@ Do not ask questions.
             continue;
           }
 
-          const transferAmount =
-            Math.abs(row.amount);
+          const startOfDay = new Date(transactionDate);
+          startOfDay.setHours(0, 0, 0, 0);
 
-          /*
-           * Check whether this transfer has
-           * already been imported.
-           *
-           * We check the outgoing transaction
-           * on the source account.
-           */
-          const startOfDay =
-            new Date(transactionDate);
-
-          startOfDay.setHours(
-            0,
-            0,
-            0,
-            0
-          );
-
-          const endOfDay =
-            new Date(transactionDate);
-
-          endOfDay.setHours(
-            23,
-            59,
-            59,
-            999
-          );
+          const endOfDay = new Date(transactionDate);
+          endOfDay.setHours(23, 59, 59, 999);
 
           const existingTransfer =
             await prisma.transaction.findFirst({
               where: {
                 userId,
                 accountId,
-                amount: transferAmount,
+                amount: transactionAmount,
                 type: "transfer",
                 description: row.description.trim(),
                 date: {
@@ -1864,36 +1818,30 @@ Do not ask questions.
             continue;
           }
 
-          /*
-           * Create the transfer and both
-           * transaction records atomically.
-           */
           await prisma.$transaction(async (tx) => {
             const transfer =
               await tx.transfer.create({
                 data: {
                   userId,
                   fromAccountId: accountId,
-                  toAccountId:
-                    row.transferAccountId,
-                  amount: transferAmount,
+                  toAccountId: row.transferAccountId,
+                  amount: transactionAmount,
                   date: transactionDate,
-                  description:
-                    row.description.trim(),
+                  description: row.description.trim(),
                 },
               });
 
             /*
-             * Money leaving source account.
+             * OUTGOING
              */
+
             await tx.transaction.create({
               data: {
                 userId,
                 accountId,
                 categoryId: null,
-                description:
-                  row.description.trim(),
-                amount: transferAmount,
+                description: row.description.trim(),
+                amount: transactionAmount,
                 type: "transfer",
                 date: transactionDate,
                 transferId: transfer.id,
@@ -1904,17 +1852,16 @@ Do not ask questions.
             });
 
             /*
-             * Money entering destination account.
+             * INCOMING
              */
+
             await tx.transaction.create({
               data: {
                 userId,
-                accountId:
-                  row.transferAccountId,
+                accountId: row.transferAccountId,
                 categoryId: null,
-                description:
-                  row.description.trim(),
-                amount: transferAmount,
+                description: row.description.trim(),
+                amount: transactionAmount,
                 type: "transfer",
                 date: transactionDate,
                 transferId: transfer.id,
@@ -1924,119 +1871,110 @@ Do not ask questions.
             });
 
             /*
-             * Decrease source balance.
+             * SOURCE ACCOUNT
              */
+
             await tx.account.update({
               where: {
                 id: accountId,
               },
               data: {
                 balance: {
-                  decrement: transferAmount,
+                  decrement: transactionAmount,
                 },
               },
             });
 
             /*
-             * Increase destination balance.
+             * DESTINATION ACCOUNT
              */
+
             await tx.account.update({
               where: {
                 id: row.transferAccountId,
               },
               data: {
                 balance: {
-                  increment: transferAmount,
+                  increment: transactionAmount,
                 },
               },
             });
           });
 
           imported++;
+          transfers++;
 
-          /*
-           * Important:
-           * Do NOT continue into the normal
-           * income/expense transaction logic.
-           */
           continue;
         }
-        /*
-         * Category selected by the user
-         * during preview.
-         */
+
+        /* =========================
+           CATEGORY
+        ========================= */
 
         let categoryId = row.categoryId || null;
-
-        /*
-         * Make sure the category actually
-         * belongs to this user.
-         */
 
         if (categoryId) {
           const category = categoryMap.get(categoryId);
 
-          if (!category || category.type !== row.type) {
+          if (
+            !category ||
+            category.type !== row.type
+          ) {
             categoryId = null;
           }
         }
 
         /*
-         * If no category was selected,
-         * try the existing category matcher.
+         * Fallback category matcher.
          */
 
         if (!categoryId) {
           categoryId = matchCategory(
             row.description,
             categories.filter(
-              (category) => category.type === row.type
+              (category) =>
+                category.type === row.type
             )
           );
         }
-
-        /* =========================
-           DUPLICATE DETECTION
-        ========================= */
-        const transactionAmount = Math.abs(row.amount);
-        const startOfDay = new Date(transactionDate);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date(transactionDate);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const existing = await prisma.transaction.findFirst({
-          where: {
-            userId,
-            accountId,
-            amount: transactionAmount,
-            type: row.type,
-            description: row.description.trim(),
-            date: {
-              gte: startOfDay,
-              lte: endOfDay,
-            },
-          },
-        });
-
-        if (existing) {
-          duplicates++;
-          continue;
-        }
-
-        /*
- * If still no category exists,
- * do not create a fake category.
- */
 
         if (!categoryId) {
           uncategorized++;
         }
 
         /* =========================
-    CREATE TRANSACTION
-    + UPDATE ACCOUNT BALANCE
- ========================= */
+           DUPLICATE DETECTION
+        ========================= */
+
+        const startOfDay = new Date(transactionDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(transactionDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existing =
+          await prisma.transaction.findFirst({
+            where: {
+              userId,
+              accountId,
+              amount: transactionAmount,
+              type: row.type,
+              description: row.description.trim(),
+              date: {
+                gte: startOfDay,
+                lte: endOfDay,
+              },
+            },
+          });
+
+        if (existing) {
+          duplicates++;
+          continue;
+        }
+
+        /* =========================
+           CREATE TRANSACTION
+        ========================= */
 
         await prisma.$transaction(async (tx) => {
           await tx.transaction.create({
@@ -2067,21 +2005,105 @@ Do not ask questions.
         });
 
         imported++;
-      }
-      /* =========================
-   RECONCILE ACCOUNT BALANCE
-========================= */
 
-      if (latestStatementBalance !== null) {
+        if (row.type === "income") {
+          income += transactionAmount;
+        }
+
+        if (row.type === "expense") {
+          expenses += transactionAmount;
+        }
+      }
+
+      /* =========================
+         RECONCILIATION
+      ========================= */
+
+      const statementClosing =
+        statement?.closingBalance !== null &&
+          statement?.closingBalance !== undefined
+          ? Number(statement.closingBalance)
+          : null;
+
+      const calculatedClosing =
+        startingBalance +
+        income -
+        expenses;
+
+      let reconciliation = {
+        performed: false,
+        reconciled: null,
+        startingBalance,
+        calculatedClosing,
+        statementClosing,
+        difference: null,
+      };
+      /*
+       * Only reconcile when the statement
+       * actually supplied a closing balance.
+       */
+
+      if (statementClosing !== null) {
+        const difference =
+          statementClosing -
+          calculatedClosing;
+
+        reconciliation = {
+          performed: true,
+          reconciled:
+            Math.abs(difference) < 0.01,
+          startingBalance,
+          calculatedClosing,
+          statementClosing,
+          difference,
+        };
+
+        /*
+         * Set the account balance to the
+         * authoritative statement closing
+         * balance.
+         */
+
         await prisma.account.update({
           where: {
             id: accountId,
           },
           data: {
-            balance: latestStatementBalance,
+            balance: statementClosing,
           },
         });
       }
+
+      /* =========================
+         GET FINAL ACCOUNT
+      ========================= */
+
+      const finalAccount =
+        await prisma.account.findUnique({
+          where: {
+            id: accountId,
+          },
+          select: {
+            balance: true,
+          },
+        });
+
+      /* =========================
+         CLEANUP
+      ========================= */
+
+      /*
+       * At this stage there is no temporary
+       * import record being persisted by this
+       * controller, so cleanup is complete.
+       *
+       * Keep this explicit so the frontend can
+       * report the completed workflow.
+       */
+
+      const cleanup = {
+        completed: true,
+      };
 
       /* =========================
          RESPONSE
@@ -2089,29 +2111,33 @@ Do not ask questions.
 
       return res.json({
         success: true,
+
         data: {
           imported,
           skipped,
           duplicates,
           uncategorized,
+          transfers,
           total: rows.length,
 
-          reconciliation: {
-            performed: latestStatementBalance !== null,
-            statementBalance: latestStatementBalance,
-            accountBalance: account.balance,
+          income,
+          expenses,
+
+          reconciliation,
+
+          account: {
+            balance:
+              finalAccount?.balance ?? null,
           },
 
-          processing: {
-            transactionsProcessed: rows.length,
-            transfersProcessed: rows.filter(
-              (row) => row.type === "transfer"
-            ).length,
-          },
+          cleanup,
         },
       });
     } catch (err) {
-      console.error("Confirm import error:", err);
+      console.error(
+        "Confirm import error:",
+        err
+      );
 
       return res.status(500).json({
         success: false,
