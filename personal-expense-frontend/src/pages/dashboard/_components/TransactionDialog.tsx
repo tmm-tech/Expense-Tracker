@@ -43,6 +43,11 @@ interface TransactionDialogProps {
   onTransactionSaved: () => void;
 }
 
+interface TransactionResponse {
+  success: boolean;
+  message: string;
+  data: Transaction;
+}
 /* ---------------- COMPONENT ---------------- */
 
 export function TransactionDialog({
@@ -97,9 +102,8 @@ export function TransactionDialog({
 
   const createTransaction = useMutation({
     mutationFn: (payload: Omit<Transaction, "id">) => {
-      console.log("Creating transaction:", payload);
 
-      return apiFetch<Transaction>("/transactions", {
+      return apiFetch<TransactionResponse>("/transactions", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -153,11 +157,14 @@ export function TransactionDialog({
       amount: number;
       description: string;
       date: number;
-    }) =>
-      apiFetch("/transfers", {
+    }) => {
+      console.log("Creating transfer:", payload);
+
+      return apiFetch("/transfers", {
         method: "POST",
         body: JSON.stringify(payload),
-      }),
+      });
+    },
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -171,9 +178,15 @@ export function TransactionDialog({
 
     onError: (error) => {
       console.error("Create transfer error:", error);
-      toast.error("Failed to create transfer");
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create transfer"
+      );
     },
   });
+
   const updateTransaction = useMutation({
     mutationFn: (payload: Transaction) =>
       apiFetch<Transaction>(`/transactions/${payload.id}`, {
