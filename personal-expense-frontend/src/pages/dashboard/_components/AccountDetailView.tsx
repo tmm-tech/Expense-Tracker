@@ -95,6 +95,9 @@ export default function AccountDetailView({
 
   const Icon = ACCOUNT_ICONS[account.type];
 
+  console.log("Account type:", account.type);
+  console.log("Account icon:", Icon);
+
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
