@@ -105,10 +105,7 @@ export function TransactionList({
                             ? "secondary"
                             : "destructive"
                       }
-                      className={`capitalize ${transaction.type === "transfer"
-                        ? "text-blue-600 border-blue-200"
-                        : ""
-                        }`}
+                      className="capitalize"
                     >
                       {transaction.type === "transfer"
                         ? transaction.transferDirection === "outgoing"
@@ -123,7 +120,7 @@ export function TransactionList({
                         {category.name}
                       </span>
                     )}
-                    
+
                     {transaction.type === "transfer" ? (
                       <Badge variant="outline" className="text-xs">
                         {account?.name ?? "Unknown"}{" "}
@@ -160,12 +157,11 @@ export function TransactionList({
 
                 {/* Right */}
                 <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-3">
-                  <span
-                    className={`text-lg font-bold ${transaction.type === "income"
-                      ? "text-accent"
-                      : transaction.type === "transfer"
-                        ? "text-blue-600"
-                        : "text-destructive"
+                  <span className={`text-lg font-bold ${transaction.type === "income"
+                        ? "text-accent"
+                        : transaction.type === "transfer"
+                          ? "text-blue-500"
+                          : "text-destructive"
                       }`}
                   >
                     {transaction.type === "income"

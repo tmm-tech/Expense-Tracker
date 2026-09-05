@@ -862,40 +862,116 @@ module.exports = {
      DELETE TRANSACTION
   ============================ */
   deleteTransaction: async (req, res) => {
-    try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized: missing user ID",
-        });
-      }
-      const deleted = await prisma.transaction.deleteMany({
+  try {
+    const userId = req.user?.id || req.user?.sub;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: missing user ID",
+      });
+    }
+
+    const transactionId = req.params.id;
+
+    const deletedTransaction = await prisma.$transaction(async (tx) => {
+      // Find the transaction and verify ownership
+      const existing = await tx.transaction.findFirst({
         where: {
-          id: req.params.id,
-          userId: req.user.id,
+          id: transactionId,
+          userId,
         },
       });
 
-      if (!deleted.count) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Transaction not found" });
+      if (!existing) {
+        throw new Error("TRANSACTION_NOT_FOUND");
       }
 
-      res.json({
-        success: true,
-        message: "Transaction deleted successfully",
+      // Transfers must be deleted through the dedicated transfer endpoint
+      if (existing.type === "transfer" || existing.transferId) {
+        throw new Error("TRANSFER_DELETE_NOT_ALLOWED");
+      }
+
+      // Find the associated account
+      const account = await tx.account.findFirst({
+        where: {
+          id: existing.accountId,
+          userId,
+        },
       });
-    } catch (error) {
-      console.error("Delete transaction error:", error);
-      res.status(500).json({
+
+      if (!account) {
+        throw new Error("ACCOUNT_NOT_FOUND");
+      }
+
+      /*
+       * Reverse the transaction's effect on the account.
+       *
+       * Income originally increased the balance,
+       * so deleting it decreases the balance.
+       *
+       * Expense originally decreased the balance,
+       * so deleting it increases the balance.
+       */
+      const balanceAdjustment =
+        existing.type === "income"
+          ? -Number(existing.amount)
+          : Number(existing.amount);
+
+      await tx.account.update({
+        where: {
+          id: account.id,
+        },
+        data: {
+          balance: {
+            increment: balanceAdjustment,
+          },
+        },
+      });
+
+      // Delete the transaction
+      return await tx.transaction.delete({
+        where: {
+          id: existing.id,
+        },
+      });
+    });
+
+    return res.json({
+      success: true,
+      message: "Transaction deleted successfully",
+      data: deletedTransaction,
+    });
+  } catch (error) {
+    console.error("Delete transaction error:", error);
+
+    if (error.message === "TRANSACTION_NOT_FOUND") {
+      return res.status(404).json({
         success: false,
-        message: `Delete Transaction Error: ${error.message}`,
+        message: "Transaction not found",
       });
     }
-  },
 
+    if (error.message === "TRANSFER_DELETE_NOT_ALLOWED") {
+      return res.status(400).json({
+        success: false,
+        message: "Transfers must be deleted using the transfer endpoint",
+      });
+    }
+
+    if (error.message === "ACCOUNT_NOT_FOUND") {
+      return res.status(500).json({
+        success: false,
+        message: "Transaction account not found",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: `Delete Transaction Error: ${error.message}`,
+    });
+  }
+},
   /* ===========================
      TRANSACTION SUMMARY
   ============================ */
