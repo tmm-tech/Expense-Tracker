@@ -610,6 +610,7 @@ module.exports = {
   updateTransaction: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -617,34 +618,240 @@ module.exports = {
         });
       }
 
-      const { name, category, amount, date } = req.body;
+      const transactionId = req.params.id;
 
-      const updated = await prisma.transaction.updateMany({
-        where: {
-          id: req.params.id,
-          userId: req.user.id,
-        },
-        data: {
-          name,
-          category,
-          amount: amount !== undefined ? Number(amount) : undefined,
-          date: date ? new Date(date) : undefined,
-        },
-      });
+      const {
+        type,
+        categoryId,
+        amount,
+        description,
+        date,
+        accountId,
+      } = req.body;
 
-      if (!updated.count) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Transaction not found" });
+      // Transfers must be handled by a dedicated transfer update endpoint
+      if (type === "transfer") {
+        return res.status(400).json({
+          success: false,
+          message: "Transfers must be edited using the transfer endpoint",
+        });
       }
 
-      res.json({
+      // Validate transaction type
+      if (!["income", "expense"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Transaction type must be income or expense",
+        });
+      }
+
+      // Validate amount
+      const amountNum = Number(amount);
+
+      if (!Number.isFinite(amountNum) || amountNum <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Amount must be a positive number",
+        });
+      }
+
+      // Validate description
+      if (!description || !String(description).trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Description is required",
+        });
+      }
+
+      // Validate date
+      const transactionDate = new Date(date);
+
+      if (Number.isNaN(transactionDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction date",
+        });
+      }
+
+      // Validate account
+      if (!accountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Account is required",
+        });
+      }
+
+      const updatedTransaction = await prisma.$transaction(async (tx) => {
+        // Get the existing transaction
+        const existing = await tx.transaction.findFirst({
+          where: {
+            id: transactionId,
+            userId,
+          },
+        });
+
+        if (!existing) {
+          throw new Error("TRANSACTION_NOT_FOUND");
+        }
+
+        // Never allow a transfer to be modified through this endpoint
+        if (existing.type === "transfer") {
+          throw new Error("TRANSFER_UPDATE_NOT_ALLOWED");
+        }
+
+        // Verify new account belongs to the user
+        const newAccount = await tx.account.findFirst({
+          where: {
+            id: accountId,
+            userId,
+          },
+        });
+
+        if (!newAccount) {
+          throw new Error("ACCOUNT_NOT_FOUND");
+        }
+
+        // Validate category if provided
+        if (categoryId) {
+          const category = await tx.category.findFirst({
+            where: {
+              id: categoryId,
+              userId,
+            },
+          });
+
+          if (!category) {
+            throw new Error("CATEGORY_NOT_FOUND");
+          }
+
+          if (category.type !== type) {
+            throw new Error("CATEGORY_TYPE_MISMATCH");
+          }
+        }
+
+        // Get old account
+        const oldAccount = await tx.account.findFirst({
+          where: {
+            id: existing.accountId,
+            userId,
+          },
+        });
+
+        if (!oldAccount) {
+          throw new Error("OLD_ACCOUNT_NOT_FOUND");
+        }
+
+        /*
+         * Reverse the old transaction's effect.
+         *
+         * Income previously increased the account.
+         * Expense previously decreased the account.
+         */
+        const oldBalanceAdjustment =
+          existing.type === "income"
+            ? -Number(existing.amount)
+            : Number(existing.amount);
+
+        await tx.account.update({
+          where: {
+            id: oldAccount.id,
+          },
+          data: {
+            balance: {
+              increment: oldBalanceAdjustment,
+            },
+          },
+        });
+
+        /*
+         * Apply the new transaction's effect.
+         *
+         * Income increases the account.
+         * Expense decreases the account.
+         */
+        const newBalanceAdjustment =
+          type === "income"
+            ? amountNum
+            : -amountNum;
+
+        await tx.account.update({
+          where: {
+            id: newAccount.id,
+          },
+          data: {
+            balance: {
+              increment: newBalanceAdjustment,
+            },
+          },
+        });
+
+        // Update the transaction
+        return await tx.transaction.update({
+          where: {
+            id: transactionId,
+          },
+          data: {
+            type,
+            categoryId: categoryId || null,
+            amount: amountNum,
+            description: String(description).trim(),
+            date: transactionDate,
+            accountId,
+          },
+        });
+      });
+
+      return res.json({
         success: true,
         message: "Transaction updated successfully",
+        data: updatedTransaction,
       });
     } catch (error) {
       console.error("Update transaction error:", error);
-      res.status(500).json({
+
+      if (error.message === "TRANSACTION_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          message: "Transaction not found",
+        });
+      }
+
+      if (error.message === "TRANSFER_UPDATE_NOT_ALLOWED") {
+        return res.status(400).json({
+          success: false,
+          message: "Transfers must be edited using the transfer endpoint",
+        });
+      }
+
+      if (error.message === "ACCOUNT_NOT_FOUND") {
+        return res.status(400).json({
+          success: false,
+          message: "Selected account not found",
+        });
+      }
+
+      if (error.message === "OLD_ACCOUNT_NOT_FOUND") {
+        return res.status(500).json({
+          success: false,
+          message: "Original transaction account not found",
+        });
+      }
+
+      if (error.message === "CATEGORY_NOT_FOUND") {
+        return res.status(400).json({
+          success: false,
+          message: "Selected category not found",
+        });
+      }
+
+      if (error.message === "CATEGORY_TYPE_MISMATCH") {
+        return res.status(400).json({
+          success: false,
+          message: "Category does not match transaction type",
+        });
+      }
+
+      return res.status(500).json({
         success: false,
         message: `Update Transaction Error: ${error.message}`,
       });

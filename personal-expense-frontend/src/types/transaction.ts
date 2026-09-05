@@ -21,6 +21,12 @@ export interface Transaction {
 }
 
 
+export interface TransactionResponse {
+  success: boolean;
+  message: string;
+  data: Transaction;
+}
+
 export interface Transfer {
   id: string;
   userId: string;

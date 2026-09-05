@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
-import type { Transaction, TransferResponse } from "@/types/transaction";
+import type { Transaction, TransactionResponse, TransferResponse } from "@/types/transaction";
 import type { Account } from "@/types/account";
 import type { Category } from "@/types/category";
 import {
@@ -43,11 +43,6 @@ interface TransactionDialogProps {
   onTransactionSaved: () => void;
 }
 
-interface TransactionResponse {
-  success: boolean;
-  message: string;
-  data: Transaction;
-}
 /* ---------------- COMPONENT ---------------- */
 
 export function TransactionDialog({
@@ -187,37 +182,59 @@ export function TransactionDialog({
     },
   });
 
-  const updateTransaction = useMutation({
-    mutationFn: (payload: Transaction) =>
-      apiFetch<Transaction>(`/transactions/${payload.id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      }),
+ const updateTransaction = useMutation({
+  mutationFn: (payload: Transaction) =>
+    apiFetch<TransactionResponse>(`/transactions/${payload.id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
 
-    onMutate: async (updatedTx) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+  onMutate: async (updatedTx) => {
+    await queryClient.cancelQueries({ queryKey: ["transactions"] });
 
-      const previous =
-        queryClient.getQueryData<Transaction[]>(["transactions"]) ?? [];
+    const cached =
+      queryClient.getQueryData<Transaction[]>(["transactions"]);
 
-      queryClient.setQueryData<Transaction[]>(["transactions"], (old = []) =>
-        old.map((t) => (t.id === updatedTx.id ? updatedTx : t)),
-      );
+    const previous = Array.isArray(cached) ? cached : [];
 
-      return { previous };
-    },
+    queryClient.setQueryData<Transaction[]>(
+      ["transactions"],
+      previous.map((t) =>
+        t.id === updatedTx.id ? updatedTx : t
+      ),
+    );
 
-    onError: (_err, _tx, ctx) => {
-      queryClient.setQueryData(["transactions"], ctx?.previous);
-      toast.error("Failed to update transaction");
-    },
+    return { previous };
+  },
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      toast.success("Transaction updated");
-      onOpenChange(false);
-    },
-  });
+  onError: (error, _tx, ctx) => {
+    queryClient.setQueryData(
+      ["transactions"],
+      ctx?.previous
+    );
+
+    console.error("Update transaction error:", error);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Failed to update transaction"
+    );
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["transactions"],
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["accounts"],
+    });
+
+    toast.success("Transaction updated");
+    onOpenChange(false);
+  },
+});
 
   /* ---------------- SUBMIT ---------------- */
 
