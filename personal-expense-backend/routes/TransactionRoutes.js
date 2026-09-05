@@ -31,6 +31,9 @@ TransactionRoutes.delete("/transfer/:id", deleteTransfer);
 // Read all transactions
 TransactionRoutes.get('/transactions', getTransactions);
 
+// Batch delete transactions and transfers
+TransactionRoutes.delete('/transactions/batch', batchDeleteTransactions);
+
 // Read a specific transaction by ID
 TransactionRoutes.get('/transactions/:id', getTransactionById);
 
@@ -40,8 +43,6 @@ TransactionRoutes.put('/transactions/:id', updateTransaction);
 // Delete a transaction by ID
 TransactionRoutes.delete('/transactions/:id', deleteTransaction);
 
-// Batch delete transactions and transfers
-TransactionRoutes.delete('/transactions/batch', batchDeleteTransactions);
 
 // Transaction Summary
 TransactionRoutes.get('/transactions/summary', getTransactionSummary);
