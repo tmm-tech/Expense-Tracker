@@ -93,10 +93,10 @@ export default function AccountDetailView({
   const account = data;
   const transactions = data.transactions ?? [];
 
-  const Icon = ACCOUNT_ICONS[account.type];
+ const Icon = ACCOUNT_ICONS[account.type] ?? Wallet;
 
-  console.log("Account type:", account.type);
-  console.log("Account icon:", Icon);
+console.log("Account type:", account.type);
+console.log("Resolved account icon:", Icon);
 
 
   const totalIncome = transactions
