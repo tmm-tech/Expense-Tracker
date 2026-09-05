@@ -1344,6 +1344,376 @@ module.exports = {
       });
     }
   },
+
+    /* ===========================
+     BATCH DELETE TRANSACTIONS
+  ============================ */
+  batchDeleteTransactions: async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?.sub;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
+      }
+
+      const {
+        transactionIds = [],
+        transferIds = [],
+      } = req.body;
+
+      // Validate payload
+      if (
+        !Array.isArray(transactionIds) ||
+        !Array.isArray(transferIds)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "transactionIds and transferIds must be arrays",
+        });
+      }
+
+      if (
+        transactionIds.length === 0 &&
+        transferIds.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "No transactions or transfers selected",
+        });
+      }
+
+      // Remove duplicate IDs
+      const uniqueTransactionIds = [
+        ...new Set(transactionIds),
+      ];
+
+      const uniqueTransferIds = [
+        ...new Set(transferIds),
+      ];
+
+      const result = await prisma.$transaction(async (tx) => {
+        let deletedTransactions = 0;
+        let deletedTransfers = 0;
+
+        /* =========================
+           DELETE NORMAL TRANSACTIONS
+        ========================= */
+
+        if (uniqueTransactionIds.length > 0) {
+          const transactions =
+            await tx.transaction.findMany({
+              where: {
+                id: {
+                  in: uniqueTransactionIds,
+                },
+                userId,
+              },
+              select: {
+                id: true,
+                accountId: true,
+                amount: true,
+                type: true,
+                transferId: true,
+              },
+            });
+
+          /*
+           * Make sure every requested transaction
+           * exists and belongs to the user.
+           */
+          if (
+            transactions.length !==
+            uniqueTransactionIds.length
+          ) {
+            throw new Error(
+              "TRANSACTION_NOT_FOUND"
+            );
+          }
+
+          /*
+           * Never allow transfer transaction rows
+           * to be deleted individually through
+           * batch delete.
+           *
+           * Transfers must be deleted using
+           * transferIds so both sides can be
+           * reversed atomically.
+           */
+          const containsTransfer =
+            transactions.some(
+              (transaction) =>
+                transaction.type === "transfer" ||
+                transaction.transferId
+            );
+
+          if (containsTransfer) {
+            throw new Error(
+              "TRANSFER_TRANSACTION_NOT_ALLOWED"
+            );
+          }
+
+          /*
+           * Reverse every normal transaction's
+           * effect on its account.
+           */
+          for (const transaction of transactions) {
+            if (transaction.type === "income") {
+              await tx.account.update({
+                where: {
+                  id: transaction.accountId,
+                },
+                data: {
+                  balance: {
+                    decrement: transaction.amount,
+                  },
+                },
+              });
+            } else if (
+              transaction.type === "expense"
+            ) {
+              await tx.account.update({
+                where: {
+                  id: transaction.accountId,
+                },
+                data: {
+                  balance: {
+                    increment: transaction.amount,
+                  },
+                },
+              });
+            }
+          }
+
+          /*
+           * Delete the normal transactions.
+           */
+          const deleted =
+            await tx.transaction.deleteMany({
+              where: {
+                id: {
+                  in: uniqueTransactionIds,
+                },
+                userId,
+              },
+            });
+
+          deletedTransactions = deleted.count;
+        }
+
+        /* =========================
+           DELETE TRANSFERS
+        ========================= */
+
+        if (uniqueTransferIds.length > 0) {
+          const transfers =
+            await tx.transfer.findMany({
+              where: {
+                id: {
+                  in: uniqueTransferIds,
+                },
+                userId,
+              },
+              select: {
+                id: true,
+                amount: true,
+              },
+            });
+
+          /*
+           * Make sure every requested transfer
+           * exists and belongs to the user.
+           */
+          if (
+            transfers.length !==
+            uniqueTransferIds.length
+          ) {
+            throw new Error(
+              "TRANSFER_NOT_FOUND"
+            );
+          }
+
+          /*
+           * Find all transaction rows belonging
+           * to these transfers.
+           */
+          const transferTransactions =
+            await tx.transaction.findMany({
+              where: {
+                transferId: {
+                  in: uniqueTransferIds,
+                },
+                userId,
+              },
+              select: {
+                id: true,
+                transferId: true,
+                accountId: true,
+                amount: true,
+                transferDirection: true,
+              },
+            });
+
+          /*
+           * Every transfer must have both sides.
+           */
+          for (const transfer of transfers) {
+            const transactions =
+              transferTransactions.filter(
+                (transaction) =>
+                  transaction.transferId ===
+                  transfer.id
+              );
+
+            const outgoing =
+              transactions.find(
+                (transaction) =>
+                  transaction.transferDirection ===
+                  "outgoing"
+              );
+
+            const incoming =
+              transactions.find(
+                (transaction) =>
+                  transaction.transferDirection ===
+                  "incoming"
+              );
+
+            if (!outgoing || !incoming) {
+              throw new Error(
+                "TRANSFER_TRANSACTIONS_INCOMPLETE"
+              );
+            }
+
+            /*
+             * Reverse outgoing side:
+             * money returns to source account.
+             */
+            await tx.account.update({
+              where: {
+                id: outgoing.accountId,
+              },
+              data: {
+                balance: {
+                  increment: transfer.amount,
+                },
+              },
+            });
+
+            /*
+             * Reverse incoming side:
+             * money leaves destination account.
+             */
+            await tx.account.update({
+              where: {
+                id: incoming.accountId,
+              },
+              data: {
+                balance: {
+                  decrement: transfer.amount,
+                },
+              },
+            });
+          }
+
+          /*
+           * Delete all transaction rows belonging
+           * to the selected transfers.
+           */
+          await tx.transaction.deleteMany({
+            where: {
+              transferId: {
+                in: uniqueTransferIds,
+              },
+              userId,
+            },
+          });
+
+          /*
+           * Delete the parent transfers.
+           */
+          const deleted =
+            await tx.transfer.deleteMany({
+              where: {
+                id: {
+                  in: uniqueTransferIds,
+                },
+                userId,
+              },
+            });
+
+          deletedTransfers = deleted.count;
+        }
+
+        return {
+          deletedTransactions,
+          deletedTransfers,
+        };
+      });
+
+      return res.json({
+        success: true,
+        message: "Selected transactions deleted successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error(
+        "Batch delete transactions error:",
+        error
+      );
+
+      if (
+        error.message ===
+        "TRANSACTION_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: "One or more transactions were not found",
+        });
+      }
+
+      if (
+        error.message ===
+        "TRANSFER_TRANSACTION_NOT_ALLOWED"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Transfer transactions must be deleted using transferIds",
+        });
+      }
+
+      if (
+        error.message ===
+        "TRANSFER_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: "One or more transfers were not found",
+        });
+      }
+
+      if (
+        error.message ===
+        "TRANSFER_TRANSACTIONS_INCOMPLETE"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "One or more transfers have incomplete transaction records",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          `Batch Delete Transactions Error: ${error.message}`,
+      });
+    }
+  },
+  
   /* ===========================
      TRANSACTION SUMMARY
   ============================ */

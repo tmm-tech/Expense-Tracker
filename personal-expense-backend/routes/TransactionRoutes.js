@@ -7,6 +7,7 @@ const {
     getTransactionById,
     updateTransaction,
     deleteTransaction,
+    batchDeleteTransactions,
     getTransactionSummary,
     previewImport,
     confirmImport,
@@ -38,6 +39,9 @@ TransactionRoutes.put('/transactions/:id', updateTransaction);
 
 // Delete a transaction by ID
 TransactionRoutes.delete('/transactions/:id', deleteTransaction);
+
+// Batch delete transactions and transfers
+TransactionRoutes.delete('/transactions/batch', batchDeleteTransactions);
 
 // Transaction Summary
 TransactionRoutes.get('/transactions/summary', getTransactionSummary);
