@@ -249,14 +249,6 @@ export function CSVImport({
      CATEGORY HELPERS
   ============================================================ */
 
-  const getCategoriesForType = (
-    type: "income" | "expense" | "transfer",
-  ) => {
-    return categories.filter(
-      (category) => category.type === type,
-    );
-  };
-
   const findCategory = (categoryId?: string | null) => {
     if (!categoryId) return undefined;
 
@@ -572,6 +564,7 @@ export function CSVImport({
     },
 
     onSuccess: (response) => {
+      setIsImporting(false);
       const result = response.data;
 
       setImportResult(result);
@@ -1769,7 +1762,9 @@ export function CSVImport({
         }}
         type={
           categoryRowIndex !== null
-            ? preview[categoryRowIndex]?.type ?? "expense"
+            ? preview[categoryRowIndex]?.type === "income"
+              ? "income"
+              : "expense"
             : "expense"
         }
         onCategoryCreated={handleCategoryCreated}

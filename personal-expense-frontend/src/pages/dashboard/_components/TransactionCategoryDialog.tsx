@@ -37,12 +37,12 @@ import type { Category } from "@/types/category";
    TYPES
 ========================= */
 
-type TransactionCategoryType = "income" | "expense"|"transfer";
+type TransactionCategoryType = "income" | "expense"| "goal";
 
 interface TransactionCategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense" | "goal";
   onCategoryCreated: (category: Category) => void;
 }
 
@@ -63,7 +63,7 @@ const categorySchema = z.object({
     .min(1, "Category name is required")
     .max(50, "Category name must be 50 characters or less"),
 
-  type: z.enum(["income", "expense", "transfer"]),
+  type: z.enum(["income", "expense", "goal"]),
 
   icon: z.string().optional(),
 
@@ -285,7 +285,7 @@ export function TransactionCategoryDialog({
                         ? "Expense"
                         : field.value === "income"
                           ? "Income"
-                          : "Transfer"}
+                          : "Goal"}
                     </div>
                   </FormControl>
 

@@ -1345,9 +1345,9 @@ module.exports = {
     }
   },
 
-    /* ===========================
-     BATCH DELETE TRANSACTIONS
-  ============================ */
+  /* ===========================
+   BATCH DELETE TRANSACTIONS
+============================ */
   batchDeleteTransactions: async (req, res) => {
     try {
       const userId = req.user?.id || req.user?.sub;
@@ -1713,7 +1713,7 @@ module.exports = {
       });
     }
   },
-  
+
   /* ===========================
      TRANSACTION SUMMARY
   ============================ */
@@ -2731,7 +2731,9 @@ Do not ask questions.
         });
       }
 
-      const startingBalance = new Prisma.Decimal(account.balance);
+      const accountStartingBalance = new Prisma.Decimal(
+        account.balance
+      );
 
       /* =========================
          GET USER CATEGORIES
@@ -2771,94 +2773,136 @@ Do not ask questions.
       let transferIn = new Prisma.Decimal(0);
 
       /* =========================
-         IMPORT TRANSACTIONS
+         STATEMENT BALANCES
       ========================= */
 
-      for (const row of rows) {
-        const transactionDate = new Date(row.date);
+      const statementClosing =
+        statement?.closingBalance !== null &&
+          statement?.closingBalance !== undefined
+          ? new Prisma.Decimal(statement.closingBalance)
+          : null;
 
-        if (
-          !row.date ||
-          !row.description ||
-          typeof row.amount !== "number" ||
-          !Number.isFinite(row.amount) ||
-          row.amount <= 0 ||
-          Number.isNaN(transactionDate.getTime()) ||
-          !["income", "expense", "transfer"].includes(row.type)
-        ) {
-          skipped++;
-          continue;
-        }
+      const reconciliationStartingBalance =
+        statement?.openingBalance !== null &&
+          statement?.openingBalance !== undefined
+          ? new Prisma.Decimal(statement.openingBalance)
+          : accountStartingBalance;
 
-        const transactionAmount = new Prisma.Decimal(
-          Math.abs(row.amount)
-        );
+      let reconciliation = {
+        performed: false,
+        reconciled: null,
+        startingBalance: reconciliationStartingBalance,
+        calculatedClosing: null,
+        statementClosing,
+        difference: null,
+      };
 
-        /* =========================
-           HANDLE TRANSFER
-        ========================= */
+      /* =========================
+         ATOMIC IMPORT
+      ========================= */
 
-        if (row.type === "transfer") {
+      await prisma.$transaction(async (tx) => {
+        for (const row of rows) {
+          const transactionDate = new Date(row.date);
+
+          /* =========================
+             ROW VALIDATION
+          ========================= */
 
           if (
-            !["outgoing", "incoming"].includes(
-              row.transferDirection
+            !row.date ||
+            !row.description ||
+            typeof row.amount !== "number" ||
+            !Number.isFinite(row.amount) ||
+            row.amount <= 0 ||
+            Number.isNaN(transactionDate.getTime()) ||
+            !["income", "expense", "transfer"].includes(
+              row.type
             )
           ) {
             skipped++;
             continue;
           }
 
-          if (!row.transferAccountId) {
-            skipped++;
-            continue;
-          }
+          const transactionAmount = new Prisma.Decimal(
+            Math.abs(row.amount)
+          );
 
-          if (row.transferAccountId === accountId) {
-            skipped++;
-            continue;
-          }
+          /* =========================
+             HANDLE TRANSFER
+          ========================= */
 
-          const destinationAccount =
-            await prisma.account.findFirst({
-              where: {
-                id: row.transferAccountId,
-                userId,
-              },
-            });
+          if (row.type === "transfer") {
+            if (
+              !["outgoing", "incoming"].includes(
+                row.transferDirection
+              )
+            ) {
+              skipped++;
+              continue;
+            }
 
-          if (!destinationAccount) {
-            skipped++;
-            continue;
-          }
+            if (!row.transferAccountId) {
+              skipped++;
+              continue;
+            }
 
-          const startOfDay = new Date(transactionDate);
-          startOfDay.setHours(0, 0, 0, 0);
+            if (row.transferAccountId === accountId) {
+              skipped++;
+              continue;
+            }
 
-          const endOfDay = new Date(transactionDate);
-          endOfDay.setHours(23, 59, 59, 999);
+            /* =========================
+               VERIFY DESTINATION
+            ========================= */
 
-          const existingTransfer =
-            await prisma.transaction.findFirst({
-              where: {
-                userId,
-                accountId,
-                amount: transactionAmount,
-                type: "transfer",
-                description: row.description.trim(),
-                date: {
-                  gte: startOfDay,
-                  lte: endOfDay,
+            const destinationAccount =
+              await tx.account.findFirst({
+                where: {
+                  id: row.transferAccountId,
+                  userId,
                 },
-              },
-            });
+              });
 
-          if (existingTransfer) {
-            duplicates++;
-            continue;
-          }
+            if (!destinationAccount) {
+              skipped++;
+              continue;
+            }
 
-          await prisma.$transaction(async (tx) => {
+            /* =========================
+               DUPLICATE DETECTION
+            ========================= */
+
+            const startOfDay = new Date(transactionDate);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(transactionDate);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            const existingTransfer =
+              await tx.transaction.findFirst({
+                where: {
+                  userId,
+                  accountId,
+                  amount: transactionAmount,
+                  type: "transfer",
+                  description: row.description.trim(),
+                  date: {
+                    gte: startOfDay,
+                    lte: endOfDay,
+                  },
+                },
+              });
+
+            if (existingTransfer) {
+              duplicates++;
+              continue;
+            }
+
+            /* =========================
+               DETERMINE DIRECTION
+            ========================= */
+
             const fromAccountId =
               row.transferDirection === "outgoing"
                 ? accountId
@@ -2868,6 +2912,10 @@ Do not ask questions.
               row.transferDirection === "outgoing"
                 ? row.transferAccountId
                 : accountId;
+
+            /* =========================
+               CREATE TRANSFER
+            ========================= */
 
             const transfer =
               await tx.transfer.create({
@@ -2881,9 +2929,10 @@ Do not ask questions.
                 },
               });
 
-            /*
-             * OUTGOING TRANSACTION
-             */
+            /* =========================
+               OUTGOING TRANSACTION
+            ========================= */
+
             await tx.transaction.create({
               data: {
                 userId,
@@ -2899,9 +2948,10 @@ Do not ask questions.
               },
             });
 
-            /*
-             * INCOMING TRANSACTION
-             */
+            /* =========================
+               INCOMING TRANSACTION
+            ========================= */
+
             await tx.transaction.create({
               data: {
                 userId,
@@ -2917,9 +2967,10 @@ Do not ask questions.
               },
             });
 
-            /*
-             * SOURCE ACCOUNT
-             */
+            /* =========================
+               SOURCE ACCOUNT
+            ========================= */
+
             await tx.account.update({
               where: {
                 id: fromAccountId,
@@ -2931,9 +2982,10 @@ Do not ask questions.
               },
             });
 
-            /*
-             * DESTINATION ACCOUNT
-             */
+            /* =========================
+               DESTINATION ACCOUNT
+            ========================= */
+
             await tx.account.update({
               where: {
                 id: toAccountId,
@@ -2944,90 +2996,96 @@ Do not ask questions.
                 },
               },
             });
-          });
 
-          imported++;
-          transfers++;
+            imported++;
+            transfers++;
 
-          if (row.transferDirection === "outgoing") {
-            transferOut = transferOut.add(transactionAmount);
-          } else {
-            transferIn = transferIn.add(transactionAmount);
+            if (row.transferDirection === "outgoing") {
+              transferOut = transferOut.add(
+                transactionAmount
+              );
+            } else {
+              transferIn = transferIn.add(
+                transactionAmount
+              );
+            }
+
+            continue;
           }
 
-          continue;
-        }
+          /* =========================
+             CATEGORY
+          ========================= */
 
-        /* =========================
-           CATEGORY
-        ========================= */
+          let categoryId = row.categoryId || null;
 
-        let categoryId = row.categoryId || null;
+          if (categoryId) {
+            const category = categoryMap.get(categoryId);
 
-        if (categoryId) {
-          const category = categoryMap.get(categoryId);
-
-          if (
-            !category ||
-            category.type !== row.type
-          ) {
-            categoryId = null;
+            if (
+              !category ||
+              category.type !== row.type
+            ) {
+              categoryId = null;
+            }
           }
-        }
 
-        /*
-         * Fallback category matcher.
-         */
+          /* =========================
+             FALLBACK CATEGORY MATCHER
+          ========================= */
 
-        if (!categoryId) {
-          categoryId = matchCategory(
-            row.description,
-            categories.filter(
-              (category) =>
-                category.type === row.type
-            )
-          );
-        }
+          if (!categoryId) {
+            categoryId = matchCategory(
+              row.description,
+              categories.filter(
+                (category) =>
+                  category.type === row.type
+              )
+            );
+          }
 
-        if (!categoryId) {
-          uncategorized++;
-        }
+          /* =========================
+             DUPLICATE DETECTION
+          ========================= */
 
-        /* =========================
-           DUPLICATE DETECTION
-        ========================= */
+          const startOfDay = new Date(transactionDate);
+          startOfDay.setHours(0, 0, 0, 0);
 
-        const startOfDay = new Date(transactionDate);
-        startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(transactionDate);
+          endOfDay.setHours(23, 59, 59, 999);
 
-        const endOfDay = new Date(transactionDate);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const existing =
-          await prisma.transaction.findFirst({
-            where: {
-              userId,
-              accountId,
-              amount: transactionAmount,
-              type: row.type,
-              description: row.description.trim(),
-              date: {
-                gte: startOfDay,
-                lte: endOfDay,
+          const existing =
+            await tx.transaction.findFirst({
+              where: {
+                userId,
+                accountId,
+                amount: transactionAmount,
+                type: row.type,
+                description: row.description.trim(),
+                date: {
+                  gte: startOfDay,
+                  lte: endOfDay,
+                },
               },
-            },
-          });
+            });
 
-        if (existing) {
-          duplicates++;
-          continue;
-        }
+          if (existing) {
+            duplicates++;
+            continue;
+          }
 
-        /* =========================
-           CREATE TRANSACTION
-        ========================= */
+          /* =========================
+             UNCATEGORIZED
+          ========================= */
 
-        await prisma.$transaction(async (tx) => {
+          if (!categoryId) {
+            uncategorized++;
+          }
+
+          /* =========================
+             CREATE TRANSACTION
+          ========================= */
+
           await tx.transaction.create({
             data: {
               userId,
@@ -3040,6 +3098,10 @@ Do not ask questions.
             },
           });
 
+          /* =========================
+             UPDATE ACCOUNT BALANCE
+          ========================= */
+
           if (row.type === "income") {
             await tx.account.update({
               where: {
@@ -3051,6 +3113,8 @@ Do not ask questions.
                 },
               },
             });
+
+            income = income.add(transactionAmount);
           } else {
             await tx.account.update({
               where: {
@@ -3062,80 +3126,66 @@ Do not ask questions.
                 },
               },
             });
+
+            expenses = expenses.add(transactionAmount);
           }
-        });
 
-        imported++;
-
-        if (row.type === "income") {
-          income = income.add(transactionAmount);
+          imported++;
         }
 
-        if (row.type === "expense") {
-          expenses = expenses.add(transactionAmount);
-        }
-      }
+        /* =========================
+           RECONCILIATION
+        ========================= */
 
-      /* =========================
-         RECONCILIATION
-      ========================= */
-
-      const statementClosing =
-        statement?.closingBalance !== null &&
-          statement?.closingBalance !== undefined
-          ? new Prisma.Decimal(statement.closingBalance)
-          : null;
-
-      const calculatedClosing =
-        startingBalance
-          .add(income)
-          .subtract(expenses)
-          .add(transferIn)
-          .subtract(transferOut);
-
-      let reconciliation = {
-        performed: false,
-        reconciled: null,
-        startingBalance,
-        calculatedClosing,
-        statementClosing,
-        difference: null,
-      };
-      /*
-       * Only reconcile when the statement
-       * actually supplied a closing balance.
-       */
-
-      if (statementClosing !== null) {
-
-        const difference =
-          statementClosing.subtract(calculatedClosing);
+        const calculatedClosing =
+          reconciliationStartingBalance
+            .add(income)
+            .subtract(expenses)
+            .add(transferIn)
+            .subtract(transferOut);
 
         reconciliation = {
-          performed: true,
-          reconciled: difference.abs().lessThan(
-            new Prisma.Decimal("0.01")
-          ),
-          startingBalance,
+          performed: statementClosing !== null,
+          reconciled: null,
+          startingBalance:
+            reconciliationStartingBalance,
           calculatedClosing,
           statementClosing,
-          difference,
+          difference: null,
         };
-        /*
-         * Set the account balance to the
-         * authoritative statement closing
-         * balance.
-         */
 
-        await prisma.account.update({
-          where: {
-            id: accountId,
-          },
-          data: {
-            balance: statementClosing,
-          },
-        });
-      }
+        if (statementClosing !== null) {
+          const difference =
+            statementClosing.subtract(
+              calculatedClosing
+            );
+
+          reconciliation = {
+            performed: true,
+            reconciled: difference
+              .abs()
+              .lessThan(new Prisma.Decimal("0.01")),
+            startingBalance:
+              reconciliationStartingBalance,
+            calculatedClosing,
+            statementClosing,
+            difference,
+          };
+
+          /* =========================
+             STATEMENT CLOSING BALANCE
+          ========================= */
+
+          await tx.account.update({
+            where: {
+              id: accountId,
+            },
+            data: {
+              balance: statementClosing,
+            },
+          });
+        }
+      });
 
       /* =========================
          GET FINAL ACCOUNT
@@ -3154,15 +3204,6 @@ Do not ask questions.
       /* =========================
          CLEANUP
       ========================= */
-
-      /*
-       * At this stage there is no temporary
-       * import record being persisted by this
-       * controller, so cleanup is complete.
-       *
-       * Keep this explicit so the frontend can
-       * report the completed workflow.
-       */
 
       const cleanup = {
         completed: true,
@@ -3183,16 +3224,45 @@ Do not ask questions.
           transfers,
           total: rows.length,
 
-          income,
-          expenses,
-          transferIn,
-          transferOut,
+          income: Number(income),
+          expenses: Number(expenses),
+          transferIn: Number(transferIn),
+          transferOut: Number(transferOut),
 
-          reconciliation,
+          reconciliation: {
+            performed: reconciliation.performed,
+            reconciled: reconciliation.reconciled,
+
+            startingBalance: Number(
+              reconciliation.startingBalance
+            ),
+
+            calculatedClosing:
+              reconciliation.calculatedClosing !== null
+                ? Number(
+                  reconciliation.calculatedClosing
+                )
+                : null,
+
+            statementClosing:
+              reconciliation.statementClosing !== null
+                ? Number(
+                  reconciliation.statementClosing
+                )
+                : null,
+
+            difference:
+              reconciliation.difference !== null
+                ? Number(reconciliation.difference)
+                : null,
+          },
 
           account: {
             balance:
-              finalAccount?.balance ?? null,
+              finalAccount?.balance !== null &&
+                finalAccount?.balance !== undefined
+                ? Number(finalAccount.balance)
+                : null,
           },
 
           cleanup,
@@ -3210,4 +3280,6 @@ Do not ask questions.
       });
     }
   },
+
+
 };
