@@ -2901,12 +2901,22 @@ Do not ask questions.
           );
 
           /* =========================
+             DATE RANGE
+          ========================= */
+
+          const startOfDay = new Date(transactionDate);
+          startOfDay.setHours(0, 0, 0, 0);
+
+          const endOfDay = new Date(transactionDate);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          /* =========================
              HANDLE TRANSFER
           ========================= */
 
           if (row.type === "transfer") {
             if (
-              !["outgoing", "incoming"].includes(
+              !["incoming", "outgoing"].includes(
                 row.transferDirection
               )
             ) {
@@ -2919,16 +2929,11 @@ Do not ask questions.
               continue;
             }
 
-            if (row.transferAccountId === accountId) {
-              skipped++;
-              continue;
-            }
-
-            /* =========================
-               VERIFY DESTINATION
-            ========================= */
-
-            const destinationAccount =
+            /*
+             * Counterpart account must belong
+             * to the same user.
+             */
+            const transferAccount =
               await tx.account.findFirst({
                 where: {
                   id: row.transferAccountId,
@@ -2936,20 +2941,41 @@ Do not ask questions.
                 },
               });
 
-            if (!destinationAccount) {
+            if (!transferAccount) {
               skipped++;
               continue;
             }
 
+            /*
+             * Cannot transfer to/from the same account.
+             */
+            if (row.transferAccountId === accountId) {
+              skipped++;
+              continue;
+            }
+
+            /*
+             * Determine the complete transfer direction.
+             *
+             * Incoming:
+             * counterpart → imported account
+             *
+             * Outgoing:
+             * imported account → counterpart
+             */
+            const fromAccountId =
+              row.transferDirection === "incoming"
+                ? row.transferAccountId
+                : accountId;
+
+            const toAccountId =
+              row.transferDirection === "incoming"
+                ? accountId
+                : row.transferAccountId;
+
             /* =========================
-               DUPLICATE DETECTION
+               DUPLICATE TRANSFER CHECK
             ========================= */
-
-            const startOfDay = new Date(transactionDate);
-            startOfDay.setHours(0, 0, 0, 0);
-
-            const endOfDay = new Date(transactionDate);
-            endOfDay.setHours(23, 59, 59, 999);
 
             const existingTransfer =
               await tx.transaction.findFirst({
@@ -2972,20 +2998,6 @@ Do not ask questions.
             }
 
             /* =========================
-               DETERMINE DIRECTION
-            ========================= */
-
-            const fromAccountId =
-              row.transferDirection === "outgoing"
-                ? accountId
-                : row.transferAccountId;
-
-            const toAccountId =
-              row.transferDirection === "outgoing"
-                ? row.transferAccountId
-                : accountId;
-
-            /* =========================
                CREATE TRANSFER
             ========================= */
 
@@ -3002,7 +3014,7 @@ Do not ask questions.
               });
 
             /* =========================
-               OUTGOING TRANSACTION
+               OUTGOING SIDE
             ========================= */
 
             await tx.transaction.create({
@@ -3021,7 +3033,7 @@ Do not ask questions.
             });
 
             /* =========================
-               INCOMING TRANSACTION
+               INCOMING SIDE
             ========================= */
 
             await tx.transaction.create({
@@ -3040,7 +3052,7 @@ Do not ask questions.
             });
 
             /* =========================
-               SOURCE ACCOUNT
+               UPDATE SOURCE BALANCE
             ========================= */
 
             await tx.account.update({
@@ -3055,7 +3067,7 @@ Do not ask questions.
             });
 
             /* =========================
-               DESTINATION ACCOUNT
+               UPDATE DESTINATION BALANCE
             ========================= */
 
             await tx.account.update({
@@ -3072,14 +3084,10 @@ Do not ask questions.
             imported++;
             transfers++;
 
-            if (row.transferDirection === "outgoing") {
-              transferOut = transferOut.add(
-                transactionAmount
-              );
+            if (row.transferDirection === "incoming") {
+              transferIn = transferIn.add(transactionAmount);
             } else {
-              transferIn = transferIn.add(
-                transactionAmount
-              );
+              transferOut = transferOut.add(transactionAmount);
             }
 
             continue;
@@ -3120,12 +3128,6 @@ Do not ask questions.
              DUPLICATE DETECTION
           ========================= */
 
-          const startOfDay = new Date(transactionDate);
-          startOfDay.setHours(0, 0, 0, 0);
-
-          const endOfDay = new Date(transactionDate);
-          endOfDay.setHours(23, 59, 59, 999);
-
           const existing =
             await tx.transaction.findFirst({
               where: {
@@ -3155,7 +3157,7 @@ Do not ask questions.
           }
 
           /* =========================
-             CREATE TRANSACTION
+             CREATE NORMAL TRANSACTION
           ========================= */
 
           await tx.transaction.create({
@@ -3204,82 +3206,59 @@ Do not ask questions.
 
           imported++;
         }
-
         /* =========================
            RECONCILIATION
         ========================= */
 
-        const startingBalanceDecimal = new Prisma.Decimal(
-          reconciliationStartingBalance.toString()
-        );
+        const startingBalanceDecimal =
+          new Prisma.Decimal(
+            reconciliationStartingBalance.toString()
+          );
 
-        const incomeDecimal = new Prisma.Decimal(
-          income.toString()
-        );
-
-        const expensesDecimal = new Prisma.Decimal(
-          expenses.toString()
-        );
-
-        const transferInDecimal = new Prisma.Decimal(
-          transferIn.toString()
-        );
-
-        const transferOutDecimal = new Prisma.Decimal(
-          transferOut.toString()
-        );
-
-        let calculatedClosing = startingBalanceDecimal
-          .add(incomeDecimal);
-
-        calculatedClosing = calculatedClosing.sub(
-          expensesDecimal
-        );
-
-        calculatedClosing = calculatedClosing.add(
-          transferInDecimal
-        );
-
-        calculatedClosing = calculatedClosing.sub(
-          transferOutDecimal
-        );
-
+        const calculatedClosing =
+          startingBalanceDecimal
+            .add(income)
+            .subtract(expenses)
+            .add(transferIn)
+            .subtract(transferOut);
 
         let difference = null;
 
         if (statementClosing !== null) {
-          const statementClosingDecimal = new Prisma.Decimal(
-            statementClosing.toString()
-          );
-
-          difference = statementClosingDecimal.sub(
-            calculatedClosing
-          );
+          difference =
+            new Prisma.Decimal(
+              statementClosing.toString()
+            ).subtract(calculatedClosing);
         }
+
         reconciliation = {
           performed: statementClosing !== null,
+
           reconciled:
             statementClosing !== null
               ? difference.abs().lessThan(
                 new Prisma.Decimal("0.01")
               )
               : null,
+
           startingBalance:
-            new Prisma.Decimal(reconciliationStartingBalance),
+            startingBalanceDecimal,
 
           calculatedClosing,
 
           statementClosing:
             statementClosing !== null
-              ? new Prisma.Decimal(statementClosing)
+              ? new Prisma.Decimal(
+                statementClosing.toString()
+              )
               : null,
 
           difference,
         };
 
         /* =========================
-           RESOLVE ACCOUNT BALANCE
-        ========================= */
+      RESOLVE ACCOUNT BALANCE
+   ========================= */
 
         if (
           statementClosing !== null &&
@@ -3290,7 +3269,10 @@ Do not ask questions.
               id: accountId,
             },
             data: {
-              balance: new Prisma.Decimal(statementClosing),
+              balance:
+                new Prisma.Decimal(
+                  statementClosing.toString()
+                ),
             },
           });
         }
@@ -3298,7 +3280,8 @@ Do not ask questions.
         {
           maxWait: 10000,
           timeout: 120000,
-        }); // <-- CLOSE THE ATOMIC TRANSACTION HERE
+        }
+      );
 
       /* =========================
          GET FINAL ACCOUNT

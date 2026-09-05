@@ -203,11 +203,13 @@ export function CSVImport({
       label: "Completing import cleanup",
     },
   ];
+
   const analysisMessages = [
-    "🔍 Looking for transactions...",
+    "🔍 Reading your statement...",
     "🧠 Understanding transaction descriptions...",
-    "💰 Separating income from expenses...",
+    "💰 Identifying income and expenses...",
     "🏷️ Matching transactions to your categories...",
+    "🔄 Looking for transfers between accounts...",
     "🧹 Checking for duplicate transactions...",
     "✨ Preparing your review...",
   ];
@@ -219,6 +221,10 @@ export function CSVImport({
     setCategoryDialogOpen(true);
   };
 
+  /*
+   * Rotate analysis messages every 4 seconds.
+   * The backend controls when the analysis actually finishes.
+   */
   useEffect(() => {
     if (!isAnalyzing) {
       setMessageIndex(0);
@@ -226,22 +232,31 @@ export function CSVImport({
     }
 
     const interval = setInterval(() => {
-      setAnalysisProgress((current) => {
+      setMessageIndex((current) => {
+        return (current + 1) % analysisMessages.length;
+      });
+    }, 4000);
 
-        setMessageIndex((current) => {
-          return (current + 1) % analysisMessages.length;
-        });
-        /*
-         * Never visually reach 100% until
-         * the backend actually responds.
-         */
+    return () => clearInterval(interval);
+  }, [isAnalyzing]);
+
+  /*
+   * Animate the progress independently from the messages.
+   *
+   * The progress never reaches 100% until the backend
+   * actually returns successfully.
+   */
+  useEffect(() => {
+    if (!isAnalyzing) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setAnalysisProgress((current) => {
         if (current >= 92) {
           return current;
         }
 
-        /*
-         * Slow down as we approach completion.
-         */
         if (current >= 80) {
           return current + 1;
         }
@@ -326,6 +341,16 @@ export function CSVImport({
             type === "transfer"
               ? row.transferAccountId ?? null
               : null,
+
+          transferDirection:
+            type === "transfer"
+              ? row.transferDirection ?? null
+              : null,
+
+          needsTransferReview:
+            type === "transfer"
+              ? row.needsTransferReview ?? false
+              : false,
         };
       }),
     );
@@ -639,12 +664,20 @@ export function CSVImport({
       }
 
       if (row.type === "transfer") {
-        return row.needsTransferReview || !row.transferAccountId;
+        return (
+          row.needsTransferReview ||
+          !row.transferDirection ||
+          !row.transferAccountId
+        );
       }
 
-      return row.needsCategoryReview || !row.categoryId;
+      return (
+        row.needsCategoryReview ||
+        !row.categoryId
+      );
     });
   }, [preview]);
+
   const uncategorizedRows = useMemo(() => {
     return preview.filter(
       (row) =>
@@ -1068,7 +1101,7 @@ export function CSVImport({
 
               <p
                 key={messageIndex}
-                className="text-sm animate-in fade-in duration-500"
+                className="text-sm animate-in fade-in slide-in-from-bottom-1 duration-700"
               >
                 {analysisMessages[messageIndex]}
               </p>
@@ -1638,40 +1671,110 @@ export function CSVImport({
                             </Select>
                           </td>
 
-                          {/* CATEGORY / TRANSFER DESTINATION */}
+                          {/* CATEGORY / TRANSFER ACCOUNT */}
 
                           <td className="p-3">
                             {row.type === "transfer" ? (
-                              <Select
-                                value={row.transferAccountId || ""}
-                                onValueChange={(value) => {
-                                  setPreview((current) =>
-                                    current.map((item, i) =>
-                                      i === index
-                                        ? {
-                                          ...item,
-                                          transferAccountId: value,
-                                        }
-                                        : item
-                                    )
-                                  );
-                                }}
-                              >
-                                <SelectTrigger className="w-[200px]">
-                                  <SelectValue placeholder="Transfer to..." />
-                                </SelectTrigger>
+                              <div className="flex flex-col gap-2">
+                                {/* TRANSFER DIRECTION */}
+                                <Select
+                                  value={row.transferDirection || ""}
+                                  onValueChange={(value) => {
+                                    setPreview((current) =>
+                                      current.map((item, i) =>
+                                        i === index
+                                          ? {
+                                            ...item,
+                                            transferAccountId: value,
+                                          }
+                                          : item
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[200px]">
+                                    <SelectValue
+                                      placeholder={
+                                        row.transferDirection === "incoming"
+                                          ? "Select source account"
+                                          : row.transferDirection === "outgoing"
+                                            ? "Select destination account"
+                                            : "Select account"
+                                      }
+                                    />
+                                  </SelectTrigger>
 
-                                <SelectContent>
-                                  {getTransferAccounts(accountId).map((account) => (
-                                    <SelectItem
-                                      key={account.id}
-                                      value={account.id}
-                                    >
-                                      {account.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                  <SelectContent>
+                                    {getTransferAccounts(accountId).map(
+                                      (account) => (
+                                        <SelectItem
+                                          key={account.id}
+                                          value={account.id}
+                                        >
+                                          {account.name}
+                                        </SelectItem>
+                                      )
+                                    )}
+                                  </SelectContent>
+                                </Select>
+
+                                {/* COUNTERPART ACCOUNT */}
+                                <Select
+                                  value={row.transferAccountId || ""}
+                                  onValueChange={(value) => {
+                                    setPreview((current) =>
+                                      current.map((item, i) =>
+                                        i === index
+                                          ? {
+                                            ...item,
+                                            type: value as "income" | "expense" | "transfer",
+
+                                            categoryId:
+                                              value === "transfer"
+                                                ? null
+                                                : item.categoryId,
+
+                                            transferAccountId:
+                                              value === "transfer"
+                                                ? item.transferAccountId
+                                                : null,
+
+                                            transferDirection:
+                                              value === "transfer"
+                                                ? item.transferDirection
+                                                : null,
+                                          }
+                                          : item
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[200px]">
+                                    <SelectValue
+                                      placeholder={
+                                        row.transferDirection === "incoming"
+                                          ? "Select source account"
+                                          : row.transferDirection === "outgoing"
+                                            ? "Select destination account"
+                                            : "Select account"
+                                      }
+                                    />
+                                  </SelectTrigger>
+
+                                  <SelectContent>
+                                    {getTransferAccounts(accountId).map(
+                                      (account) => (
+                                        <SelectItem
+                                          key={account.id}
+                                          value={account.id}
+                                        >
+                                          {account.name}
+                                        </SelectItem>
+                                      )
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             ) : (
                               <Select
                                 value={row.categoryId || ""}
@@ -1713,7 +1816,6 @@ export function CSVImport({
                               </Select>
                             )}
                           </td>
-
                         </tr>
                       );
                     },
