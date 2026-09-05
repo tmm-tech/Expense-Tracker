@@ -2693,7 +2693,12 @@ Do not ask questions.
         });
       }
 
-      const { rows, accountId, statement } = req.body;
+      const {
+        rows,
+        accountId,
+        statement,
+        balanceResolution,
+      } = req.body;
 
       /* =========================
          VALIDATION
@@ -2710,6 +2715,18 @@ Do not ask questions.
         return res.status(400).json({
           success: false,
           error: "No transactions to import",
+        });
+      }
+
+      if (
+        balanceResolution !== undefined &&
+        !["keep_current", "use_statement"].includes(
+          balanceResolution
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid balance resolution",
         });
       }
 
@@ -3144,38 +3161,37 @@ Do not ask questions.
             .add(transferIn)
             .subtract(transferOut);
 
+        let difference = null;
+
+        if (statementClosing !== null) {
+          difference = statementClosing.subtract(
+            calculatedClosing
+          );
+        }
+
         reconciliation = {
           performed: statementClosing !== null,
-          reconciled: null,
+          reconciled:
+            statementClosing !== null
+              ? difference.abs().lessThan(
+                new Prisma.Decimal("0.01")
+              )
+              : null,
           startingBalance:
             reconciliationStartingBalance,
           calculatedClosing,
           statementClosing,
-          difference: null,
+          difference,
         };
 
-        if (statementClosing !== null) {
-          const difference =
-            statementClosing.subtract(
-              calculatedClosing
-            );
+        /* =========================
+    RESOLVE ACCOUNT BALANCE
+ ========================= */
 
-          reconciliation = {
-            performed: true,
-            reconciled: difference
-              .abs()
-              .lessThan(new Prisma.Decimal("0.01")),
-            startingBalance:
-              reconciliationStartingBalance,
-            calculatedClosing,
-            statementClosing,
-            difference,
-          };
-
-          /* =========================
-             STATEMENT CLOSING BALANCE
-          ========================= */
-
+        if (
+          statementClosing !== null &&
+          balanceResolution === "use_statement"
+        ) {
           await tx.account.update({
             where: {
               id: accountId,
@@ -3185,7 +3201,7 @@ Do not ask questions.
             },
           });
         }
-      });
+      }); // <-- CLOSE THE ATOMIC TRANSACTION HERE
 
       /* =========================
          GET FINAL ACCOUNT
@@ -3253,7 +3269,9 @@ Do not ask questions.
 
             difference:
               reconciliation.difference !== null
-                ? Number(reconciliation.difference)
+                ? Number(
+                  reconciliation.difference
+                )
                 : null,
           },
 
@@ -3280,6 +3298,4 @@ Do not ask questions.
       });
     }
   },
-
-
 };
