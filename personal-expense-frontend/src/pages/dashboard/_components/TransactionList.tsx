@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, Receipt } from "lucide-react";
@@ -32,13 +33,31 @@ export function TransactionList({
   accounts,
   categories,
 }: TransactionListProps) {
+
+  const queryClient = useQueryClient();
+
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch(`/transactions/${id}`, { method: "DELETE" });
+      await apiFetch(`/transactions/${id}`, {
+        method: "DELETE",
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["accounts"],
+      });
+
       toast.success("Transaction deleted");
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete transaction");
+      console.error("Delete transaction error:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete transaction"
+      );
     }
   };
 
@@ -158,11 +177,11 @@ export function TransactionList({
                 {/* Right */}
                 <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-3">
                   <span className={`text-lg font-bold ${transaction.type === "income"
-                        ? "text-accent"
-                        : transaction.type === "transfer"
-                          ? "text-blue-500"
-                          : "text-destructive"
-                      }`}
+                    ? "text-accent"
+                    : transaction.type === "transfer"
+                      ? "text-blue-500"
+                      : "text-destructive"
+                    }`}
                   >
                     {transaction.type === "income"
                       ? "+"
