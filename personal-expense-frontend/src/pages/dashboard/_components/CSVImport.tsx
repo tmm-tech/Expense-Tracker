@@ -67,16 +67,22 @@ interface ImportResult {
 
   account: {
     balance: number | null;
+    balanceBeforeImport?: number | null;
+    statementDifference?: number | null;
   };
 
   cleanup: {
     completed: boolean;
   };
 }
+
+
 interface ReconciliationResult {
   income: number;
   expenses: number;
   transfers: number;
+  transferIn: number;
+  transferOut: number;
   expectedClosing: number | null;
   difference: number | null;
   reconciled: boolean | null;
@@ -109,6 +115,7 @@ interface PreviewRow {
 
   transferAccountId: string | null;
   transferConfidence: "high" | "medium" | "low" | "none";
+  transferDirection?: "incoming" | "outgoing" | null;
 }
 
 interface StatementBalance {
@@ -675,6 +682,8 @@ export function CSVImport({
         income: 0,
         expenses: 0,
         transfers: 0,
+        transferIn: 0,
+        transferOut: 0,
         expectedClosing: null,
         difference: null,
         reconciled: null,
@@ -683,15 +692,41 @@ export function CSVImport({
 
     const income = preview
       .filter((row) => row.type === "income")
-      .reduce((total, row) => total + Number(row.amount || 0), 0);
+      .reduce(
+        (total, row) => total + Number(row.amount || 0),
+        0,
+      );
 
     const expenses = preview
       .filter((row) => row.type === "expense")
-      .reduce((total, row) => total + Number(row.amount || 0), 0);
+      .reduce(
+        (total, row) => total + Number(row.amount || 0),
+        0,
+      );
 
-    const transfers = preview
-      .filter((row) => row.type === "transfer")
-      .reduce((total, row) => total + Number(row.amount || 0), 0);
+    const transferIn = preview
+      .filter(
+        (row) =>
+          row.type === "transfer" &&
+          row.transferDirection === "incoming",
+      )
+      .reduce(
+        (total, row) => total + Number(row.amount || 0),
+        0,
+      );
+
+    const transferOut = preview
+      .filter(
+        (row) =>
+          row.type === "transfer" &&
+          row.transferDirection === "outgoing",
+      )
+      .reduce(
+        (total, row) => total + Number(row.amount || 0),
+        0,
+      );
+
+    const transfers = transferIn + transferOut;
 
     if (
       statement.openingBalance === null ||
@@ -701,6 +736,8 @@ export function CSVImport({
         income,
         expenses,
         transfers,
+        transferIn,
+        transferOut,
         expectedClosing: null,
         difference: null,
         reconciled: null,
@@ -708,15 +745,21 @@ export function CSVImport({
     }
 
     /*
-     * For now, transfers are excluded from the balance calculation.
+     * Statement reconciliation:
      *
-     * This is intentional until the import rows expose the direction
-     * of a transfer relative to the selected account.
+     * Opening Balance
+     * + Income
+     * - Expenses
+     * + Transfer In
+     * - Transfer Out
+     * = Expected Closing
      */
     const expectedClosing =
       Number(statement.openingBalance) +
       income -
-      expenses;
+      expenses +
+      transferIn -
+      transferOut;
 
     const difference =
       Number(statement.closingBalance) -
@@ -726,11 +769,15 @@ export function CSVImport({
       income,
       expenses,
       transfers,
+      transferIn,
+      transferOut,
       expectedClosing,
       difference,
       reconciled: Math.abs(difference) < 0.01,
     };
   }, [preview, statement]);
+
+
   /*
    * We allow import only when every transaction
    * has a category and there are no validation
@@ -1297,19 +1344,39 @@ export function CSVImport({
                     </div>
 
                     {reconciliation.transfers > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Transfers
-                        </span>
+                      <>
+                        {reconciliation.transferIn > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Transfer In
+                            </span>
 
-                        <span className="font-medium">
-                          {statement.currency}{" "}
-                          {reconciliation.transfers.toLocaleString("en-KE", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
+                            <span className="font-medium">
+                              +{statement.currency}{" "}
+                              {reconciliation.transferIn.toLocaleString("en-KE", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+
+                        {reconciliation.transferOut > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Transfer Out
+                            </span>
+
+                            <span className="font-medium">
+                              -{statement.currency}{" "}
+                              {reconciliation.transferOut.toLocaleString("en-KE", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     <div className="border-t pt-2 flex justify-between font-semibold">
