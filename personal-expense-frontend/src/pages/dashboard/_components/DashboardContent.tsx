@@ -86,6 +86,19 @@ export function DashboardContent() {
 
   const queryClient = useQueryClient();
 
+
+  const formatCurrency = (value: string | number | null | undefined) => {
+    const numericValue = Number(value ?? 0);
+
+    if (!Number.isFinite(numericValue)) {
+      return "0.00";
+    }
+
+    return numericValue.toLocaleString("en-KE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
   const transactionsQuery = useQuery<ApiResponse<Transaction[]>>({
     queryKey: ["transactions"],
     enabled: !!session,
@@ -143,24 +156,24 @@ export function DashboardContent() {
       ),
   });
 
-const recurringTransactions = Array.isArray(
-  recurringTransactionsQuery.data?.data
-)
-  ? recurringTransactionsQuery.data.data
-  : [];
+  const recurringTransactions = Array.isArray(
+    recurringTransactionsQuery.data?.data
+  )
+    ? recurringTransactionsQuery.data.data
+    : [];
 
 
   const transactions = Array.isArray(transactionsQuery.data?.data)
     ? transactionsQuery.data.data
     : [];
 
-const accounts = Array.isArray(accountsQuery.data?.data)
-  ? accountsQuery.data.data.map((account) => ({
+  const accounts = Array.isArray(accountsQuery.data?.data)
+    ? accountsQuery.data.data.map((account) => ({
       ...account,
       balance: Number(account.balance),
     }))
-  : [];
-  
+    : [];
+
   const bills = Array.isArray(billsQuery.data?.data)
     ? billsQuery.data.data
     : [];
@@ -571,7 +584,7 @@ const accounts = Array.isArray(accountsQuery.data?.data)
             </CardHeader>
             <CardContent className="relative z-10">
               <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold">
-                KES {balance.toFixed(2)}
+                KES {formatCurrency(balance)}
               </CardTitle>
             </CardContent>
           </Card>
@@ -586,7 +599,7 @@ const accounts = Array.isArray(accountsQuery.data?.data)
             </CardHeader>
             <CardContent className="relative z-10">
               <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold text-accent">
-                KES {totalIncome.toFixed(2)}
+                KES {formatCurrency(totalIncome)}
               </CardTitle>
             </CardContent>
           </Card>
@@ -601,7 +614,7 @@ const accounts = Array.isArray(accountsQuery.data?.data)
             </CardHeader>
             <CardContent className="relative z-10">
               <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold text-destructive">
-                KES {totalExpense.toFixed(2)}
+                KES {formatCurrency(totalExpense)}
               </CardTitle>
             </CardContent>
           </Card>
@@ -772,8 +785,8 @@ const accounts = Array.isArray(accountsQuery.data?.data)
           </TabsContent>
 
           <TabsContent value="recurring" className="mt-6">
-            <RecurringTransactionList  
-            recurringTransactions={recurringTransactions} 
+            <RecurringTransactionList
+              recurringTransactions={recurringTransactions}
             />
           </TabsContent>
           <TabsContent value="bills" className="mt-6">

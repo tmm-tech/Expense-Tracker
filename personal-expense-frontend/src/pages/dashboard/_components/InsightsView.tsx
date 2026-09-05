@@ -114,7 +114,11 @@ export function InsightsView() {
     : [];
 
   const investments = Array.isArray(investmentsResponse?.data)
-    ? investmentsResponse.data
+    ? investmentsResponse.data.map((investment) => ({
+      ...investment,
+      principal: Number(investment.principal),
+      currentValue: Number(investment.currentValue),
+    }))
     : [];
 
   const categories = Array.isArray(categoriesResponse?.data)
