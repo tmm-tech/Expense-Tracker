@@ -94,12 +94,16 @@ export function TransactionDialog({
       setToAccountId("");
     }
   }, [editingTransaction, open]);
+
   const createTransaction = useMutation({
-    mutationFn: (payload: Omit<Transaction, "id">) =>
-      apiFetch<Transaction>("/transactions", {
+    mutationFn: (payload: Omit<Transaction, "id">) => {
+      console.log("Creating transaction:", payload);
+
+      return apiFetch<Transaction>("/transactions", {
         method: "POST",
         body: JSON.stringify(payload),
-      }),
+      });
+    },
 
     onMutate: async (newTx) => {
       await queryClient.cancelQueries({ queryKey: ["transactions"] });
@@ -120,9 +124,16 @@ export function TransactionDialog({
       return { previous };
     },
 
-    onError: (_err, _tx, ctx) => {
+    onError: (error, _tx, ctx) => {
       queryClient.setQueryData(["transactions"], ctx?.previous);
-      toast.error("Failed to create transaction");
+
+      console.error("Create transaction error:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create transaction"
+      );
     },
 
     onSuccess: () => {
@@ -132,6 +143,7 @@ export function TransactionDialog({
       onOpenChange(false);
     },
   });
+
   const createTransfer = useMutation({
     mutationFn: (payload: {
       fromAccountId: string;
