@@ -211,7 +211,7 @@ export function TransactionList({
                           ? "+"
                           : "-"
                         : "-"}
-                    KES {transaction.amount.toFixed(2)}
+                    KES {Number(transaction.amount).toFixed(2)}
                   </span>
 
                   <div className="flex gap-2">
