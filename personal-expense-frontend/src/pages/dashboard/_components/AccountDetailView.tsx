@@ -52,9 +52,23 @@ export default function AccountDetailView({
   categories,
   onBack,
 }: AccountDetailViewProps) {
+
   const { data, isLoading } = useQuery<AccountWithTransactions>({
     queryKey: ["account", accountId],
-    queryFn: () => apiFetch(`/accounts/${accountId}?includeTransactions=true`),
+    queryFn: async () => {
+      const account = await apiFetch<AccountWithTransactions>(
+        `/accounts/${accountId}?includeTransactions=true`
+      );
+
+      return {
+        ...account,
+        balance: Number(account.balance),
+        transactions: account.transactions?.map((transaction) => ({
+          ...transaction,
+          amount: Number(transaction.amount),
+        })),
+      };
+    },
   });
 
   if (isLoading) {
@@ -189,11 +203,10 @@ export default function AccountDetailView({
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`p-2 rounded-lg ${
-                          t.type === "income"
-                            ? "bg-accent/10 text-accent"
-                            : "bg-destructive/10 text-destructive"
-                        }`}
+                        className={`p-2 rounded-lg ${t.type === "income"
+                          ? "bg-accent/10 text-accent"
+                          : "bg-destructive/10 text-destructive"
+                          }`}
                       >
                         {t.type === "income" ? (
                           <ArrowUpCircle className="h-4 w-4" />
@@ -217,9 +230,8 @@ export default function AccountDetailView({
                     </div>
 
                     <p
-                      className={`text-lg font-semibold ${
-                        t.type === "income" ? "text-accent" : "text-destructive"
-                      }`}
+                      className={`text-lg font-semibold ${t.type === "income" ? "text-accent" : "text-destructive"
+                        }`}
                     >
                       {t.type === "income" ? "+" : "-"}
                       {account.currency || "KES"} {(t.amount ?? 0).toFixed(2)}

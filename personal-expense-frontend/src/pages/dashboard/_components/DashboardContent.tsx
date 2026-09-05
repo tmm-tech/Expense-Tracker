@@ -154,10 +154,13 @@ const recurringTransactions = Array.isArray(
     ? transactionsQuery.data.data
     : [];
 
-  const accounts = Array.isArray(accountsQuery.data?.data)
-    ? accountsQuery.data.data
-    : [];
-
+const accounts = Array.isArray(accountsQuery.data?.data)
+  ? accountsQuery.data.data.map((account) => ({
+      ...account,
+      balance: Number(account.balance),
+    }))
+  : [];
+  
   const bills = Array.isArray(billsQuery.data?.data)
     ? billsQuery.data.data
     : [];

@@ -43,62 +43,88 @@ const formatKES = (value: number) =>
 
 export function InsightsView() {
   type ApiResponse<T> = {
-  success: boolean;
-  data: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
+    success: boolean;
+    data: T;
+    pagination?: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   };
-};
 
-const { data: transactionsResponse, isLoading } =
-  useQuery<ApiResponse<Transaction[]>>({
-    queryKey: ["transactions"],
-    queryFn: () => apiFetch<ApiResponse<Transaction[]>>("/transactions"),
+  const { data: transactionsResponse, isLoading } =
+    useQuery<ApiResponse<Transaction[]>>({
+      queryKey: ["transactions"],
+      queryFn: async () => {
+        const response =
+          await apiFetch<ApiResponse<Transaction[]>>("/transactions");
+
+        return {
+          ...response,
+          data: Array.isArray(response.data)
+            ? response.data.map((transaction) => ({
+              ...transaction,
+              amount: Number(transaction.amount),
+            }))
+            : [],
+        };
+      },
+    });
+
+  const { data: budgetsResponse } = useQuery<ApiResponse<Budget[]>>({
+    queryKey: ["budgets"],
+    queryFn: () => apiFetch<ApiResponse<Budget[]>>("/budgets"),
   });
 
-const { data: budgetsResponse } = useQuery<ApiResponse<Budget[]>>({
-  queryKey: ["budgets"],
-  queryFn: () => apiFetch<ApiResponse<Budget[]>>("/budgets"),
-});
+  const { data: investmentsResponse } = useQuery<ApiResponse<Investment[]>>({
+    queryKey: ["investments"],
+    queryFn: () => apiFetch<ApiResponse<Investment[]>>("/investments"),
+  });
 
-const { data: investmentsResponse } = useQuery<ApiResponse<Investment[]>>({
-  queryKey: ["investments"],
-  queryFn: () => apiFetch<ApiResponse<Investment[]>>("/investments"),
-});
+  const { data: categoriesResponse } = useQuery<ApiResponse<Category[]>>({
+    queryKey: ["categories"],
+    queryFn: () => apiFetch<ApiResponse<Category[]>>("/categories"),
+  });
 
-const { data: categoriesResponse } = useQuery<ApiResponse<Category[]>>({
-  queryKey: ["categories"],
-  queryFn: () => apiFetch<ApiResponse<Category[]>>("/categories"),
-});
+  const { data: accountsResponse } = useQuery<ApiResponse<Account[]>>({
+    queryKey: ["accounts"],
+    queryFn: async () => {
+      const response =
+        await apiFetch<ApiResponse<Account[]>>("/accounts");
 
-const { data: accountsResponse } = useQuery<ApiResponse<Account[]>>({
-  queryKey: ["accounts"],
-  queryFn: () => apiFetch<ApiResponse<Account[]>>("/accounts"),
-});
+      return {
+        ...response,
+        data: Array.isArray(response.data)
+          ? response.data.map((account) => ({
+            ...account,
+            balance: Number(account.balance),
+          }))
+          : [],
+      };
+    },
+  });
 
-const transactions = Array.isArray(transactionsResponse?.data)
-  ? transactionsResponse.data
-  : [];
+  const transactions = Array.isArray(transactionsResponse?.data)
+    ? transactionsResponse.data
+    : [];
 
-const budgets = Array.isArray(budgetsResponse?.data)
-  ? budgetsResponse.data
-  : [];
+  const budgets = Array.isArray(budgetsResponse?.data)
+    ? budgetsResponse.data
+    : [];
 
-const investments = Array.isArray(investmentsResponse?.data)
-  ? investmentsResponse.data
-  : [];
+  const investments = Array.isArray(investmentsResponse?.data)
+    ? investmentsResponse.data
+    : [];
 
-const categories = Array.isArray(categoriesResponse?.data)
-  ? categoriesResponse.data
-  : [];
+  const categories = Array.isArray(categoriesResponse?.data)
+    ? categoriesResponse.data
+    : [];
 
-const accounts = Array.isArray(accountsResponse?.data)
-  ? accountsResponse.data
-  : [];
-  
+  const accounts = Array.isArray(accountsResponse?.data)
+    ? accountsResponse.data
+    : [];
+
   /* ---------- LOADING ---------- */
   if (isLoading) {
     return <div className="h-40 animate-pulse bg-muted rounded-xl" />;
@@ -176,7 +202,7 @@ const accounts = Array.isArray(accountsResponse?.data)
   const netWorthGrowth =
     netWorthData.length > 1
       ? netWorthData[netWorthData.length - 1].NetWorth -
-        netWorthData[0].NetWorth
+      netWorthData[0].NetWorth
       : 0;
 
   /* ---------- CATEGORY ---------- */
