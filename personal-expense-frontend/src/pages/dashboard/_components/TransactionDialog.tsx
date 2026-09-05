@@ -109,37 +109,26 @@ export function TransactionDialog({
 
   const createTransaction = useMutation({
     mutationFn: (payload: Omit<Transaction, "id">) => {
-
       return apiFetch<TransactionResponse>("/transactions", {
         method: "POST",
         body: JSON.stringify(payload),
       });
     },
 
-    onMutate: async (newTx) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
 
-      const cached =
-        queryClient.getQueryData<Transaction[]>(["transactions"]);
+      await queryClient.invalidateQueries({
+        queryKey: ["accounts"],
+      });
 
-      const previous = Array.isArray(cached) ? cached : [];
-
-      const optimisticTx: Transaction = {
-        id: `temp-${Date.now()}`,
-        ...newTx,
-      };
-
-      queryClient.setQueryData<Transaction[]>(
-        ["transactions"],
-        [optimisticTx, ...previous],
-      );
-
-      return { previous };
+      toast.success("Transaction created");
+      onOpenChange(false);
     },
 
-    onError: (error, _tx, ctx) => {
-      queryClient.setQueryData(["transactions"], ctx?.previous);
-
+    onError: (error) => {
       console.error("Create transaction error:", error);
 
       toast.error(
@@ -147,13 +136,6 @@ export function TransactionDialog({
           ? error.message
           : "Failed to create transaction"
       );
-    },
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      toast.success("Transaction created");
-      onOpenChange(false);
     },
   });
 
@@ -237,35 +219,28 @@ export function TransactionDialog({
 
   const updateTransaction = useMutation({
     mutationFn: (payload: Transaction) =>
-      apiFetch<TransactionResponse>(`/transactions/${payload.id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      }),
+      apiFetch<TransactionResponse>(
+        `/transactions/${payload.id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }
+      ),
 
-    onMutate: async (updatedTx) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
 
-      const cached =
-        queryClient.getQueryData<Transaction[]>(["transactions"]);
+      await queryClient.invalidateQueries({
+        queryKey: ["accounts"],
+      });
 
-      const previous = Array.isArray(cached) ? cached : [];
-
-      queryClient.setQueryData<Transaction[]>(
-        ["transactions"],
-        previous.map((t) =>
-          t.id === updatedTx.id ? updatedTx : t
-        ),
-      );
-
-      return { previous };
+      toast.success("Transaction updated");
+      onOpenChange(false);
     },
 
-    onError: (error, _tx, ctx) => {
-      queryClient.setQueryData(
-        ["transactions"],
-        ctx?.previous
-      );
-
+    onError: (error) => {
       console.error("Update transaction error:", error);
 
       toast.error(
@@ -273,19 +248,6 @@ export function TransactionDialog({
           ? error.message
           : "Failed to update transaction"
       );
-    },
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["transactions"],
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["accounts"],
-      });
-
-      toast.success("Transaction updated");
-      onOpenChange(false);
     },
   });
 
