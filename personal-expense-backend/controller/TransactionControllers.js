@@ -3218,9 +3218,9 @@ Do not ask questions.
         const calculatedClosing =
           startingBalanceDecimal
             .add(income)
-            .subtract(expenses)
+            .sub(expenses)
             .add(transferIn)
-            .subtract(transferOut);
+            .sub(transferOut);
 
         let difference = null;
 
