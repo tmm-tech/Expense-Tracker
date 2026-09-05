@@ -102,9 +102,6 @@ export default function AccountDetailView({
 
   const Icon = ACCOUNT_ICONS[account.type] ?? Wallet;
 
-  console.log("Account type:", account.type);
-  console.log("Resolved account icon:", Icon);
-
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -221,16 +218,19 @@ export default function AccountDetailView({
                       <div
                         className={`p-2 rounded-lg ${t.type === "income"
                           ? "bg-accent/10 text-accent"
-                          : "bg-destructive/10 text-destructive"
+                          : t.type === "transfer"
+                            ? "bg-blue-500/10 text-blue-500"
+                            : "bg-destructive/10 text-destructive"
                           }`}
                       >
                         {t.type === "income" ? (
+                          <ArrowUpCircle className="h-4 w-4" />
+                        ) : t.type === "transfer" ? (
                           <ArrowUpCircle className="h-4 w-4" />
                         ) : (
                           <ArrowDownCircle className="h-4 w-4" />
                         )}
                       </div>
-
                       <div>
                         <p className="font-medium">{t.description}</p>
                         {category && (
@@ -246,10 +246,20 @@ export default function AccountDetailView({
                     </div>
 
                     <p
-                      className={`text-lg font-semibold ${t.type === "income" ? "text-accent" : "text-destructive"
+                      className={`text-lg font-semibold ${t.type === "income"
+                          ? "text-accent"
+                          : t.type === "transfer"
+                            ? "text-blue-500"
+                            : "text-destructive"
                         }`}
                     >
-                      {t.type === "income" ? "+" : "-"}
+                      {t.type === "income"
+                        ? "+"
+                        : t.type === "transfer"
+                          ? t.transferDirection === "incoming"
+                            ? "+"
+                            : "-"
+                          : "-"}
                       {account.currency || "KES"} {(t.amount ?? 0).toFixed(2)}
                     </p>
                   </div>
