@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,15 +36,24 @@ interface CategoryListProps {
 ========================= */
 
 export function CategoryList({ categories, onEdit }: CategoryListProps) {
-  const handleDelete = async (id: string) => {
-    try {
-      await apiFetch(`/categories/${id}`, { method: "DELETE" });
-      toast.success("Category deleted");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete category");
-    }
-  };
+  const queryClient = useQueryClient();
+  
+const handleDelete = async (id: string) => {
+  try {
+    await apiFetch(`/categories/${id}`, {
+      method: "DELETE",
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["categories"],
+    });
+
+    toast.success("Category deleted");
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to delete category");
+  }
+};
 
   /* -------------------------
      Loading

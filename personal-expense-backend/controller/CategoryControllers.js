@@ -89,6 +89,20 @@ module.exports = {
         });
       }
 
+      if (typeof color !== "string" || !color.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "Category color is required",
+        });
+      }
+
+      if (typeof icon !== "string" || !icon.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "Category icon is required",
+        });
+      }
+
       // =========================
       // DUPLICATE CHECK
       // =========================
@@ -117,8 +131,8 @@ module.exports = {
           userId,
           name: trimmedName,
           type,
-          color: color || null,
-          icon: icon || null,
+          color: color.trim(),
+          icon: icon.trim(),
           isDefault: false,
         },
       });
@@ -145,60 +159,177 @@ module.exports = {
   // PUT /api/categories/:id
   updateCategory: async (req, res) => {
     try {
-      if (!req.user?.sub) {
+      const userId = req.user?.sub;
+
+      if (!userId) {
         return res.status(401).json({
           success: false,
-          message: "Unauthorized",
+          error: "Unauthorized",
         });
       }
-      const userId = req.user.sub;
+
       const { id } = req.params;
       const { name, color, icon } = req.body;
 
-      const updated = await prisma.category.updateMany({
-        where: { id, userId },
-        data: {
-          name,
-          color,
-          icon,
+      const category = await prisma.category.findFirst({
+        where: {
+          id,
+          userId,
         },
       });
 
-      if (!updated.count) {
-        return res.status(404).json({ message: "Category not found" });
+      if (!category) {
+        return res.status(404).json({
+          success: false,
+          error: "Category not found",
+        });
       }
 
-      res.json({ success: true });
+      const trimmedName =
+        typeof name === "string" ? name.trim() : "";
+
+      if (!trimmedName) {
+        return res.status(400).json({
+          success: false,
+          error: "Category name is required",
+        });
+      }
+
+      if (typeof color !== "string" || !color.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "Category color is required",
+        });
+      }
+
+      if (typeof icon !== "string" || !icon.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: "Category icon is required",
+        });
+      }
+
+      const duplicate = await prisma.category.findFirst({
+        where: {
+          userId,
+          name: trimmedName,
+          type: category.type,
+          NOT: {
+            id,
+          },
+        },
+      });
+
+      if (duplicate) {
+        return res.status(409).json({
+          success: false,
+          error: "Category already exists",
+        });
+      }
+
+      const updated = await prisma.category.update({
+        where: {
+          id: category.id,
+        },
+        data: {
+          name: trimmedName,
+          color: color.trim(),
+          icon: icon.trim(),
+        },
+      });
+
+      return res.json({
+        success: true,
+        data: updated,
+      });
     } catch (err) {
-      console.error(err);
-      res.status(400).json({ message: "Failed to update category" });
+      console.error("Update category error:", err);
+
+      return res.status(500).json({
+        success: false,
+        error: "Failed to update category",
+      });
     }
   },
 
   // DELETE /api/categories/:id
   deleteCategory: async (req, res) => {
     try {
-      if (!req.user?.sub) {
+      const userId = req.user?.sub;
+
+      if (!userId) {
         return res.status(401).json({
           success: false,
-          message: "Unauthorized",
+          error: "Unauthorized",
         });
       }
-      const userId = req.user.sub;
+
       const { id } = req.params;
 
-      const deleted = await prisma.category.deleteMany({
-        where: { id, userId },
+      const category = await prisma.category.findFirst({
+        where: {
+          id,
+          userId,
+        },
+        include: {
+          transactions: {
+            select: { id: true },
+            take: 1,
+          },
+          budgets: {
+            select: { id: true },
+            take: 1,
+          },
+          Recurring: {
+            select: { id: true },
+            take: 1,
+          },
+        },
       });
 
-      if (!deleted.count) {
-        return res.status(404).json({ message: "Category not found" });
+      if (!category) {
+        return res.status(404).json({
+          success: false,
+          error: "Category not found",
+        });
       }
 
-      res.json({ success: true });
+      if (category.isDefault) {
+        return res.status(400).json({
+          success: false,
+          error: "Default categories cannot be deleted",
+        });
+      }
+
+      const isInUse =
+        category.transactions.length > 0 ||
+        category.budgets.length > 0 ||
+        category.Recurring.length > 0;
+
+      if (isInUse) {
+        return res.status(409).json({
+          success: false,
+          error: "Category is in use and cannot be deleted",
+        });
+      }
+
+      await prisma.category.delete({
+        where: {
+          id: category.id,
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: "Category deleted successfully",
+      });
     } catch (err) {
-      console.error(err);
-      res.status(400).json({ message: "Failed to delete category" });
+      console.error("Delete category error:", err);
+
+      return res.status(500).json({
+        success: false,
+        error: "Failed to delete category",
+      });
     }
   },
 };

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +41,10 @@ interface CategoryDialogProps {
   categories: Category[];
 }
 
+interface CategoryResponse {
+  success: boolean;
+  data: Category;
+}
 /* =========================
    Schema
 ========================= */
@@ -103,6 +107,8 @@ export function CategoryDialog({
   editingId,
   categories,
 }: CategoryDialogProps) {
+
+
   const queryClient = useQueryClient();
 
   const editingCategory = useMemo(
@@ -127,11 +133,29 @@ export function CategoryDialog({
       },
   });
 
+  useEffect(() => {
+    if (editingCategory) {
+      form.reset({
+        name: editingCategory.name,
+        type: editingCategory.type,
+        icon: editingCategory.icon ?? "Folder",
+        color: editingCategory.color ?? "#3b82f6",
+      });
+    } else {
+      form.reset({
+        name: "",
+        type: "expense",
+        icon: "Folder",
+        color: "#3b82f6",
+      });
+    }
+  }, [editingCategory, form]);
+
   const selectedIcon = form.watch("icon");
   const selectedColor = form.watch("color");
   const createCategory = useMutation({
     mutationFn: (payload: CategoryFormData) =>
-      apiFetch<Category>("/categories", {
+      apiFetch<CategoryResponse>("/categories", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
@@ -163,36 +187,38 @@ export function CategoryDialog({
       );
     },
   });
+
   const updateCategory = useMutation({
-    mutationFn: (payload: Category) =>
-      apiFetch<Category>(`/categories/${payload.id}`, {
+    mutationFn: (
+      payload: CategoryFormData & { id: string }
+    ) =>
+      apiFetch<CategoryResponse>(`/categories/${payload.id}`, {
         method: "PUT",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          name: payload.name,
+          color: payload.color,
+          icon: payload.icon,
+        }),
       }),
 
-    onMutate: async (updatedCategory) => {
-      await queryClient.cancelQueries({ queryKey: ["categories"] });
-
-      const previousCategories =
-        queryClient.getQueryData<Category[]>(["categories"]) ?? [];
-
-      queryClient.setQueryData<Category[]>(["categories"], (old = []) =>
-        old.map((c) => (c.id === updatedCategory.id ? updatedCategory : c)),
-      );
-
-      return { previousCategories };
-    },
-
-    onError: (_err, _updatedCategory, context) => {
-      queryClient.setQueryData(["categories"], context?.previousCategories);
-      toast.error("Failed to update category");
-    },
-
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({
+        queryKey: ["categories"],
+      });
+
       toast.success("Category updated");
       form.reset();
       onOpenChange(false);
+    },
+
+    onError: (error: any) => {
+      console.error("Update category error:", error);
+
+      toast.error(
+        error?.error ||
+        error?.message ||
+        "Failed to update category",
+      );
     },
   });
 
