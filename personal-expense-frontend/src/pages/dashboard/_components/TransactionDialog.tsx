@@ -160,7 +160,7 @@ export function TransactionDialog({
     }) => {
       console.log("Creating transfer:", payload);
 
-      return apiFetch("/transfers", {
+      return apiFetch("/transfer", {
         method: "POST",
         body: JSON.stringify(payload),
       });
