@@ -56,13 +56,20 @@ export default function AccountDetailView({
   const { data, isLoading } = useQuery<AccountWithTransactions>({
     queryKey: ["account", accountId],
     queryFn: async () => {
-      const account = await apiFetch<AccountWithTransactions>(
+      const response = await apiFetch<{
+        success: boolean;
+        data: AccountWithTransactions;
+      }>(
         `/accounts/${accountId}?includeTransactions=true`
       );
 
+      const account = response.data;
+
       return {
         ...account,
-        balance: Number(account.balance),
+        balance: Number.isFinite(Number(account.balance))
+          ? Number(account.balance)
+          : 0,
         transactions: account.transactions?.map((transaction) => ({
           ...transaction,
           amount: Number(transaction.amount),
@@ -93,10 +100,10 @@ export default function AccountDetailView({
   const account = data;
   const transactions = data.transactions ?? [];
 
- const Icon = ACCOUNT_ICONS[account.type] ?? Wallet;
+  const Icon = ACCOUNT_ICONS[account.type] ?? Wallet;
 
-console.log("Account type:", account.type);
-console.log("Resolved account icon:", Icon);
+  console.log("Account type:", account.type);
+  console.log("Resolved account icon:", Icon);
 
 
   const totalIncome = transactions
@@ -146,7 +153,10 @@ console.log("Resolved account icon:", Icon);
                 Current Balance
               </p>
               <p className="text-3xl font-bold text-primary">
-                {account.currency || "KES"} {(account.balance ?? 0).toFixed(2)}
+                {account.currency || "KES"}{" "}
+                {Number.isFinite(Number(account.balance))
+                  ? Number(account.balance).toFixed(2)
+                  : "0.00"}
               </p>
             </div>
           </div>
