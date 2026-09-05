@@ -3155,22 +3155,53 @@ Do not ask questions.
            RECONCILIATION
         ========================= */
 
-        const calculatedClosing =
-          new Prisma.Decimal(reconciliationStartingBalance)
-            .add(new Prisma.Decimal(income))
-            .subtract(new Prisma.Decimal(expenses))
-            .add(new Prisma.Decimal(transferIn))
-            .subtract(new Prisma.Decimal(transferOut));
+        const startingBalanceDecimal = new Prisma.Decimal(
+          reconciliationStartingBalance.toString()
+        );
+
+        const incomeDecimal = new Prisma.Decimal(
+          income.toString()
+        );
+
+        const expensesDecimal = new Prisma.Decimal(
+          expenses.toString()
+        );
+
+        const transferInDecimal = new Prisma.Decimal(
+          transferIn.toString()
+        );
+
+        const transferOutDecimal = new Prisma.Decimal(
+          transferOut.toString()
+        );
+
+        let calculatedClosing = startingBalanceDecimal
+          .add(incomeDecimal);
+
+        calculatedClosing = calculatedClosing.sub(
+          expensesDecimal
+        );
+
+        calculatedClosing = calculatedClosing.add(
+          transferInDecimal
+        );
+
+        calculatedClosing = calculatedClosing.sub(
+          transferOutDecimal
+        );
 
 
         let difference = null;
 
         if (statementClosing !== null) {
-          difference = new Prisma.Decimal(statementClosing).subtract(
+          const statementClosingDecimal = new Prisma.Decimal(
+            statementClosing.toString()
+          );
+
+          difference = statementClosingDecimal.sub(
             calculatedClosing
           );
         }
-
         reconciliation = {
           performed: statementClosing !== null,
           reconciled:
