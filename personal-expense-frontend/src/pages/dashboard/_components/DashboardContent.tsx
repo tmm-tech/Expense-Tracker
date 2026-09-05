@@ -164,16 +164,22 @@ export function DashboardContent() {
 
 
   const transactions = Array.isArray(transactionsQuery.data?.data)
-    ? transactionsQuery.data.data
-    : [];
+  ? transactionsQuery.data.data.map((transaction) => ({
+      ...transaction,
+      amount: Number.isFinite(Number(transaction.amount))
+        ? Number(transaction.amount)
+        : 0,
+    }))
+  : [];
 
   const accounts = Array.isArray(accountsQuery.data?.data)
-    ? accountsQuery.data.data.map((account) => ({
+  ? accountsQuery.data.data.map((account) => ({
       ...account,
-      balance: Number(account.balance),
+      balance: Number.isFinite(Number(account.balance))
+        ? Number(account.balance)
+        : 0,
     }))
-    : [];
-
+  : [];
   const bills = Array.isArray(billsQuery.data?.data)
     ? billsQuery.data.data
     : [];
