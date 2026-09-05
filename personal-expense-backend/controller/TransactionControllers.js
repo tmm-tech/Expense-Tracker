@@ -3185,8 +3185,8 @@ Do not ask questions.
         };
 
         /* =========================
-    RESOLVE ACCOUNT BALANCE
- ========================= */
+           RESOLVE ACCOUNT BALANCE
+        ========================= */
 
         if (
           statementClosing !== null &&
@@ -3201,7 +3201,11 @@ Do not ask questions.
             },
           });
         }
-      }); // <-- CLOSE THE ATOMIC TRANSACTION HERE
+      },
+        {
+          maxWait: 10000,
+          timeout: 120000,
+        }); // <-- CLOSE THE ATOMIC TRANSACTION HERE
 
       /* =========================
          GET FINAL ACCOUNT
