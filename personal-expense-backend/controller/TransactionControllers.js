@@ -5,6 +5,7 @@ const pdf = require("pdf-parse");
 const { parseCSV } = require("../utils/csvParser");
 const parsePdf = require("../utils/pdfParser");
 const { openai } = require("../src/lib/openai.js");
+const { validateHeaderName } = require("http");
 
 /**
  * NOTE:
@@ -3155,16 +3156,17 @@ Do not ask questions.
         ========================= */
 
         const calculatedClosing =
-          reconciliationStartingBalance
-            .add(income)
-            .subtract(expenses)
-            .add(transferIn)
-            .subtract(transferOut);
+          new Prisma.Decimal(reconciliationStartingBalance)
+            .add(new Prisma.Decimal(income))
+            .subtract(new Prisma.Decimal(expenses))
+            .add(new Prisma.Decimal(transferIn))
+            .subtract(new Prisma.Decimal(transferOut));
+
 
         let difference = null;
 
         if (statementClosing !== null) {
-          difference = statementClosing.subtract(
+          difference = new Prisma.Decimal(statementClosing).subtract(
             calculatedClosing
           );
         }
@@ -3178,9 +3180,15 @@ Do not ask questions.
               )
               : null,
           startingBalance:
-            reconciliationStartingBalance,
+            new Prisma.Decimal(reconciliationStartingBalance),
+
           calculatedClosing,
-          statementClosing,
+
+          statementClosing:
+            statementClosing !== null
+              ? new Prisma.Decimal(statementClosing)
+              : null,
+
           difference,
         };
 
@@ -3197,7 +3205,7 @@ Do not ask questions.
               id: accountId,
             },
             data: {
-              balance: statementClosing,
+              balance: new Prisma.Decimal(statementClosing),
             },
           });
         }
