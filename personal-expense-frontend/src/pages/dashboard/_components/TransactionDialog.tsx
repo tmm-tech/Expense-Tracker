@@ -84,6 +84,18 @@ export function TransactionDialog({
       setDate(txDate);
       setAccountId(editingTransaction.accountId ?? "");
 
+      if (editingTransaction.type === "transfer") {
+        if (editingTransaction.transferDirection === "outgoing") {
+          setAccountId(editingTransaction.accountId ?? "");
+          setToAccountId(editingTransaction.transferAccountId ?? "");
+        } else if (editingTransaction.transferDirection === "incoming") {
+          setAccountId(editingTransaction.transferAccountId ?? "");
+          setToAccountId(editingTransaction.accountId ?? "");
+        }
+      } else {
+        setToAccountId("");
+      }
+
     } else {
       setType("expense");
       setCategoryId("");
@@ -182,59 +194,103 @@ export function TransactionDialog({
     },
   });
 
- const updateTransaction = useMutation({
-  mutationFn: (payload: Transaction) =>
-    apiFetch<TransactionResponse>(`/transactions/${payload.id}`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    }),
+  const updateTransfer = useMutation({
+    mutationFn: (payload: {
+      id: string;
+      fromAccountId: string;
+      toAccountId: string;
+      amount: number;
+      description: string;
+      date: number;
+    }) => {
+      console.log("Updating transfer:", payload);
 
-  onMutate: async (updatedTx) => {
-    await queryClient.cancelQueries({ queryKey: ["transactions"] });
+      return apiFetch<TransferResponse>(`/transfer/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          fromAccountId: payload.fromAccountId,
+          toAccountId: payload.toAccountId,
+          amount: payload.amount,
+          description: payload.description,
+          date: payload.date,
+        }),
+      });
+    },
 
-    const cached =
-      queryClient.getQueryData<Transaction[]>(["transactions"]);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
 
-    const previous = Array.isArray(cached) ? cached : [];
+      toast.success("Transfer updated");
 
-    queryClient.setQueryData<Transaction[]>(
-      ["transactions"],
-      previous.map((t) =>
-        t.id === updatedTx.id ? updatedTx : t
-      ),
-    );
+      onOpenChange(false);
+      onTransactionSaved();
+    },
 
-    return { previous };
-  },
+    onError: (error) => {
+      console.error("Update transfer error:", error);
 
-  onError: (error, _tx, ctx) => {
-    queryClient.setQueryData(
-      ["transactions"],
-      ctx?.previous
-    );
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update transfer"
+      );
+    },
+  });
 
-    console.error("Update transaction error:", error);
+  const updateTransaction = useMutation({
+    mutationFn: (payload: Transaction) =>
+      apiFetch<TransactionResponse>(`/transactions/${payload.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
 
-    toast.error(
-      error instanceof Error
-        ? error.message
-        : "Failed to update transaction"
-    );
-  },
+    onMutate: async (updatedTx) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
 
-  onSuccess: () => {
-    queryClient.invalidateQueries({
-      queryKey: ["transactions"],
-    });
+      const cached =
+        queryClient.getQueryData<Transaction[]>(["transactions"]);
 
-    queryClient.invalidateQueries({
-      queryKey: ["accounts"],
-    });
+      const previous = Array.isArray(cached) ? cached : [];
 
-    toast.success("Transaction updated");
-    onOpenChange(false);
-  },
-});
+      queryClient.setQueryData<Transaction[]>(
+        ["transactions"],
+        previous.map((t) =>
+          t.id === updatedTx.id ? updatedTx : t
+        ),
+      );
+
+      return { previous };
+    },
+
+    onError: (error, _tx, ctx) => {
+      queryClient.setQueryData(
+        ["transactions"],
+        ctx?.previous
+      );
+
+      console.error("Update transaction error:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update transaction"
+      );
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["accounts"],
+      });
+
+      toast.success("Transaction updated");
+      onOpenChange(false);
+    },
+  });
 
   /* ---------------- SUBMIT ---------------- */
 
@@ -272,25 +328,22 @@ export function TransactionDialog({
       return;
     }
 
-    const payload =
-      type === "transfer"
-        ? {
-          fromAccountId: accountId,
-          toAccountId,
-          amount: amountNum,
-          description,
-          date: date ? date.getTime() : Date.now(),
-        }
-        : {
-          type,
-          categoryId,
-          amount: amountNum,
-          description,
-          date: date ? date.getTime() : Date.now(),
-          accountId,
-        };
 
-    if (editingTransaction) {
+    if (editingTransaction?.type === "transfer") {
+      if (!editingTransaction.transferId) {
+        toast.error("Transfer ID is missing");
+        return;
+      }
+
+      updateTransfer.mutate({
+        id: editingTransaction.transferId,
+        fromAccountId: accountId,
+        toAccountId,
+        amount: amountNum,
+        description,
+        date: date ? date.getTime() : Date.now(),
+      });
+    } else if (editingTransaction) {
       updateTransaction.mutate({
         id: editingTransaction.id,
         type,
@@ -497,10 +550,18 @@ export function TransactionDialog({
               type="submit"
               className="flex-1"
               disabled={
-                createTransaction.isPending || updateTransaction.isPending
+
+                createTransaction.isPending ||
+                createTransfer.isPending ||
+                updateTransaction.isPending ||
+                updateTransfer.isPending
               }
+
             >
-              {createTransaction.isPending || updateTransaction.isPending
+              {createTransaction.isPending ||
+                updateTransaction.isPending ||
+                createTransfer.isPending ||
+                updateTransfer.isPending
                 ? "Saving..."
                 : editingId
                   ? "Update"

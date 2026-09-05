@@ -468,7 +468,261 @@ module.exports = {
       });
     }
   },
+  /* ===========================
+      UPDATE TRANSFER
+   ============================ */
 
+  updateTransfer: async (req, res) => {
+    const userId = req.user?.id || req.user?.sub;
+
+    try {
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const { fromAccountId, toAccountId, amount, description, date } = req.body;
+      const transferId = req.params.id;
+
+      // ---------------- VALIDATION ----------------
+
+      if (!fromAccountId || !toAccountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Source and destination accounts are required",
+        });
+      }
+
+      if (fromAccountId === toAccountId) {
+        return res.status(400).json({
+          success: false,
+          message: "Source and destination accounts must be different",
+        });
+      }
+
+      const transferAmount = Number(amount);
+
+      if (
+        Number.isNaN(transferAmount) ||
+        transferAmount <= 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Amount must be greater than zero",
+        });
+      }
+
+      if (!date) {
+        return res.status(400).json({
+          success: false,
+          message: "Date is required",
+        });
+      }
+
+      // ---------------- ATOMIC UPDATE ----------------
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Find the transfer belonging to this user
+        const existingTransfer = await tx.transfer.findFirst({
+          where: {
+            id: transferId,
+            userId,
+          },
+        });
+
+        if (!existingTransfer) {
+          throw new Error("Transfer not found");
+        }
+
+        // Verify both new accounts belong to the user
+        const accounts = await tx.account.findMany({
+          where: {
+            id: {
+              in: [fromAccountId, toAccountId],
+            },
+            userId,
+          },
+        });
+
+        if (accounts.length !== 2) {
+          throw new Error("One or both accounts were not found");
+        }
+
+        const fromAccount = accounts.find(
+          (account) => account.id === fromAccountId
+        );
+
+        const toAccount = accounts.find(
+          (account) => account.id === toAccountId
+        );
+
+        // Find the two transactions belonging to this transfer
+        const transferTransactions = await tx.transaction.findMany({
+          where: {
+            transferId,
+            userId,
+          },
+        });
+
+        const outgoingTransaction = transferTransactions.find(
+          (transaction) =>
+            transaction.transferDirection === "outgoing"
+        );
+
+        const incomingTransaction = transferTransactions.find(
+          (transaction) =>
+            transaction.transferDirection === "incoming"
+        );
+
+        if (!outgoingTransaction || !incomingTransaction) {
+          throw new Error(
+            "Transfer transactions are incomplete"
+          );
+        }
+
+        // ---------------- REVERSE OLD BALANCES ----------------
+
+        // Old source account gets the old amount back
+        await tx.account.update({
+          where: {
+            id: outgoingTransaction.accountId,
+          },
+          data: {
+            balance: {
+              increment: existingTransfer.amount,
+            },
+          },
+        });
+
+        // Old destination account loses the old amount
+        await tx.account.update({
+          where: {
+            id: incomingTransaction.accountId,
+          },
+          data: {
+            balance: {
+              decrement: existingTransfer.amount,
+            },
+          },
+        });
+
+        // ---------------- APPLY NEW BALANCES ----------------
+
+        await tx.account.update({
+          where: {
+            id: fromAccount.id,
+          },
+          data: {
+            balance: {
+              decrement: transferAmount,
+            },
+          },
+        });
+
+        await tx.account.update({
+          where: {
+            id: toAccount.id,
+          },
+          data: {
+            balance: {
+              increment: transferAmount,
+            },
+          },
+        });
+
+        // ---------------- UPDATE TRANSFER ----------------
+
+        const updatedTransfer = await tx.transfer.update({
+          where: {
+            id: transferId,
+          },
+          data: {
+            fromAccountId,
+            toAccountId,
+            amount: transferAmount,
+            description: description?.trim() || null,
+            date: new Date(date),
+          },
+        });
+
+        // ---------------- UPDATE OUTGOING TRANSACTION ----------------
+
+        const updatedOutgoingTransaction =
+          await tx.transaction.update({
+            where: {
+              id: outgoingTransaction.id,
+            },
+            data: {
+              accountId: fromAccountId,
+              amount: transferAmount,
+              description: description?.trim() || null,
+              date: new Date(date),
+              type: "transfer",
+              categoryId: null,
+              transferAccountId: toAccountId,
+              transferDirection: "outgoing",
+            },
+          });
+
+        // ---------------- UPDATE INCOMING TRANSACTION ----------------
+
+        const updatedIncomingTransaction =
+          await tx.transaction.update({
+            where: {
+              id: incomingTransaction.id,
+            },
+            data: {
+              accountId: toAccountId,
+              amount: transferAmount,
+              description: description?.trim() || null,
+              date: new Date(date),
+              type: "transfer",
+              categoryId: null,
+              transferAccountId: fromAccountId,
+              transferDirection: "incoming",
+            },
+          });
+
+        return {
+          transfer: updatedTransfer,
+          outgoingTransaction: updatedOutgoingTransaction,
+          incomingTransaction: updatedIncomingTransaction,
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Transfer updated successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Update transfer error:", error);
+
+      if (error.message === "Transfer not found") {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (
+        error.message === "One or both accounts were not found" ||
+        error.message === "Transfer transactions are incomplete"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update transfer",
+      });
+    }
+  },
   /* ===========================
      GET TRANSACTIONS
   ============================ */
@@ -862,116 +1116,116 @@ module.exports = {
      DELETE TRANSACTION
   ============================ */
   deleteTransaction: async (req, res) => {
-  try {
-    const userId = req.user?.id || req.user?.sub;
+    try {
+      const userId = req.user?.id || req.user?.sub;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized: missing user ID",
-      });
-    }
-
-    const transactionId = req.params.id;
-
-    const deletedTransaction = await prisma.$transaction(async (tx) => {
-      // Find the transaction and verify ownership
-      const existing = await tx.transaction.findFirst({
-        where: {
-          id: transactionId,
-          userId,
-        },
-      });
-
-      if (!existing) {
-        throw new Error("TRANSACTION_NOT_FOUND");
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: missing user ID",
+        });
       }
 
-      // Transfers must be deleted through the dedicated transfer endpoint
-      if (existing.type === "transfer" || existing.transferId) {
-        throw new Error("TRANSFER_DELETE_NOT_ALLOWED");
-      }
+      const transactionId = req.params.id;
 
-      // Find the associated account
-      const account = await tx.account.findFirst({
-        where: {
-          id: existing.accountId,
-          userId,
-        },
-      });
-
-      if (!account) {
-        throw new Error("ACCOUNT_NOT_FOUND");
-      }
-
-      /*
-       * Reverse the transaction's effect on the account.
-       *
-       * Income originally increased the balance,
-       * so deleting it decreases the balance.
-       *
-       * Expense originally decreased the balance,
-       * so deleting it increases the balance.
-       */
-      const balanceAdjustment =
-        existing.type === "income"
-          ? -Number(existing.amount)
-          : Number(existing.amount);
-
-      await tx.account.update({
-        where: {
-          id: account.id,
-        },
-        data: {
-          balance: {
-            increment: balanceAdjustment,
+      const deletedTransaction = await prisma.$transaction(async (tx) => {
+        // Find the transaction and verify ownership
+        const existing = await tx.transaction.findFirst({
+          where: {
+            id: transactionId,
+            userId,
           },
-        },
+        });
+
+        if (!existing) {
+          throw new Error("TRANSACTION_NOT_FOUND");
+        }
+
+        // Transfers must be deleted through the dedicated transfer endpoint
+        if (existing.type === "transfer" || existing.transferId) {
+          throw new Error("TRANSFER_DELETE_NOT_ALLOWED");
+        }
+
+        // Find the associated account
+        const account = await tx.account.findFirst({
+          where: {
+            id: existing.accountId,
+            userId,
+          },
+        });
+
+        if (!account) {
+          throw new Error("ACCOUNT_NOT_FOUND");
+        }
+
+        /*
+         * Reverse the transaction's effect on the account.
+         *
+         * Income originally increased the balance,
+         * so deleting it decreases the balance.
+         *
+         * Expense originally decreased the balance,
+         * so deleting it increases the balance.
+         */
+        const balanceAdjustment =
+          existing.type === "income"
+            ? -Number(existing.amount)
+            : Number(existing.amount);
+
+        await tx.account.update({
+          where: {
+            id: account.id,
+          },
+          data: {
+            balance: {
+              increment: balanceAdjustment,
+            },
+          },
+        });
+
+        // Delete the transaction
+        return await tx.transaction.delete({
+          where: {
+            id: existing.id,
+          },
+        });
       });
 
-      // Delete the transaction
-      return await tx.transaction.delete({
-        where: {
-          id: existing.id,
-        },
+      return res.json({
+        success: true,
+        message: "Transaction deleted successfully",
+        data: deletedTransaction,
       });
-    });
+    } catch (error) {
+      console.error("Delete transaction error:", error);
 
-    return res.json({
-      success: true,
-      message: "Transaction deleted successfully",
-      data: deletedTransaction,
-    });
-  } catch (error) {
-    console.error("Delete transaction error:", error);
+      if (error.message === "TRANSACTION_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          message: "Transaction not found",
+        });
+      }
 
-    if (error.message === "TRANSACTION_NOT_FOUND") {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction not found",
-      });
-    }
+      if (error.message === "TRANSFER_DELETE_NOT_ALLOWED") {
+        return res.status(400).json({
+          success: false,
+          message: "Transfers must be deleted using the transfer endpoint",
+        });
+      }
 
-    if (error.message === "TRANSFER_DELETE_NOT_ALLOWED") {
-      return res.status(400).json({
-        success: false,
-        message: "Transfers must be deleted using the transfer endpoint",
-      });
-    }
+      if (error.message === "ACCOUNT_NOT_FOUND") {
+        return res.status(500).json({
+          success: false,
+          message: "Transaction account not found",
+        });
+      }
 
-    if (error.message === "ACCOUNT_NOT_FOUND") {
       return res.status(500).json({
         success: false,
-        message: "Transaction account not found",
+        message: `Delete Transaction Error: ${error.message}`,
       });
     }
-
-    return res.status(500).json({
-      success: false,
-      message: `Delete Transaction Error: ${error.message}`,
-    });
-  }
-},
+  },
   /* ===========================
      TRANSACTION SUMMARY
   ============================ */
