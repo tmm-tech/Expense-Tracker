@@ -165,8 +165,6 @@ export function TransactionDialog({
       description: string;
       date: number;
     }) => {
-      console.log("Creating transfer:", payload);
-
       return apiFetch<TransferResponse>("/transfer", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -203,7 +201,6 @@ export function TransactionDialog({
       description: string;
       date: number;
     }) => {
-      console.log("Updating transfer:", payload);
 
       return apiFetch<TransferResponse>(`/transfer/${payload.id}`, {
         method: "PUT",

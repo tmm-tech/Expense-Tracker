@@ -71,6 +71,11 @@ export default function AccountDetailView({
     },
   });
 
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories],
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -90,6 +95,7 @@ export default function AccountDetailView({
 
   const Icon = ACCOUNT_ICONS[account.type];
 
+
   const totalIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -98,10 +104,7 @@ export default function AccountDetailView({
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c.name])),
-    [categories],
-  );
+
 
   return (
     <div className="space-y-6">
