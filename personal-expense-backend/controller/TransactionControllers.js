@@ -1365,14 +1365,18 @@ module.exports = {
         transferIds = [],
       } = req.body;
 
-      // Validate payload
+      /* =========================
+         VALIDATE PAYLOAD
+      ========================= */
+
       if (
         !Array.isArray(transactionIds) ||
         !Array.isArray(transferIds)
       ) {
         return res.status(400).json({
           success: false,
-          message: "transactionIds and transferIds must be arrays",
+          message:
+            "transactionIds and transferIds must be arrays",
         });
       }
 
@@ -1382,11 +1386,15 @@ module.exports = {
       ) {
         return res.status(400).json({
           success: false,
-          message: "No transactions or transfers selected",
+          message:
+            "No transactions or transfers selected",
         });
       }
 
-      // Remove duplicate IDs
+      /* =========================
+         REMOVE DUPLICATE IDS
+      ========================= */
+
       const uniqueTransactionIds = [
         ...new Set(transactionIds),
       ];
@@ -1395,268 +1403,312 @@ module.exports = {
         ...new Set(transferIds),
       ];
 
-      const result = await prisma.$transaction(async (tx) => {
-        let deletedTransactions = 0;
-        let deletedTransfers = 0;
+      /* =========================
+         ATOMIC DELETE
+      ========================= */
 
-        /* =========================
-           DELETE NORMAL TRANSACTIONS
-        ========================= */
-
-        if (uniqueTransactionIds.length > 0) {
-          const transactions =
-            await tx.transaction.findMany({
-              where: {
-                id: {
-                  in: uniqueTransactionIds,
-                },
-                userId,
-              },
-              select: {
-                id: true,
-                accountId: true,
-                amount: true,
-                type: true,
-                transferId: true,
-              },
-            });
+      const result = await prisma.$transaction(
+        async (tx) => {
+          let deletedTransactions = 0;
+          let deletedTransfers = 0;
 
           /*
-           * Make sure every requested transaction
-           * exists and belongs to the user.
-           */
-          if (
-            transactions.length !==
-            uniqueTransactionIds.length
-          ) {
-            throw new Error(
-              "TRANSACTION_NOT_FOUND"
-            );
-          }
-
-          /*
-           * Never allow transfer transaction rows
-           * to be deleted individually through
-           * batch delete.
+           * One shared adjustment map for the
+           * entire batch.
            *
-           * Transfers must be deleted using
-           * transferIds so both sides can be
-           * reversed atomically.
+           * accountId -> net balance adjustment
            */
-          const containsTransfer =
-            transactions.some(
-              (transaction) =>
-                transaction.type === "transfer" ||
-                transaction.transferId
-            );
+          const accountAdjustments = new Map();
 
-          if (containsTransfer) {
-            throw new Error(
-              "TRANSFER_TRANSACTION_NOT_ALLOWED"
-            );
-          }
+          /* =========================
+             NORMAL TRANSACTIONS
+          ========================= */
 
-          /*
-           * Reverse every normal transaction's
-           * effect on its account.
-           */
-          for (const transaction of transactions) {
-            if (transaction.type === "income") {
-              await tx.account.update({
+          if (uniqueTransactionIds.length > 0) {
+            const transactions =
+              await tx.transaction.findMany({
                 where: {
-                  id: transaction.accountId,
-                },
-                data: {
-                  balance: {
-                    decrement: transaction.amount,
+                  id: {
+                    in: uniqueTransactionIds,
                   },
+                  userId,
+                },
+                select: {
+                  id: true,
+                  accountId: true,
+                  amount: true,
+                  type: true,
+                  transferId: true,
                 },
               });
-            } else if (
-              transaction.type === "expense"
+
+            /*
+             * Make sure every requested transaction
+             * exists and belongs to the user.
+             */
+            if (
+              transactions.length !==
+              uniqueTransactionIds.length
             ) {
-              await tx.account.update({
+              throw new Error(
+                "TRANSACTION_NOT_FOUND"
+              );
+            }
+
+            /*
+             * Transfer transaction rows must be
+             * deleted through transferIds.
+             */
+            const containsTransfer =
+              transactions.some(
+                (transaction) =>
+                  transaction.type === "transfer" ||
+                  transaction.transferId
+              );
+
+            if (containsTransfer) {
+              throw new Error(
+                "TRANSFER_TRANSACTION_NOT_ALLOWED"
+              );
+            }
+
+            /*
+             * Calculate balance adjustments.
+             *
+             * Removing income:
+             * balance decreases
+             *
+             * Removing expense:
+             * balance increases
+             */
+            for (const transaction of transactions) {
+              const currentAdjustment =
+                accountAdjustments.get(
+                  transaction.accountId
+                ) ?? new Prisma.Decimal(0);
+
+              const adjustment =
+                transaction.type === "income"
+                  ? currentAdjustment.subtract(
+                    transaction.amount
+                  )
+                  : currentAdjustment.add(
+                    transaction.amount
+                  );
+
+              accountAdjustments.set(
+                transaction.accountId,
+                adjustment
+              );
+            }
+
+            /*
+             * Delete normal transactions.
+             */
+            const deleted =
+              await tx.transaction.deleteMany({
                 where: {
-                  id: transaction.accountId,
-                },
-                data: {
-                  balance: {
-                    increment: transaction.amount,
+                  id: {
+                    in: uniqueTransactionIds,
                   },
+                  userId,
                 },
               });
+
+            deletedTransactions = deleted.count;
+          }
+
+          /* =========================
+             TRANSFERS
+          ========================= */
+
+          if (uniqueTransferIds.length > 0) {
+            const transfers =
+              await tx.transfer.findMany({
+                where: {
+                  id: {
+                    in: uniqueTransferIds,
+                  },
+                  userId,
+                },
+                select: {
+                  id: true,
+                  amount: true,
+                },
+              });
+
+            /*
+             * Make sure every requested transfer
+             * exists and belongs to the user.
+             */
+            if (
+              transfers.length !==
+              uniqueTransferIds.length
+            ) {
+              throw new Error(
+                "TRANSFER_NOT_FOUND"
+              );
             }
-          }
 
-          /*
-           * Delete the normal transactions.
-           */
-          const deleted =
+            /*
+             * Find both transaction sides.
+             */
+            const transferTransactions =
+              await tx.transaction.findMany({
+                where: {
+                  transferId: {
+                    in: uniqueTransferIds,
+                  },
+                  userId,
+                },
+                select: {
+                  id: true,
+                  transferId: true,
+                  accountId: true,
+                  amount: true,
+                  transferDirection: true,
+                },
+              });
+
+            /* =========================
+               VALIDATE TRANSFER SIDES
+            ========================= */
+
+            for (const transfer of transfers) {
+              const transactions =
+                transferTransactions.filter(
+                  (transaction) =>
+                    transaction.transferId ===
+                    transfer.id
+                );
+
+              const outgoing =
+                transactions.find(
+                  (transaction) =>
+                    transaction.transferDirection ===
+                    "outgoing"
+                );
+
+              const incoming =
+                transactions.find(
+                  (transaction) =>
+                    transaction.transferDirection ===
+                    "incoming"
+                );
+
+              if (!outgoing || !incoming) {
+                throw new Error(
+                  "TRANSFER_TRANSACTIONS_INCOMPLETE"
+                );
+              }
+
+              /*
+               * Removing transfer:
+               *
+               * Source account:
+               * + amount
+               *
+               * Destination account:
+               * - amount
+               */
+
+              const sourceAdjustment =
+                accountAdjustments.get(
+                  outgoing.accountId
+                ) ?? new Prisma.Decimal(0);
+
+              accountAdjustments.set(
+                outgoing.accountId,
+                sourceAdjustment.add(
+                  transfer.amount
+                )
+              );
+
+              const destinationAdjustment =
+                accountAdjustments.get(
+                  incoming.accountId
+                ) ?? new Prisma.Decimal(0);
+
+              accountAdjustments.set(
+                incoming.accountId,
+                destinationAdjustment.subtract(
+                  transfer.amount
+                )
+              );
+            }
+
+            /*
+             * Delete transfer transactions.
+             */
             await tx.transaction.deleteMany({
-              where: {
-                id: {
-                  in: uniqueTransactionIds,
-                },
-                userId,
-              },
-            });
-
-          deletedTransactions = deleted.count;
-        }
-
-        /* =========================
-           DELETE TRANSFERS
-        ========================= */
-
-        if (uniqueTransferIds.length > 0) {
-          const transfers =
-            await tx.transfer.findMany({
-              where: {
-                id: {
-                  in: uniqueTransferIds,
-                },
-                userId,
-              },
-              select: {
-                id: true,
-                amount: true,
-              },
-            });
-
-          /*
-           * Make sure every requested transfer
-           * exists and belongs to the user.
-           */
-          if (
-            transfers.length !==
-            uniqueTransferIds.length
-          ) {
-            throw new Error(
-              "TRANSFER_NOT_FOUND"
-            );
-          }
-
-          /*
-           * Find all transaction rows belonging
-           * to these transfers.
-           */
-          const transferTransactions =
-            await tx.transaction.findMany({
               where: {
                 transferId: {
                   in: uniqueTransferIds,
                 },
                 userId,
               },
-              select: {
-                id: true,
-                transferId: true,
-                accountId: true,
-                amount: true,
-                transferDirection: true,
-              },
             });
 
-          /*
-           * Every transfer must have both sides.
-           */
-          for (const transfer of transfers) {
-            const transactions =
-              transferTransactions.filter(
-                (transaction) =>
-                  transaction.transferId ===
-                  transfer.id
-              );
+            /*
+             * Delete transfer parents.
+             */
+            const deleted =
+              await tx.transfer.deleteMany({
+                where: {
+                  id: {
+                    in: uniqueTransferIds,
+                  },
+                  userId,
+                },
+              });
 
-            const outgoing =
-              transactions.find(
-                (transaction) =>
-                  transaction.transferDirection ===
-                  "outgoing"
-              );
+            deletedTransfers = deleted.count;
+          }
 
-            const incoming =
-              transactions.find(
-                (transaction) =>
-                  transaction.transferDirection ===
-                  "incoming"
-              );
+          /* =========================
+             APPLY ALL BALANCE
+             ADJUSTMENTS
+          ========================= */
 
-            if (!outgoing || !incoming) {
-              throw new Error(
-                "TRANSFER_TRANSACTIONS_INCOMPLETE"
-              );
+          for (const [
+            accountIdToUpdate,
+            adjustment,
+          ] of accountAdjustments) {
+            if (adjustment.isZero()) {
+              continue;
             }
 
-            /*
-             * Reverse outgoing side:
-             * money returns to source account.
-             */
             await tx.account.update({
               where: {
-                id: outgoing.accountId,
+                id: accountIdToUpdate,
               },
               data: {
                 balance: {
-                  increment: transfer.amount,
-                },
-              },
-            });
-
-            /*
-             * Reverse incoming side:
-             * money leaves destination account.
-             */
-            await tx.account.update({
-              where: {
-                id: incoming.accountId,
-              },
-              data: {
-                balance: {
-                  decrement: transfer.amount,
+                  increment: adjustment,
                 },
               },
             });
           }
 
-          /*
-           * Delete all transaction rows belonging
-           * to the selected transfers.
-           */
-          await tx.transaction.deleteMany({
-            where: {
-              transferId: {
-                in: uniqueTransferIds,
-              },
-              userId,
-            },
-          });
-
-          /*
-           * Delete the parent transfers.
-           */
-          const deleted =
-            await tx.transfer.deleteMany({
-              where: {
-                id: {
-                  in: uniqueTransferIds,
-                },
-                userId,
-              },
-            });
-
-          deletedTransfers = deleted.count;
+          return {
+            deletedTransactions,
+            deletedTransfers,
+          };
+        },
+        {
+          maxWait: 10000,
+          timeout: 30000,
         }
+      );
 
-        return {
-          deletedTransactions,
-          deletedTransfers,
-        };
-      });
+      /* =========================
+         RESPONSE
+      ========================= */
 
       return res.json({
         success: true,
-        message: "Selected transactions deleted successfully",
+        message:
+          "Selected transactions deleted successfully",
         data: result,
       });
     } catch (error) {
@@ -1671,7 +1723,8 @@ module.exports = {
       ) {
         return res.status(404).json({
           success: false,
-          message: "One or more transactions were not found",
+          message:
+            "One or more transactions were not found",
         });
       }
 
@@ -1692,7 +1745,8 @@ module.exports = {
       ) {
         return res.status(404).json({
           success: false,
-          message: "One or more transfers were not found",
+          message:
+            "One or more transfers were not found",
         });
       }
 
